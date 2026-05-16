@@ -1,0 +1,17 @@
+.git
+.gitignore
+**/node_modules
+**/__pycache__
+**/.vite
+**/dist
+**/.pytest_cache
+**/htmlcov
+**/.mypy_cache
+**/.ruff_cache
+**/.coverage
+**/*.tsbuildinfo
+tests/
+.env
+.env.*
+docs/
+*.md

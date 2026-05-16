@@ -19,4 +19,4 @@ Phase 0 → Phase 1: Hard-Fork des OCRexpert-GUI-Codes (Backend `ocrexpert/gui/`
 - GitHub-Repo `underdog220/moag` muss noch erstellt werden
 
 ## Letzte Änderung
-2026-05-16 — Projekt angelegt, Pflicht-Doku geschrieben, Phasenplan in ARCHITEKTUR.md verankert.
+2026-05-16 — Infrastruktur-Setup abgeschlossen: docker/Dockerfile, .dockerignore, scripts/build-state.ps1, README.md, .env.example.
