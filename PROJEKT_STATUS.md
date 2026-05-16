@@ -1,23 +1,23 @@
 # PROJEKT_STATUS — MOAG (Mother of All GUIs)
 
 ## Aktueller Stand
-Phase 1 Frontend abgeschlossen. Hard-Fork von OCRexpert-GUI-Prototyp nach `frontend/` vollständig: npm run build grün, 245 Tests (56 Files) grün. Overview-Seite mit 8 Karten in 3 Gruppen, TopBar mit Health-Score, alle Pflicht-Komponenten (Tooltip, Gauge, PageBadge, Breadcrumb). Backend-Subagent läuft parallel in `backend/`.
+Phase 1 vollständig: Frontend (Hard-Fork OCRexpert-GUI, 245 Frontend-Tests grün) + Backend (moag Python-Package, 123 Backend-Tests grün). Bereit für Docker-Container auf VDR und echte Adapter-Verkabelung.
 
 ## Version
-v0.1.0 (Phase 1 Frontend fertig)
+v0.1.0 (Phase 1 komplett: Frontend + Backend)
 
 ## Nächste geplante Stufe
-Phase 1 abschließen: Backend-Subagent fertigstellen, Docker-Container auf VDR deployen (Port 17900).
-Phase 2: Top-Health-Leiste mit echten Aggregator-Daten verkabeln.
+Phase 2: Docker-Container auf VDR deployen (Port 17900), echte Aggregator-Daten an Frontend-TopBar verkabeln.
 
 ## Offene Punkte
-- Backend-Subagent `backend/moag/` fertigstellen (läuft parallel)
 - Docker-Container bauen + auf VDR deployen
 - GitHub-Repo `underdog220/moag` erstellen + push
-- qnapbackup: Status-Endpoint-CR einreichen (Task #3)
-- Panopticor: Status+Actions-API-CR einreichen (Task #4)
+- Phase 1.5: ocrexpert-Adapter Pipeline-Jobs via POST /api/jobs/upload
+- qnapbackup: Status-Endpoint-CR einreichen (CR #3, Phase 5)
+- Panopticor: Status+Actions-API-CR einreichen (CR #4, Phase 6)
 - NasDominator: API-Reife für Health-Aggregation prüfen (Phase 3)
 - Custos: Findings-Widget-Schema festlegen (Phase 4)
+- sonofseti-Adapter: node_addresses aus Settings versorgen
 
 ## Letzte Änderung
-2026-05-16 — Phase 1 Frontend: Hard-Fork OCRexpert-GUI, 8 Feature-Ordner, neue Pflicht-Komponenten, 245 Tests grün.
+2026-05-16 — Phase 1 Backend: moag Python-Package, 8 Adapter, Aggregator, 123 Tests grün.
