@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+.vite/
+dist/
+.eslintcache
+*.tsbuildinfo
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# MOAG-Laufzeit
+data/
+*.db
+*.db-journal
+.moag/
+moag.log
+
+# Build-Artefakte
+backend/moag/static/
+
+# Secrets
+.env
+.env.*
+!.env.example
