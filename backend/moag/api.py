@@ -282,6 +282,8 @@ def create_app(
         ]
         results = await asyncio.gather(*coros, return_exceptions=True)
 
+        from moag.aggregator import SYSTEM_INFO
+
         statuses = []
         for i, res in enumerate(results):
             if isinstance(res, Exception):
@@ -290,7 +292,7 @@ def create_app(
                                "nasdominator", "qnapbackup", "custos", "panopticor"]
                 sid = system_ids[i] if i < len(system_ids) else f"unknown-{i}"
                 from moag.schemas import SystemStatus
-                statuses.append(SystemStatus(
+                d = SystemStatus(
                     system_id=sid,
                     ok=False,
                     score=0,
@@ -298,9 +300,17 @@ def create_app(
                     metrics={},
                     fetched_at=datetime.now(timezone.utc),
                     error=str(res)[:300],
-                ).model_dump())
+                ).model_dump()
             else:
-                statuses.append(res.model_dump())
+                d = res.model_dump()
+
+            # Frontend-Vertrag: id (Alias auf system_id), name, group-Label.
+            # Quelle: aggregator.SYSTEM_INFO (Single-Source-of-Truth).
+            info = SYSTEM_INFO.get(d["system_id"], (d["system_id"], "Unbekannt"))
+            d["id"] = d["system_id"]
+            d["name"] = info[0]
+            d["group"] = info[1]
+            statuses.append(d)
 
         return {
             "systems": statuses,

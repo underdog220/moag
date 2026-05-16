@@ -35,6 +35,20 @@ _GROUP_LABELS: dict[str, str] = {
     "compliance_test": "Compliance & Test",
 }
 
+# Anzeige-Metadaten pro System fuer das Frontend (id, name, group-Label).
+# Wird vom /api/v1/overview-Handler beim Augmentieren des Response benutzt,
+# damit das Frontend nicht selbst mappen muss.
+SYSTEM_INFO: dict[str, tuple[str, str]] = {
+    "oberon":       ("Oberon",       "KI-Backbone"),
+    "octoboss":     ("OctoBoss",     "KI-Backbone"),
+    "sonofseti":    ("SonOfSETI",    "KI-Backbone"),
+    "ocrexpert":    ("OCRexpert",    "KI-Backbone"),
+    "nasdominator": ("NasDominator", "Infrastruktur"),
+    "qnapbackup":   ("qnapbackup",   "Infrastruktur"),
+    "custos":       ("Custos",       "Compliance & Test"),
+    "panopticor":   ("Panopticor",   "Compliance & Test"),
+}
+
 
 def _group_score(statuses: list[SystemStatus], system_ids: list[str]) -> int:
     """Berechnet den durchschnittlichen Score einer Gruppe.
