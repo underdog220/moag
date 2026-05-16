@@ -1,7 +1,7 @@
 # PROJEKT_STATUS — MOAG (Mother of All GUIs)
 
 ## Aktueller Stand
-Phase 1 vollständig + lokaler Smoke + Container-Build + VDR-Deploy live. Container `moag:0.1.0` läuft auf VDR:17900 (healthy), Browser-Test unter `http://192.168.200.71:17900/`. OctoBoss-Adapter erreichbar (5/5 Nodes), Oberon-Adapter im Stub-Modus (Token noch nicht konfiguriert), OCRexpert-Adapter aktuell offline (VDR:17810 nicht erreichbar — Roman, später checken), 4 Stub-Adapter wie vorgesehen.
+Phase 1 + Container live auf VDR:17900 (`http://192.168.200.71:17900/`). Oberon-Token gesetzt → Cockpit-API liefert PASS 6/6, OctoBoss erreichbar (5/5 Nodes). OCRexpert-Adapter offline (VDR:17810 nicht erreichbar — Service-Status klären), SonOfSETI wartet auf Node-Adressen aus OctoBoss-Heartbeat, 4 Stub-Adapter wie vorgesehen. Aggregator-Overall 25 (KI 50 · Infra 0 · Compl 0).
 
 ## Version
 v0.1.0 (Phase 1 komplett + Container live auf VDR)
@@ -10,6 +10,9 @@ v0.1.0 (Phase 1 komplett + Container live auf VDR)
 Phase 2: Top-Health-Leiste echte Daten + Pflicht-Tooltip-Komponente verfeinern + PageBadge-Coverage. Parallel: Oberon-Token konfigurieren (echte Cockpit-Daten), OCRexpert-Service-Adresse klären.
 
 ## Offene Punkte
+- Token nicht über `docker run -e` halten — Settings-Volume oder env-file mit chmod 600 (Phase 2)
+- OCRexpert-Service auf VDR:17810 offline — Service-Status klären
+- Code-Kommentar in `clients/oberon_cockpit_client.py` Z. 21–22 ist veraltet (Cockpit akzeptiert OBERON_TOKEN, nicht nur Admin-Token) — bei nächstem Touch korrigieren
 - Phase 1.5: ocrexpert-Adapter Pipeline-Jobs via POST /api/jobs/upload
 - qnapbackup: Status-Endpoint-CR einreichen (CR #3, Phase 5)
 - Panopticor: Status+Actions-API-CR einreichen (CR #4, Phase 6)
@@ -18,4 +21,4 @@ Phase 2: Top-Health-Leiste echte Daten + Pflicht-Tooltip-Komponente verfeinern +
 - sonofseti-Adapter: node_addresses aus Settings versorgen
 
 ## Letzte Änderung
-2026-05-16 — Container `moag:0.1.0` deployed auf VDR:17900 (healthy), Smoke-Test grün, Frontend ausgeliefert mit korrektem Title, Aggregator-Score live (Overall 12: KI 25 · Infra 0 · Compl 0).
+2026-05-16 — Oberon-Token in MOAG-Container gesetzt (per docker run -e), Oberon-Adapter liefert echte Cockpit-Daten (PASS 6/6 Checks), Aggregator-Overall 12 → 25.
