@@ -1,0 +1,1003 @@
+{
+  "_comment": "Mock-Daten für Frontend-Entwicklung ohne laufendes Backend. Subagent A erweitert/aktualisiert diese Datei beim Backend-Build.",
+  "_version": "0.1",
+  "_last_updated": "2026-05-06",
+
+  "GET /api/health": {
+    "status": "ok",
+    "version": "0.4.2-dev",
+    "build": "7d3f1c2",
+    "build_ts": "2026-05-06T10:30:00Z"
+  },
+
+  "GET /api/cluster/hubs": {
+    "hubs": [
+      {
+        "id": "vdr",
+        "name": "VDR-Production",
+        "url": "http://192.168.200.71:18765",
+        "reachable": true,
+        "latency_ms": 3,
+        "nodes_total": 2,
+        "nodes_connected": 2,
+        "engines_count": 0,
+        "is_default": true,
+        "last_check": "2026-05-06T10:31:00Z"
+      },
+      {
+        "id": "nas",
+        "name": "NAS-Legacy",
+        "url": "http://192.168.200.169:8765",
+        "reachable": true,
+        "latency_ms": 4,
+        "nodes_total": 7,
+        "nodes_connected": 1,
+        "engines_count": 8,
+        "is_default": false,
+        "last_check": "2026-05-06T10:31:00Z"
+      },
+      {
+        "id": "nas-test",
+        "name": "NAS-Test",
+        "url": "http://192.168.200.169:8766",
+        "reachable": true,
+        "latency_ms": 3,
+        "nodes_total": 0,
+        "nodes_connected": 0,
+        "engines_count": 0,
+        "is_default": false,
+        "last_check": "2026-05-06T10:31:00Z"
+      }
+    ]
+  },
+
+  "GET /api/cluster/nodes": {
+    "nodes": [
+      {
+        "node_id": "a27ffe6e-2cdc-4ca1-b8fc-43a18f0e738a",
+        "hostname": "WorkRyzen",
+        "connected": true,
+        "last_heartbeat": "2026-05-06T10:31:36Z",
+        "hardware": {
+          "gpu_name": "NVIDIA GeForce RTX 4070 Ti",
+          "gpu_load_percent": 22,
+          "cpu_load_percent": 14,
+          "ram_free_gb": 24.2,
+          "vram_free_gb": 11.8,
+          "cpu_model": "AMD Ryzen 9"
+        },
+        "engines": ["tesseract", "easyocr", "paddleocr", "surya"],
+        "modules": [
+          {"name": "ocr-multi", "version": "1.0.3"},
+          {"name": "installer", "version": "1.1.1"},
+          {"name": "hw-monitor", "version": "1.1.2"},
+          {"name": "ocr-listener", "version": "1.4.1"}
+        ],
+        "last_known_ip": "192.168.200.11"
+      },
+      {
+        "node_id": "b1234567-89ab-cdef-0123-456789abcdef",
+        "hostname": "Ryzenstrike",
+        "connected": true,
+        "last_heartbeat": "2026-05-06T10:31:52Z",
+        "hardware": {
+          "gpu_name": "NVIDIA RTX 2060 SUPER",
+          "gpu_load_percent": 71,
+          "cpu_load_percent": 38,
+          "ram_free_gb": 12.5,
+          "vram_free_gb": 4.2,
+          "cpu_model": "AMD Ryzen 7"
+        },
+        "engines": ["tesseract", "easyocr", "paddleocr", "surya"],
+        "modules": [
+          {"name": "ocr-multi", "version": "1.0.3"},
+          {"name": "installer", "version": "1.1.1"},
+          {"name": "hw-monitor", "version": "1.1.2"},
+          {"name": "ocr-listener", "version": "1.4.1"}
+        ],
+        "last_known_ip": "192.168.200.113"
+      },
+      {
+        "node_id": "c0000000-1111-2222-3333-444444444444",
+        "hostname": "WhiteStar",
+        "connected": false,
+        "last_heartbeat": "2026-05-06T08:30:00Z",
+        "hardware": {
+          "gpu_name": "AMD Radeon",
+          "gpu_load_percent": null,
+          "cpu_load_percent": 5,
+          "ram_free_gb": 14.0,
+          "vram_free_gb": null,
+          "cpu_model": "AMD Ryzen"
+        },
+        "engines": [],
+        "modules": [
+          {"name": "ocr-multi", "version": "1.0.3"},
+          {"name": "installer", "version": "1.1.0"},
+          {"name": "hw-monitor", "version": "1.1.2"},
+          {"name": "ocr-listener", "version": "1.4.0"}
+        ],
+        "last_known_ip": "192.168.200.26"
+      }
+    ]
+  },
+
+  "GET /api/cluster/engines": {
+    "matrix": {
+      "engines": ["tesseract", "easyocr", "paddleocr", "surya"],
+      "nodes": ["WorkRyzen", "Ryzenstrike", "WhiteStar"],
+      "available": [
+        ["ok", "ok", "ok"],
+        ["ok", "ok", "ok"],
+        ["ok", "ok", "missing"],
+        ["ok", "ok", "missing"]
+      ]
+    }
+  },
+
+  "GET /api/cluster/status": {
+    "instance_id": "vdr-uuid-001",
+    "hostname": "vdr-server",
+    "mode": "primary",
+    "epoch": 7,
+    "priority": 20,
+    "primary_id": "vdr-uuid-001",
+    "primary_address": "192.168.200.71:18765",
+    "node_count": 3,
+    "compute_score": 320,
+    "operator_priority": 20,
+    "uptime_seconds": 124521,
+    "version": "0.9.3-mock",
+    "site_id": "ts-home",
+    "last_election": {
+      "timestamp": "2026-05-08T07:32:00Z",
+      "winner_id": "vdr-uuid-001",
+      "reason": "cold-start",
+      "cooldown_remaining_s": 0.0
+    },
+    "election_eligible": true,
+    "cooldown_remaining_s": 0.0,
+    "load_threshold_percent": 85.0,
+    "mode_aware_routing_enabled": true,
+    "raw_hub_response": {
+      "self_info": {
+        "instance_id": "vdr-uuid-001",
+        "mode": "primary",
+        "epoch": 7,
+        "operator_priority": 20,
+        "node_count": 3,
+        "compute_score": 320,
+        "primary_id": "vdr-uuid-001",
+        "primary_address": "192.168.200.71:18765",
+        "last_election": "2026-05-08T07:32:00Z"
+      },
+      "primary": {"id": "vdr-uuid-001", "address": "192.168.200.71:18765"},
+      "election_eligible": true,
+      "cooldown_remaining_s": 0.0
+    }
+  },
+
+  "GET /api/cluster/peers": {
+    "peers": [
+      {
+        "instance_id": "vdr-uuid-001",
+        "hostname": "vdr-server",
+        "address": "192.168.200.71",
+        "port": 18765,
+        "url": "http://192.168.200.71:18765",
+        "mode": "primary",
+        "epoch": 7,
+        "last_beacon": "2026-05-08T12:01:05Z",
+        "online": true,
+        "last_known_mode": "primary",
+        "last_known_epoch": 7
+      },
+      {
+        "instance_id": "nas-uuid-002",
+        "hostname": "octoboss-nas",
+        "address": "192.168.200.169",
+        "port": 8765,
+        "url": "http://192.168.200.169:8765",
+        "mode": "replica",
+        "epoch": 7,
+        "last_beacon": "2026-05-08T12:01:00Z",
+        "online": true,
+        "last_known_mode": "replica",
+        "last_known_epoch": 7
+      },
+      {
+        "instance_id": "test-uuid-003",
+        "hostname": "octoboss-nas-test",
+        "address": "192.168.200.169",
+        "port": 8766,
+        "url": "http://192.168.200.169:8766",
+        "mode": "standalone",
+        "epoch": 0,
+        "last_beacon": "2026-05-07T22:14:11Z",
+        "online": false,
+        "last_known_mode": "standalone",
+        "last_known_epoch": 0
+      }
+    ]
+  },
+
+  "GET /api/cluster/edge-log": {
+    "events": [
+      {"ts": "2026-05-06T10:31:42Z", "level": "INFO", "source": "hub", "message": "heartbeat from WorkRyzen ok"},
+      {"ts": "2026-05-06T10:31:39Z", "level": "INFO", "source": "hub", "message": "heartbeat from Ryzenstrike ok"},
+      {"ts": "2026-05-06T10:31:08Z", "level": "DEBUG", "source": "dispatcher", "message": "round-robin: next=Ryzenstrike"},
+      {"ts": "2026-05-06T10:30:55Z", "level": "INFO", "source": "ocr/run", "message": "job ocr-71c190ec started"},
+      {"ts": "2026-05-06T10:30:14Z", "level": "WARN", "source": "engine/easyocr", "message": "albumentations<1.4-pin warning"}
+    ]
+  },
+
+  "GET /api/jobs": {
+    "jobs": [
+      {
+        "job_id": "ocr-71c190ec",
+        "filename": "rechnung_2026_03.pdf",
+        "status": "running",
+        "progress_pct": 60,
+        "page_total": 5,
+        "page_done": 3,
+        "started_at": "2026-05-06T10:30:55Z",
+        "finished_at": null,
+        "doctype": "Rechnung",
+        "doctype_confidence": 0.92,
+        "pii_count": 5,
+        "consensus_score": null,
+        "engines_used": ["tesseract", "easyocr"],
+        "nodes_used": ["Ryzenstrike"],
+        "error": null
+      },
+      {
+        "job_id": "ocr-3aeb6a5c",
+        "filename": "mietvertrag_meier.pdf",
+        "status": "done",
+        "progress_pct": 100,
+        "page_total": 12,
+        "page_done": 12,
+        "started_at": "2026-05-06T10:25:10Z",
+        "finished_at": "2026-05-06T10:27:02Z",
+        "doctype": "Mietvertrag",
+        "doctype_confidence": 0.87,
+        "pii_count": 14,
+        "consensus_score": 0.95,
+        "engines_used": ["tesseract", "easyocr", "paddleocr", "surya"],
+        "nodes_used": ["Ryzenstrike", "WorkRyzen"],
+        "error": null
+      },
+      {
+        "job_id": "ocr-376579",
+        "filename": "lageplan_korrupt.pdf",
+        "status": "failed",
+        "progress_pct": 30,
+        "page_total": 1,
+        "page_done": 0,
+        "started_at": "2026-05-06T10:20:00Z",
+        "finished_at": "2026-05-06T10:20:14Z",
+        "doctype": null,
+        "doctype_confidence": null,
+        "pii_count": null,
+        "consensus_score": null,
+        "engines_used": [],
+        "nodes_used": [],
+        "error": "PDF-Header malformed (Zeile 12)"
+      }
+    ],
+    "total": 156,
+    "filtered": 3
+  },
+
+  "GET /api/jobs/ocr-3aeb6a5c": {
+    "job_id": "ocr-3aeb6a5c",
+    "filename": "mietvertrag_meier.pdf",
+    "status": "done",
+    "progress_pct": 100,
+    "page_total": 12,
+    "page_done": 12,
+    "started_at": "2026-05-06T10:25:10Z",
+    "finished_at": "2026-05-06T10:27:02Z",
+    "doctype": "Mietvertrag",
+    "doctype_confidence": 0.87,
+    "doctype_text_score": 0.81,
+    "doctype_layout_score": 0.93,
+    "doctype_alternatives": [
+      {"label": "Kaufvertrag", "score": 0.05},
+      {"label": "Sonstiges", "score": 0.03}
+    ],
+    "pii_findings": [
+      {"type": "PERSON", "count": 4, "examples": ["**** **** Meier"]},
+      {"type": "ADDRESS", "count": 3, "examples": ["**** Straße **"]},
+      {"type": "IBAN", "count": 2, "examples": ["DE** **** **** **** **** ****"]},
+      {"type": "PHONE", "count": 5, "examples": ["+49 *** *********"]}
+    ],
+    "consensus_score": 0.95,
+    "engine_consensus_per_page": [
+      {"page": 1, "tesseract": 0.94, "easyocr": 0.96, "paddleocr": 0.93, "surya": 0.95},
+      {"page": 2, "tesseract": 0.92, "easyocr": 0.97, "paddleocr": 0.94, "surya": 0.96}
+    ],
+    "engines_used": ["tesseract", "easyocr", "paddleocr", "surya"],
+    "nodes_used": ["Ryzenstrike", "WorkRyzen"],
+    "routing_trace": [
+      {"page": 1, "engine": "tesseract", "node": "Ryzenstrike", "latency_ms": 350, "confidence": 0.94},
+      {"page": 1, "engine": "easyocr", "node": "WorkRyzen", "latency_ms": 1200, "confidence": 0.96}
+    ],
+    "ab_compare_available": false,
+    "error": null
+  },
+
+  "GET /api/jobs/ocr-71c190ec": {
+    "job_id": "ocr-71c190ec",
+    "filename": "rechnung_2026_03.pdf",
+    "status": "done",
+    "progress_pct": 100,
+    "page_total": 5,
+    "page_done": 5,
+    "started_at": "2026-05-06T10:30:55Z",
+    "finished_at": "2026-05-06T10:32:12Z",
+    "doctype": "Rechnung",
+    "doctype_confidence": 0.94,
+    "doctype_text_score": 0.97,
+    "doctype_layout_score": 0.86,
+    "doctype_alternatives": [
+      {"label": "Mahnung", "score": 0.04},
+      {"label": "Lieferschein", "score": 0.02}
+    ],
+    "pii_findings": [
+      {"type": "PERSON", "count": 2, "examples": ["**** Mueller"], "hits": [{"page": 1, "bbox": [120, 80, 280, 105]}]},
+      {"type": "ADDRESS", "count": 1, "examples": ["Beispielstr. **"], "hits": [{"page": 1, "bbox": [120, 110, 320, 135]}]},
+      {"type": "IBAN", "count": 1, "examples": ["DE** **** **** **** ****"], "hits": [{"page": 3, "bbox": [80, 400, 380, 420]}]},
+      {"type": "PHONE", "count": 1, "examples": ["+49 *** *********"], "hits": [{"page": 1, "bbox": [120, 140, 300, 165]}]}
+    ],
+    "consensus_score": 0.96,
+    "engine_consensus_per_page": [
+      {"page": 1, "tesseract": 0.94, "easyocr": 0.97, "paddleocr": 0.95, "surya": 0.96},
+      {"page": 2, "tesseract": 0.92, "easyocr": 0.96, "paddleocr": 0.94, "surya": 0.95},
+      {"page": 3, "tesseract": 0.88, "easyocr": 0.95, "paddleocr": 0.91, "surya": 0.93},
+      {"page": 4, "tesseract": 0.95, "easyocr": 0.97, "paddleocr": 0.96, "surya": 0.97},
+      {"page": 5, "tesseract": 0.91, "easyocr": 0.94, "paddleocr": 0.92, "surya": 0.93}
+    ],
+    "engines_used": ["tesseract", "easyocr", "paddleocr", "surya"],
+    "nodes_used": ["Ryzenstrike", "WorkRyzen"],
+    "routing_trace": [
+      {"page": 1, "engine": "tesseract", "node": "Ryzenstrike", "latency_ms": 280, "confidence": 0.94},
+      {"page": 1, "engine": "easyocr", "node": "WorkRyzen", "latency_ms": 1100, "confidence": 0.97},
+      {"page": 2, "engine": "tesseract", "node": "Ryzenstrike", "latency_ms": 320, "confidence": 0.92},
+      {"page": 2, "engine": "easyocr", "node": "WorkRyzen", "latency_ms": 1250, "confidence": 0.96}
+    ],
+    "ab_compare_available": true,
+    "error": null
+  },
+
+  "GET /api/jobs/ocr-71c190ec/text": {
+    "job_id": "ocr-71c190ec",
+    "is_native": false,
+    "pages": [
+      {
+        "page": 1,
+        "width": 595,
+        "height": 842,
+        "words": [
+          {"text": "Rechnung", "confidence": 0.98, "bbox": [50, 50, 180, 80]},
+          {"text": "Nr.", "confidence": 0.96, "bbox": [200, 50, 240, 80]},
+          {"text": "2026/03/0042", "confidence": 0.94, "bbox": [250, 50, 420, 80]},
+          {"text": "Herr", "confidence": 0.93, "bbox": [120, 80, 160, 105]},
+          {"text": "Lukas", "confidence": 0.91, "bbox": [165, 80, 220, 105]},
+          {"text": "Mueller", "confidence": 0.92, "bbox": [225, 80, 280, 105]},
+          {"text": "Beispielstr.", "confidence": 0.85, "bbox": [120, 110, 240, 135]},
+          {"text": "12", "confidence": 0.95, "bbox": [245, 110, 270, 135]},
+          {"text": "90402", "confidence": 0.45, "bbox": [120, 140, 175, 165]},
+          {"text": "Nuernberg", "confidence": 0.62, "bbox": [180, 140, 300, 165]},
+          {"text": "Datum:", "confidence": 0.96, "bbox": [50, 200, 120, 225]},
+          {"text": "06.05.2026", "confidence": 0.97, "bbox": [125, 200, 230, 225]},
+          {"text": "Betrag:", "confidence": 0.96, "bbox": [50, 250, 120, 275]},
+          {"text": "1.234,56", "confidence": 0.31, "bbox": [125, 250, 220, 275]},
+          {"text": "EUR", "confidence": 0.99, "bbox": [225, 250, 270, 275]}
+        ]
+      },
+      {
+        "page": 2,
+        "width": 595,
+        "height": 842,
+        "words": [
+          {"text": "Position", "confidence": 0.97, "bbox": [50, 50, 130, 75]},
+          {"text": "Beschreibung", "confidence": 0.93, "bbox": [140, 50, 280, 75]},
+          {"text": "Einzelpreis", "confidence": 0.88, "bbox": [290, 50, 400, 75]},
+          {"text": "Gesamt", "confidence": 0.94, "bbox": [410, 50, 480, 75]}
+        ]
+      }
+    ]
+  },
+
+  "GET /api/jobs/ocr-3aeb6a5c/text": {
+    "job_id": "ocr-3aeb6a5c",
+    "is_native": false,
+    "pages": [
+      {
+        "page": 1,
+        "width": 595,
+        "height": 842,
+        "words": [
+          {"text": "Mietvertrag", "confidence": 0.99, "bbox": [50, 50, 200, 80]},
+          {"text": "fuer", "confidence": 0.95, "bbox": [205, 50, 245, 80]},
+          {"text": "Wohnraum", "confidence": 0.93, "bbox": [250, 50, 380, 80]},
+          {"text": "zwischen", "confidence": 0.96, "bbox": [50, 100, 130, 125]},
+          {"text": "Vermieter", "confidence": 0.95, "bbox": [50, 130, 150, 155]}
+        ]
+      }
+    ]
+  },
+
+  "GET /api/jobs/ocr-71c190ec/ab-compare": {
+    "available": true,
+    "local": {
+      "text": "Rechnung Nr. 2026/03/0042\nHerr Lukas Mueller\nBeispielstr. 12\n90402 Nuernberg\nDatum: 06.05.2026\nBetrag: 1.234,56 EUR",
+      "latency_ms": 4200,
+      "engines": ["tesseract"]
+    },
+    "cluster": {
+      "text": "Rechnung Nr. 2026/03/0042\nHerr Lukas Mueller\nBeispielstr. 12\n90402 Nuernberg\nDatum: 06.05.2026\nBetrag: 1.234,56 EUR\nMwSt.: 19%",
+      "latency_ms": 1850,
+      "engines": ["tesseract", "easyocr", "paddleocr", "surya"]
+    },
+    "diff": [
+      {"type": "equal", "text": "Rechnung Nr. 2026/03/0042"},
+      {"type": "equal", "text": "Herr Lukas Mueller"},
+      {"type": "equal", "text": "Beispielstr. 12"},
+      {"type": "equal", "text": "90402 Nuernberg"},
+      {"type": "equal", "text": "Datum: 06.05.2026"},
+      {"type": "equal", "text": "Betrag: 1.234,56 EUR"},
+      {"type": "cluster-only", "text": "MwSt.: 19%"}
+    ]
+  },
+
+  "GET /api/jobs/ocr-3aeb6a5c/ab-compare": {
+    "available": false,
+    "reason": "A/B-Vergleich ist Phase-2-Feature"
+  },
+
+  "GET /api/charts/throughput?range=24h": {
+    "datapoints": [
+      {"ts": "2026-05-06T08:00:00Z", "docs_per_hour": 18, "avg_latency_ms": 4200},
+      {"ts": "2026-05-06T09:00:00Z", "docs_per_hour": 24, "avg_latency_ms": 3800},
+      {"ts": "2026-05-06T10:00:00Z", "docs_per_hour": 31, "avg_latency_ms": 3500}
+    ]
+  },
+
+  "GET /api/charts/engine-performance": {
+    "engines": [
+      {"name": "tesseract", "p50_ms": 280, "p95_ms": 950, "avg_confidence": 0.84},
+      {"name": "easyocr",   "p50_ms": 1100, "p95_ms": 3400, "avg_confidence": 0.91},
+      {"name": "paddleocr", "p50_ms": 850, "p95_ms": 2200, "avg_confidence": 0.89},
+      {"name": "surya",     "p50_ms": 1450, "p95_ms": 4100, "avg_confidence": 0.93}
+    ]
+  },
+
+  "GET /api/charts/doctype-distribution": {
+    "current": [
+      {"doctype": "Rechnung", "count": 65, "pct": 0.42},
+      {"doctype": "Mietvertrag", "count": 48, "pct": 0.31},
+      {"doctype": "Lageplan", "count": 19, "pct": 0.12},
+      {"doctype": "Sonstiges", "count": 24, "pct": 0.15}
+    ],
+    "trend": [
+      {"ts": "2026-05-04", "Rechnung": 12, "Mietvertrag": 8, "Lageplan": 3, "Sonstiges": 5},
+      {"ts": "2026-05-05", "Rechnung": 22, "Mietvertrag": 15, "Lageplan": 7, "Sonstiges": 9},
+      {"ts": "2026-05-06", "Rechnung": 31, "Mietvertrag": 25, "Lageplan": 9, "Sonstiges": 10}
+    ]
+  },
+
+  "GET /api/charts/round-robin": {
+    "datapoints": [
+      {"ts": "2026-05-06T08:00:00Z", "WorkRyzen": 6, "Ryzenstrike": 6, "WhiteStar": 6},
+      {"ts": "2026-05-06T09:00:00Z", "WorkRyzen": 8, "Ryzenstrike": 8, "WhiteStar": 8},
+      {"ts": "2026-05-06T10:00:00Z", "WorkRyzen": 10, "Ryzenstrike": 11, "WhiteStar": 10}
+    ]
+  },
+
+  "GET /api/charts/failure-rate": {
+    "trend": [
+      {"ts": "2026-05-04", "rate": 0.012},
+      {"ts": "2026-05-05", "rate": 0.008},
+      {"ts": "2026-05-06", "rate": 0.005}
+    ],
+    "top_errors": [
+      {"type": "PDF-Header malformed", "count": 3, "example": "Zeile 12"},
+      {"type": "Engine timeout", "count": 2, "example": "surya@WhiteStar 60s"},
+      {"type": "OCR provider unavailable", "count": 1, "example": "no_engines"}
+    ]
+  },
+
+  "GET /api/settings": {
+    "hubs": [
+      {"id": "vdr",      "name": "VDR-Production", "url": "http://192.168.200.71:18765"},
+      {"id": "nas",      "name": "NAS-Legacy",     "url": "http://192.168.200.169:8765"},
+      {"id": "nas-test", "name": "NAS-Test",       "url": "http://192.168.200.169:8766"}
+    ],
+    "default_hub_id": "vdr",
+    "cluster_enabled": true,
+    "voting_engines": ["tesseract", "easyocr", "paddleocr", "surya"],
+    "voting_strategy": "consensus",
+    "fallback_to_local": true,
+    "api_token": "panopticor-test-token",
+    "pipeline_log_enabled": true,
+    "active_env": {
+      "OCREXPERT_USE_OCTOBOSS": "true",
+      "OCTOBOSS_HUB_URL": "http://192.168.200.71:18765",
+      "OCTOBOSS_TOKEN": "panopticor-test-token"
+    },
+    "settings_path": "C:/Users/roman/.ocrexpert/gui_settings.json"
+  },
+
+  "GET /api/cockpit/providers": {
+    "providers": [
+      {
+        "id": "anthropic",
+        "name": "Anthropic",
+        "type": "anthropic",
+        "status": "healthy",
+        "base_url": "https://api.anthropic.com",
+        "api_key_hint": "sk-ant-ap...3A9F",
+        "latency_p50_ms": 820,
+        "latency_p95_ms": 2100,
+        "cost_per_1m_tokens_usd": null,
+        "last_check": "2026-05-16T10:00:00Z",
+        "is_default": true,
+        "profiles": {
+          "STANDARD": "claude-sonnet-4-6",
+          "MINI": "claude-haiku-4-7",
+          "HEAVY": "claude-opus-4-7",
+          "VISION": "claude-sonnet-4-6"
+        }
+      },
+      {
+        "id": "openai",
+        "name": "OpenAI",
+        "type": "openai-like",
+        "status": "healthy",
+        "base_url": "https://api.openai.com/v1",
+        "api_key_hint": "sk-proj-...F7Ax",
+        "latency_p50_ms": 610,
+        "latency_p95_ms": 1850,
+        "cost_per_1m_tokens_usd": null,
+        "last_check": "2026-05-16T10:00:00Z",
+        "is_default": false,
+        "profiles": {
+          "STANDARD": "gpt-4o-mini",
+          "MINI": "gpt-4o-mini",
+          "HEAVY": "gpt-4o",
+          "VISION": "gpt-4o"
+        }
+      },
+      {
+        "id": "local",
+        "name": "Local (OctoBoss)",
+        "type": "ollama",
+        "status": "degraded",
+        "base_url": "http://192.168.200.71:11434",
+        "api_key_hint": null,
+        "latency_p50_ms": 3400,
+        "latency_p95_ms": 9800,
+        "cost_per_1m_tokens_usd": null,
+        "last_check": "2026-05-16T09:58:12Z",
+        "is_default": false,
+        "profiles": {
+          "STANDARD": "gemma3:12b",
+          "MINI": "gemma3:4b",
+          "HEAVY": null,
+          "VISION": null
+        }
+      }
+    ]
+  },
+
+  "GET /api/cockpit/calls": {
+    "calls": [
+      {
+        "id": 4201,
+        "ts": "2026-05-16T09:59:42Z",
+        "client_id": "ocrexpert",
+        "profile": "STANDARD",
+        "model": "claude-sonnet-4-6",
+        "provider": "anthropic",
+        "prompt_tokens": 1842,
+        "completion_tokens": 312,
+        "total_tokens": 2154,
+        "duration_ms": 1140,
+        "pii_found": null,
+        "pii_anonymized": null,
+        "status": "ok",
+        "error": null
+      },
+      {
+        "id": 4200,
+        "ts": "2026-05-16T09:57:11Z",
+        "client_id": "chaoscrusher",
+        "profile": "HEAVY",
+        "model": "claude-opus-4-7",
+        "provider": "anthropic",
+        "prompt_tokens": 5310,
+        "completion_tokens": 890,
+        "total_tokens": 6200,
+        "duration_ms": 4820,
+        "pii_found": null,
+        "pii_anonymized": null,
+        "status": "ok",
+        "error": null
+      },
+      {
+        "id": 4199,
+        "ts": "2026-05-16T09:54:30Z",
+        "client_id": "ocrexpert",
+        "profile": "MINI",
+        "model": "claude-haiku-4-7",
+        "provider": "anthropic",
+        "prompt_tokens": 420,
+        "completion_tokens": 88,
+        "total_tokens": 508,
+        "duration_ms": 340,
+        "pii_found": null,
+        "pii_anonymized": null,
+        "status": "ok",
+        "error": null
+      }
+    ],
+    "next_since": "2026-05-16T09:54:30Z",
+    "limit": 50,
+    "returned": 3
+  },
+
+  "GET /api/cockpit/cost": {
+    "from": "2026-05-14T00:00:00Z",
+    "to": "2026-05-16T23:59:59Z",
+    "group_by": "day",
+    "groups": [
+      {
+        "key": "2026-05-14",
+        "calls": 38,
+        "total_tokens": 82400,
+        "prompt_tokens": 68200,
+        "completion_tokens": 14200,
+        "total_cost_usd": 0.0247
+      },
+      {
+        "key": "2026-05-15",
+        "calls": 51,
+        "total_tokens": 114800,
+        "prompt_tokens": 93100,
+        "completion_tokens": 21700,
+        "total_cost_usd": 0.0344
+      },
+      {
+        "key": "2026-05-16",
+        "calls": 24,
+        "total_tokens": 52300,
+        "prompt_tokens": 43800,
+        "completion_tokens": 8500,
+        "total_cost_usd": 0.0157
+      }
+    ],
+    "total": {
+      "calls": 113,
+      "total_tokens": 249500,
+      "prompt_tokens": 205100,
+      "completion_tokens": 44400,
+      "total_cost_usd": 0.0748
+    }
+  },
+
+  "GET /api/cockpit/audit": {
+    "events": [
+      {
+        "ts": "2026-05-16T09:59:42Z",
+        "audit_id": "aud-001-aabbcc",
+        "client_id": "ocrexpert",
+        "event_type": "dsgvo_proxy",
+        "pii_types": ["IBAN", "NAME"],
+        "anonymized": true,
+        "routing_decision": "PROXY",
+        "duration_ms": 182,
+        "domain": "DOCUMENTS"
+      },
+      {
+        "ts": "2026-05-16T09:57:11Z",
+        "audit_id": "aud-002-ddeeff",
+        "client_id": "chaoscrusher",
+        "event_type": "dsgvo_proxy",
+        "pii_types": [],
+        "anonymized": false,
+        "routing_decision": "PROXY",
+        "duration_ms": 95,
+        "domain": "DOCUMENTS"
+      },
+      {
+        "ts": "2026-05-16T09:41:07Z",
+        "audit_id": "aud-003-112233",
+        "client_id": "ocrexpert",
+        "event_type": "transcribe",
+        "pii_types": ["PHONE"],
+        "anonymized": true,
+        "routing_decision": null,
+        "duration_ms": 2340,
+        "domain": null
+      }
+    ],
+    "next_since": "2026-05-16T09:41:07Z",
+    "limit": 50,
+    "returned": 3,
+    "filters": {
+      "pii_type": null,
+      "client_id": null
+    }
+  },
+
+  "GET /api/cockpit/smoke": {
+    "suites": [
+      {
+        "name": "dsgvo-status",
+        "status": "PASS",
+        "last_run": "2026-05-16T10:00:01Z",
+        "latency_ms": 3,
+        "error": null
+      },
+      {
+        "name": "pii-detect",
+        "status": "PASS",
+        "last_run": "2026-05-16T10:00:01Z",
+        "latency_ms": 18,
+        "error": null
+      },
+      {
+        "name": "ner-extract",
+        "status": "WARN",
+        "last_run": "2026-05-16T10:00:01Z",
+        "latency_ms": 5,
+        "error": "NER_MODE=OFF — NER-Scanner deaktiviert"
+      },
+      {
+        "name": "octoboss-local",
+        "status": "PASS",
+        "last_run": "2026-05-16T10:00:01Z",
+        "latency_ms": 12,
+        "error": null
+      },
+      {
+        "name": "oberon-postgres",
+        "status": "PASS",
+        "last_run": "2026-05-16T10:00:01Z",
+        "latency_ms": 4,
+        "error": null
+      },
+      {
+        "name": "local-llm-hub",
+        "status": "PASS",
+        "last_run": "2026-05-16T10:00:01Z",
+        "latency_ms": 87,
+        "error": null
+      }
+    ],
+    "summary": {
+      "pass": 5,
+      "warn": 1,
+      "fail": 0,
+      "total": 6,
+      "verdict": "WARN"
+    }
+  },
+
+  "WS_EVENTS_EXAMPLES": [
+    {"type": "hub_status_changed", "hub_id": "vdr", "status": "ok", "latency_ms": 4},
+    {"type": "node_health_changed", "node_id": "a27ffe6e-...", "hostname": "WorkRyzen", "gpu_load_percent": 28, "cpu_load_percent": 16, "ram_free_gb": 23.9},
+    {"type": "job_started", "job_id": "ocr-aabbccdd", "filename": "neue_rechnung.pdf"},
+    {"type": "job_progress", "job_id": "ocr-aabbccdd", "page_done": 1, "page_total": 3, "engine": "tesseract", "node": "WorkRyzen"},
+    {"type": "job_engine_done", "job_id": "ocr-aabbccdd", "page": 1, "engine": "tesseract", "latency_ms": 280, "confidence": 0.91},
+    {"type": "job_done", "job_id": "ocr-aabbccdd", "doctype": "Rechnung", "doctype_confidence": 0.94, "pii_count": 4, "consensus_score": 0.96},
+    {"type": "job_failed", "job_id": "ocr-eeffgghh", "error": "Engine timeout: surya@WhiteStar 60s"},
+    {"type": "edge_log", "ts": "2026-05-06T10:35:00Z", "level": "INFO", "source": "hub", "message": "Round-robin tick"},
+    {"type": "settings_changed", "default_hub_id": "nas"}
+  ],
+
+  "GET /api/cockpit/providers": {
+    "providers": [
+      {
+        "id": "anthropic",
+        "name": "Anthropic",
+        "type": "anthropic",
+        "status": "healthy",
+        "base_url": "https://api.anthropic.com",
+        "api_key_hint": "sk-ant-ap...3A9F",
+        "latency_p50_ms": 1243,
+        "latency_p95_ms": 3820,
+        "cost_per_1m_tokens_usd": null,
+        "last_check": "2026-05-16T08:42:00Z",
+        "is_default": true,
+        "profiles": {
+          "STANDARD": "claude-3-5-haiku-20241022",
+          "MINI": null,
+          "HEAVY": "claude-opus-4-7",
+          "VISION": "claude-3-5-sonnet-20241022"
+        }
+      },
+      {
+        "id": "local",
+        "name": "Local (OctoBoss)",
+        "type": "openai-like",
+        "status": "degraded",
+        "base_url": "http://192.168.200.71:11434",
+        "api_key_hint": null,
+        "latency_p50_ms": 8540,
+        "latency_p95_ms": 24100,
+        "cost_per_1m_tokens_usd": null,
+        "last_check": "2026-05-16T08:41:55Z",
+        "is_default": false,
+        "profiles": {
+          "STANDARD": "llama3.2:latest",
+          "MINI": null,
+          "HEAVY": null,
+          "VISION": null
+        }
+      },
+      {
+        "id": "openai",
+        "name": "OpenAI",
+        "type": "openai-like",
+        "status": "down",
+        "base_url": "https://api.openai.com",
+        "api_key_hint": null,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null,
+        "cost_per_1m_tokens_usd": null,
+        "last_check": null,
+        "is_default": false,
+        "profiles": null
+      }
+    ]
+  },
+
+  "GET /api/v1/overview": {
+    "systems": [
+      {
+        "id": "oberon",
+        "name": "Oberon",
+        "group": "KI-Backbone",
+        "ok": true,
+        "score": 85,
+        "summary": "LLM-Gateway aktiv, 2 Provider healthy, DSGVO-Engine läuft",
+        "metrics": {
+          "providers_up": 2,
+          "calls_last_hour": 47,
+          "avg_latency_ms": 320
+        },
+        "fetched_at": "2026-05-16T08:30:00Z",
+        "error": null
+      },
+      {
+        "id": "octoboss",
+        "name": "OctoBoss",
+        "group": "KI-Backbone",
+        "ok": true,
+        "score": 78,
+        "summary": "Hub erreichbar, 2/2 Nodes connected, OCR-Queue leer",
+        "metrics": {
+          "nodes_connected": 2,
+          "nodes_total": 2,
+          "queue_depth": 0
+        },
+        "fetched_at": "2026-05-16T08:30:00Z",
+        "error": null
+      },
+      {
+        "id": "sonofseti",
+        "name": "SonOfSETI",
+        "group": "KI-Backbone",
+        "ok": true,
+        "score": 90,
+        "summary": "3 Nodes aktiv, letztes Heartbeat vor 12s",
+        "metrics": {
+          "nodes_active": 3,
+          "nodes_total": 3,
+          "last_heartbeat_s": 12
+        },
+        "fetched_at": "2026-05-16T08:30:00Z",
+        "error": null
+      },
+      {
+        "id": "ocrexpert",
+        "name": "OCRexpert",
+        "group": "KI-Backbone",
+        "ok": true,
+        "score": 72,
+        "summary": "Pipeline läuft, 1 Job in Queue, letzte Erkennung vor 3 min",
+        "metrics": {
+          "jobs_queue": 1,
+          "jobs_done_today": 14,
+          "avg_confidence": 0.87
+        },
+        "fetched_at": "2026-05-16T08:30:00Z",
+        "error": null
+      },
+      {
+        "id": "nasdominator",
+        "name": "NasDominator",
+        "group": "Infrastruktur",
+        "ok": true,
+        "score": 80,
+        "summary": "NAS-Health OK, alle Critical-Services erreichbar",
+        "metrics": {
+          "services_up": 4,
+          "services_total": 4,
+          "disk_free_pct": 62
+        },
+        "fetched_at": "2026-05-16T08:30:00Z",
+        "error": null
+      },
+      {
+        "id": "qnapbackup",
+        "name": "qnapbackup",
+        "group": "Infrastruktur",
+        "ok": false,
+        "score": 40,
+        "summary": "Status-API nicht verfügbar — CR offen (Task #3)",
+        "metrics": {},
+        "fetched_at": "2026-05-16T08:30:00Z",
+        "error": "Kein Status-Endpoint verfügbar"
+      },
+      {
+        "id": "custos",
+        "name": "Custos",
+        "group": "Compliance & Test",
+        "ok": false,
+        "score": 55,
+        "summary": "Noch nicht angebunden — Phase 4",
+        "metrics": {},
+        "fetched_at": "2026-05-16T08:30:00Z",
+        "error": "Phase 4 — noch nicht angebunden"
+      },
+      {
+        "id": "panopticor",
+        "name": "Panopticor",
+        "group": "Compliance & Test",
+        "ok": false,
+        "score": 55,
+        "summary": "Status-API nicht verfügbar — CR offen (Task #4)",
+        "metrics": {},
+        "fetched_at": "2026-05-16T08:30:00Z",
+        "error": "Kein Status-Endpoint verfügbar"
+      }
+    ]
+  },
+
+  "GET /api/v1/aggregator/health": {
+    "overall_score": 72,
+    "alert_count": 2,
+    "groups": [
+      {
+        "name": "KI",
+        "score": 81,
+        "systems": [
+          { "name": "Oberon",    "score": 85, "ok": true },
+          { "name": "OctoBoss", "score": 78, "ok": true },
+          { "name": "SonOfSETI","score": 90, "ok": true },
+          { "name": "OCRexpert","score": 72, "ok": true }
+        ]
+      },
+      {
+        "name": "Infra",
+        "score": 60,
+        "systems": [
+          { "name": "NasDominator", "score": 80, "ok": true },
+          { "name": "qnapbackup",   "score": 40, "ok": false }
+        ]
+      },
+      {
+        "name": "Compl+Test",
+        "score": 55,
+        "systems": [
+          { "name": "Custos",     "score": 55, "ok": false },
+          { "name": "Panopticor", "score": 55, "ok": false }
+        ]
+      }
+    ]
+  }
+}

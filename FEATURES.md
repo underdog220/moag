@@ -2,11 +2,98 @@
 
 ## Aktiv
 
-_(noch leer — Code-Migration startet in Phase 1)_
+### Hard-Fork Frontend (Phase 1)
+- Was: `frontend/` — vollständige Vite+React+TS-App, fork aus OCRexpert-GUI-Prototyp
+- Code: `frontend/src/`
+- Tests: 56 Test-Files, 245 Tests grün
+
+### Overview-Cockpit-Seite
+- Was: 8 Karten in 3 Gruppen (KI-Backbone / Infrastruktur / Compliance & Test), Hero-Gauge, Mock-Daten
+- Code: `frontend/src/features/overview/`
+- Tests: `frontend/src/features/overview/Overview.test.tsx` (4 Tests)
+
+### TopBar mit Health-Score
+- Was: Sticky TopBar, MOAG-Logo, Gesamt-Health-Score + Gruppen-Indikatoren (KI/Infra/Compl+Test) + Alert-Counter, Hover-Popover
+- Code: `frontend/src/components/TopBar.tsx`
+- Tests: `frontend/src/components/TopBar.test.tsx` (3 Tests)
+- Datenquelle: `/api/v1/aggregator/health` (Polling 10s, Placeholder-Daten wenn Backend offline)
+
+### Tooltip-Komponente (ADR-004)
+- Was: Hover-Tooltip mit Titel/Quelle/Aktualisierung/Schwellwert, Long-Press für Mobile
+- Code: `frontend/src/components/Tooltip.tsx`
+- Tests: `frontend/src/components/Tooltip.test.tsx` (3 Tests)
+
+### Gauge-Komponente (hero + mini)
+- Was: Hero-Gauge (SVG-Ring, 80px) + Mini-Gauge (Balken), Farb-Codierung grün/gelb/rot, Tooltip-Pflicht
+- Code: `frontend/src/components/Gauge.tsx`
+- Tests: `frontend/src/components/Gauge.test.tsx` (5 Tests)
+
+### PageBadge (globale Pflicht)
+- Was: `pg:<route> · <commit-hash> · <build-ts>` unten rechts, auf jeder Top-Level-Seite
+- Code: `frontend/src/components/PageBadge.tsx`
+- Tests: `frontend/src/components/PageBadge.test.tsx` (1 Test)
+
+### Breadcrumb
+- Was: Navigations-Pfad `MOAG › Oberon › LLM`, Klick-Navigation
+- Code: `frontend/src/components/Breadcrumb.tsx`
+- Tests: `frontend/src/components/Breadcrumb.test.tsx` (3 Tests)
+
+### Feature-Wrapper: Oberon
+- Was: `/oberon/*` mit Sub-Routen llm/cost/audit/smoke
+- Code: `frontend/src/features/oberon/`
+
+### Feature-Wrapper: OctoBoss
+- Was: `/octoboss/*` mit Sub-Routen dashboard/cluster
+- Code: `frontend/src/features/octoboss/`
+
+### Feature-Wrapper: OCRexpert
+- Was: `/ocrexpert/*` mit Sub-Routen jobs/history/charts
+- Code: `frontend/src/features/ocrexpert/`
+
+### Feature-Wrapper: SonOfSETI
+- Was: `/sonofseti` — Node-Liste aus OctoBoss-Proxy
+- Code: `frontend/src/features/sonofseti/`
+
+### Stubs: NasDominator, qnapbackup, Custos, Panopticor
+- Was: Platzhalter-Seiten mit Info + Direktlink, je Phase 3–6
+- Code: `frontend/src/features/{nasdominator,qnapbackup,custos,panopticor}/`
 
 ## Migriert (war in alter Version, ist in neuer Version)
 
-_(Migrations-Quelle: OCRexpert-GUI-Prototyp `ocrexpert-gui:0.7.1`. Wird in Phase 1 nachgepflegt.)_
+### LLM-Tab (Oberon Cockpit)
+- War: `ocrexpert/gui_frontend/src/features/llm/`
+- Ist: `frontend/src/features/llm/` → eingebunden als Sub-Route `/oberon/llm`
+- Datum: 2026-05-16
+
+### Cost-Tab (Oberon Cockpit)
+- War: `ocrexpert/gui_frontend/src/features/cost/`
+- Ist: `frontend/src/features/cost/` → `/oberon/cost`
+- Datum: 2026-05-16
+
+### Audit-Tab (Oberon Cockpit)
+- War: `ocrexpert/gui_frontend/src/features/audit/`
+- Ist: `frontend/src/features/audit/` → `/oberon/audit`
+- Datum: 2026-05-16
+
+### Cluster-Dashboard
+- War: `ocrexpert/gui_frontend/src/features/cluster-dashboard/`
+- Ist: `frontend/src/features/cluster-dashboard/` → `/octoboss/dashboard`
+- Datum: 2026-05-16
+
+### Cluster-Swarm
+- War: `ocrexpert/gui_frontend/src/features/cluster/`
+- Ist: `frontend/src/features/cluster/` → `/octoboss/cluster`
+- Datum: 2026-05-16
+
+### Job-Queue, Job-Detail, History, Charts
+- War: `ocrexpert/gui_frontend/src/features/{job-queue,job-detail,history,charts}/`
+- Ist: unter `frontend/src/features/` → als Sub-Routen von `/ocrexpert/*`
+- Datum: 2026-05-16
+
+### TopBar (OCRexpert-Hub-Anzeige)
+- War: `ocrexpert/gui_frontend/src/components/TopBar.tsx` — Hub-Badge + Cluster-Health
+- Ist: `frontend/src/components/TopBar.tsx` — MOAG Health-Score + Gruppen-Indikatoren (komplett neu geschrieben)
+- Datum: 2026-05-16
 
 ## Verloren / Migrations-TODO
 

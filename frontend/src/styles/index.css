@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Globale Basis */
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: theme("fontFamily.sans");
+  background-color: theme("colors.bg.DEFAULT");
+  color: theme("colors.fg.DEFAULT");
+}
+
+/* Scrollbar im Dark-Theme dezent */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+*::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 6px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* Light-Mode-Override (Toggle) */
+html:not(.dark) body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}

@@ -1,0 +1,25 @@
+# Build-Output
+node_modules/
+dist/
+.vite/
+coverage/
+
+# TypeScript Build-Info (incrementelles Cache, nicht committen)
+tsconfig.tsbuildinfo
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Lokale Env
+.env
+.env.local
+.env.*.local
+
+# Build-Artefakte ins gui/static gehen ausserhalb dieses Ordners
