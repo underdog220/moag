@@ -28,7 +28,10 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-# Output liegt nach vite.config.ts outDir in frontend/dist/
+# vite.config.ts hat outDir = "../backend/moag/static" — Build landet also unter
+# /build/backend/moag/static/ (Vite legt Parent-Verzeichnisse via emptyOutDir an).
+# So funktioniert die lokale Dev-Loop ohne Extra-Copy, weil das Backend den Build
+# direkt aus seinem eigenen moag/static/-Verzeichnis als SPA serviert.
 
 # ============================================================
 # Stage 2: Python-Runtime
@@ -57,7 +60,7 @@ COPY backend/ ./
 
 # Frontend-Bundle aus Stage 1 einkopieren
 # Backend serviert statische Dateien aus moag/static/ als SPA
-COPY --from=builder /build/frontend/dist ./moag/static
+COPY --from=builder /build/backend/moag/static ./moag/static
 
 # Non-root User (uid 1000)
 RUN useradd -u 1000 -m moag && chown -R moag:moag /app
