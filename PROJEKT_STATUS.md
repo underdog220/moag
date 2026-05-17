@@ -21,4 +21,4 @@ Phase 2: Top-Health-Leiste echte Daten + Pflicht-Tooltip-Komponente verfeinern +
 - sonofseti-Adapter: node_addresses aus Settings versorgen
 
 ## Letzte Änderung
-2026-05-17 — Frontend-Aktionen-Achse: NavBar zweistufig, AktionenPage (/aktionen), ActionCard (DRY), ConfirmDialog. 59 Test-Files, 272 Tests grün. Commit 8057589.
+2026-05-17 — 5-Agent-Parallellauf: Drilldown-Erweiterung pro System (Oberon/OctoBoss/OCRexpert/NasDominator/Custos). 10 von 12 Aktionen jetzt echt (nur octoboss.node.reboot + panopticor.scenario.trigger noch Stub). NasDominator + Custos-Adapter von Stub auf echte HTTP-Anbindung umgebaut. 249 Backend-Tests + 340 Frontend-Tests grün, Smoke 5/5. Live-Inventar: 22 neue Sub-Routen. Bekannte Folge-Bugs: einige Aktionen scheitern an Endpoint-Drift (z.B. octoboss.bench.start HTTP 422) — separater Cycle.

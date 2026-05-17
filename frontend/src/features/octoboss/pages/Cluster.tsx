@@ -99,14 +99,14 @@ export function ClusterPage() {
               {
                 label: "Modus",
                 tooltip: "Aktueller Cluster-Betriebsmodus (primary/replica/standalone)",
-                value: <ModeBadge mode={(status as Record<string, unknown>).mode as string} />,
+                value: <ModeBadge mode={(status as unknown as Record<string, unknown>).mode as string} />,
               },
               {
                 label: "Cluster-ID",
                 tooltip: "Eindeutige Cluster-ID",
                 value: (
                   <span className="font-mono text-xs text-fg-muted">
-                    {((status as Record<string, unknown>).cluster_id as string) ?? "—"}
+                    {((status as unknown as Record<string, unknown>).cluster_id as string) ?? "—"}
                   </span>
                 ),
               },
@@ -115,7 +115,7 @@ export function ClusterPage() {
                 tooltip: "Anzahl bekannter Cluster-Peers",
                 value: (
                   <span className="text-fg tabular-nums">
-                    {((status as Record<string, unknown>).peer_count as number) ?? peers.length}
+                    {((status as unknown as Record<string, unknown>).peer_count as number) ?? peers.length}
                   </span>
                 ),
               },

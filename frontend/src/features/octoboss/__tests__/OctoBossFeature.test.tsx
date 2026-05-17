@@ -74,7 +74,7 @@ const MOCK_ASSET = {
   created_at: new Date().toISOString(),
 };
 
-const MOCK_ACTIONS = {
+const MOCK_ACTIONS: import("../../../lib/types").ActionsResponse = {
   actions: [
     {
       action_id: "octoboss.cluster.status",
