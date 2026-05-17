@@ -1,11 +1,12 @@
 """
-Aktion: ocrexpert.shadow.batch — Shadow-Verarbeitungs-Batch starten.
+Aktion: ocrexpert.shadow.batch — Shadow-Verarbeitungs-Lauf starten.
 
 POST {OCREXPERT_BASE_URL}/api/v1/shadow/process
-Body: {"pfad": "<Pfad-zur-PDF>"}
+Body: {"source_path": "<Pfad>", "shadow_path": "<Pfad>", "profile": "generic"}
 
 Default-Testpfad: /mnt/qnap_public/Dokumente/test.pdf
-Uebersteuert wird er durch body["pfad"] wenn vorhanden.
+Default-Shadow-Pfad: aus source_path abgeleitet via /Dokumente/ -> /Dokumente_pdfa/
+Uebersteuert durch body["source_path"]/["shadow_path"] oder body["pfad"] (Legacy).
 
 Result-Mapping:
   HTTP 200 → status="completed", result_summary enthaelt pdfa_pfad aus Response
@@ -57,19 +58,50 @@ async def handle_ocrexpert_shadow_batch(body: dict) -> ActionTriggerResponse:
     t0 = time.monotonic()
 
     base_url = os.environ.get("MOAG_OCREXPERT_BASE_URL", _DEFAULT_BASE).rstrip("/")
-    pfad = body.get("pfad", _DEFAULT_PFAD) if body else _DEFAULT_PFAD
+
+    # source_path: bevorzugt body.source_path, sonst body.pfad (Legacy), sonst Default
+    source_path = (
+        (body or {}).get("source_path")
+        or (body or {}).get("pfad")
+        or _DEFAULT_PFAD
+    )
+
+    # shadow_path: bevorzugt body.shadow_path, sonst aus source_path abgeleitet
+    # Heuristik: ersetze /Dokumente/ durch /Dokumente_pdfa/ (Default-Mapping aus
+    # OCRexpert-Container-Konvention). Falls Source-Pfad keinen passenden Marker
+    # hat, hänge .pdfa.pdf an statt .pdf.
+    shadow_path = (body or {}).get("shadow_path")
+    if not shadow_path:
+        if "/Dokumente/" in source_path:
+            shadow_path = source_path.replace("/Dokumente/", "/Dokumente_pdfa/")
+        elif source_path.endswith(".pdf"):
+            shadow_path = source_path[:-4] + ".pdfa.pdf"
+        else:
+            shadow_path = source_path + ".pdfa"
+
+    profile = (body or {}).get("profile", "generic")
+
+    request_body: dict = {
+        "source_path": source_path,
+        "shadow_path": shadow_path,
+        "profile":     profile,
+    }
+    if (body or {}).get("language"):
+        request_body["language"] = body["language"]
+    if (body or {}).get("overwrite") is not None:
+        request_body["overwrite"] = bool(body["overwrite"])
 
     plog.step(
         "actions.ocrexpert.shadow.batch",
         "start",
-        input={"url": base_url, "pfad": pfad},
+        input={"url": base_url, "source_path": source_path, "shadow_path": shadow_path},
     )
 
     try:
         async with httpx.AsyncClient(timeout=35.0) as client:
             resp = await client.post(
                 f"{base_url}/api/v1/shadow/process",
-                json={"pfad": pfad},
+                json=request_body,
             )
             duration_ms = int((time.monotonic() - t0) * 1000)
 
@@ -77,7 +109,7 @@ async def handle_ocrexpert_shadow_batch(body: dict) -> ActionTriggerResponse:
                 plog.step(
                     "actions.ocrexpert.shadow.batch",
                     "failed",
-                    input={"url": base_url, "pfad": pfad},
+                    input={"url": base_url, "source_path": source_path, "shadow_path": shadow_path},
                     output={"status_code": resp.status_code},
                     dauer_ms=duration_ms,
                     ok=False,
@@ -87,7 +119,7 @@ async def handle_ocrexpert_shadow_batch(body: dict) -> ActionTriggerResponse:
                     triggered_at=triggered_at,
                     status="failed",
                     result_summary=f"Shadow-Batch: OCRexpert antwortete HTTP {resp.status_code}.",
-                    payload={"status_code": resp.status_code, "pfad": pfad},
+                    payload={"status_code": resp.status_code, "source_path": source_path, "shadow_path": shadow_path},
                     duration_ms=duration_ms,
                     error=f"HTTP {resp.status_code}: {resp.text[:300]}",
                 )
@@ -102,14 +134,14 @@ async def handle_ocrexpert_shadow_batch(body: dict) -> ActionTriggerResponse:
             pdfa_pfad = data.get("pdfa_pfad") or data.get("output_path") or data.get("output")
             summary = (
                 f"Shadow-Batch abgeschlossen. "
-                f"Eingabe: {pfad}"
+                f"Eingabe: {source_path}"
                 + (f" → PDF/A: {pdfa_pfad}" if pdfa_pfad else " (kein Output-Pfad in Response)")
             )
 
             plog.step(
                 "actions.ocrexpert.shadow.batch",
                 "completed",
-                input={"url": base_url, "pfad": pfad},
+                input={"url": base_url, "source_path": source_path, "shadow_path": shadow_path},
                 output={"pdfa_pfad": pdfa_pfad},
                 dauer_ms=duration_ms,
                 ok=True,
@@ -121,8 +153,9 @@ async def handle_ocrexpert_shadow_batch(body: dict) -> ActionTriggerResponse:
                 status="completed",
                 result_summary=summary,
                 payload={
-                    "pfad":      pfad,
-                    "pdfa_pfad": pdfa_pfad,
+                    "source_path": source_path,
+                    "shadow_path": shadow_path,
+                    "pdfa_pfad":   pdfa_pfad,
                     **data,
                 },
                 duration_ms=duration_ms,
@@ -134,7 +167,7 @@ async def handle_ocrexpert_shadow_batch(body: dict) -> ActionTriggerResponse:
         plog.step(
             "actions.ocrexpert.shadow.batch",
             "failed",
-            input={"url": base_url, "pfad": pfad},
+            input={"url": base_url, "source_path": source_path, "shadow_path": shadow_path},
             output={"error": "timeout"},
             dauer_ms=duration_ms,
             ok=False,
@@ -144,7 +177,7 @@ async def handle_ocrexpert_shadow_batch(body: dict) -> ActionTriggerResponse:
             triggered_at=triggered_at,
             status="failed",
             result_summary="Shadow-Batch: OCRexpert nicht erreichbar (Timeout).",
-            payload={"pfad": pfad},
+            payload={"source_path": source_path, "shadow_path": shadow_path},
             duration_ms=duration_ms,
             error=f"Timeout nach 35s: {exc}",
         )
@@ -155,7 +188,7 @@ async def handle_ocrexpert_shadow_batch(body: dict) -> ActionTriggerResponse:
         plog.step(
             "actions.ocrexpert.shadow.batch",
             "failed",
-            input={"url": base_url, "pfad": pfad},
+            input={"url": base_url, "source_path": source_path, "shadow_path": shadow_path},
             output={"error": str(exc)},
             dauer_ms=duration_ms,
             ok=False,
@@ -165,7 +198,7 @@ async def handle_ocrexpert_shadow_batch(body: dict) -> ActionTriggerResponse:
             triggered_at=triggered_at,
             status="failed",
             result_summary="Shadow-Batch: OCRexpert nicht erreichbar.",
-            payload={"pfad": pfad},
+            payload={"source_path": source_path, "shadow_path": shadow_path},
             duration_ms=duration_ms,
             error=str(exc)[:300],
         )
@@ -176,7 +209,7 @@ async def handle_ocrexpert_shadow_batch(body: dict) -> ActionTriggerResponse:
         plog.step(
             "actions.ocrexpert.shadow.batch",
             "failed",
-            input={"url": base_url, "pfad": pfad},
+            input={"url": base_url, "source_path": source_path, "shadow_path": shadow_path},
             output={"error": str(exc)},
             dauer_ms=duration_ms,
             ok=False,
@@ -186,7 +219,7 @@ async def handle_ocrexpert_shadow_batch(body: dict) -> ActionTriggerResponse:
             triggered_at=triggered_at,
             status="failed",
             result_summary="Shadow-Batch: unerwarteter Fehler.",
-            payload={"pfad": pfad},
+            payload={"source_path": source_path, "shadow_path": shadow_path},
             duration_ms=duration_ms,
             error=str(exc)[:300],
         )

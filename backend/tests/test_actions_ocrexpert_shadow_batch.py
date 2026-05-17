@@ -75,7 +75,10 @@ async def test_shadow_batch_custom_pfad(monkeypatch):
 
     assert result.status == "completed"
     assert len(captured_bodies) == 1
-    assert captured_bodies[0]["pfad"] == custom_pfad
+    # body.pfad (Legacy) wird auf source_path gemappt
+    assert captured_bodies[0]["source_path"] == custom_pfad
+    # shadow_path Default-Ableitung: /Dokumente/ -> /Dokumente_pdfa/
+    assert "Dokumente_pdfa" in captured_bodies[0]["shadow_path"]
     assert custom_pfad in result.result_summary
 
 
