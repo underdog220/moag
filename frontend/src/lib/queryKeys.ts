@@ -57,4 +57,28 @@ export const qk = {
 
   // MOAG-Aktionen-API
   actions: ["actions"] as const,
+
+  // Oberon Drilldown-API (neue /api/v1/oberon/* Routen)
+  oberon: {
+    providers: ["oberon", "providers"] as const,
+    calls: (since?: string, clientId?: string) => ["oberon", "calls", since ?? null, clientId ?? null] as const,
+    cost: (from: string, to: string, groupBy: string) => ["oberon", "cost", from, to, groupBy] as const,
+    audit: (since?: string, piiType?: string, clientId?: string) => ["oberon", "audit", since ?? null, piiType ?? null, clientId ?? null] as const,
+    smoke: ["oberon", "smoke"] as const,
+    instances: ["oberon", "instances"] as const,
+    piiTuning: ["oberon", "pii-tuning"] as const,
+    dbBroker: ["oberon", "db-broker"] as const,
+    contract: ["oberon", "contract"] as const,
+    platformStatus: ["oberon", "platform-status"] as const,
+  },
+
+  // Custos-Drilldown-API (/api/v1/custos/*)
+  custos: {
+    health: ["custos", "health"] as const,
+    findings: (severity?: string, status?: string) =>
+      ["custos", "findings", severity ?? null, status ?? null] as const,
+    rules: ["custos", "rules"] as const,
+    ruleLastRun: (ruleId: string) => ["custos", "rules", ruleId, "last-run"] as const,
+    audit: ["custos", "audit"] as const,
+  },
 } as const;

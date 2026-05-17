@@ -339,6 +339,204 @@ export const api = {
       `/v1/actions/${encodeURIComponent(action_id)}/trigger`,
       { method: "POST", body: body ?? {} },
     ),
+
+  // ─── Oberon Drilldown-API (neue /api/v1/oberon/* Routen) ────────────────────
+  // Separate Routen von /api/cockpit/* (Admin-Cockpit) — gleiche Daten, neuer Pfad.
+
+  oberon: {
+    /** GET /api/v1/oberon/providers — Provider-Liste mit Health + Latenz. */
+    getProviders: (): Promise<ProvidersResponse> =>
+      request<ProvidersResponse>("/v1/oberon/providers"),
+
+    /** GET /api/v1/oberon/calls — Cursor-paginierter Recent-Calls-Stream. */
+    getCalls: (opts?: { since?: string; limit?: number; clientId?: string }): Promise<CallsResponse> => {
+      const params = new URLSearchParams();
+      if (opts?.since) params.set("since", toIsoDatetime(opts.since));
+      if (opts?.limit != null) params.set("limit", String(opts.limit));
+      if (opts?.clientId) params.set("client_id", opts.clientId);
+      const q = params.toString() ? `?${params}` : "";
+      return request<CallsResponse>(`/v1/oberon/calls${q}`);
+    },
+
+    /** GET /api/v1/oberon/cost — Aggregierte Kostendaten. */
+    getCost: (opts: { from: string; to: string; groupBy: string }): Promise<CostResponse> => {
+      const params = new URLSearchParams({
+        from: toIsoDatetime(opts.from),
+        to: toIsoDatetime(opts.to, true),
+        group_by: opts.groupBy,
+      });
+      return request<CostResponse>(`/v1/oberon/cost?${params}`);
+    },
+
+    /** GET /api/v1/oberon/audit — DSGVO-Audit-Event-Stream. */
+    getAudit: (opts?: { since?: string; limit?: number; piiType?: string; clientId?: string }): Promise<AuditResponse> => {
+      const params = new URLSearchParams();
+      if (opts?.since) params.set("since", toIsoDatetime(opts.since));
+      if (opts?.limit != null) params.set("limit", String(opts.limit));
+      if (opts?.piiType) params.set("pii_type", opts.piiType);
+      if (opts?.clientId) params.set("client_id", opts.clientId);
+      const q = params.toString() ? `?${params}` : "";
+      return request<AuditResponse>(`/v1/oberon/audit${q}`);
+    },
+
+    /** GET /api/v1/oberon/smoke — Live-Health-Snapshot. */
+    getSmoke: (): Promise<SmokeResponse> =>
+      request<SmokeResponse>("/v1/oberon/smoke"),
+
+    /** GET /api/v1/oberon/instances — Aktive Oberon-Instanzen. */
+    getInstances: (): Promise<unknown> =>
+      request<unknown>("/v1/oberon/instances"),
+
+    /** GET /api/v1/oberon/pii-tuning — PII-Tuning-Konfiguration. */
+    getPiiTuning: (): Promise<unknown> =>
+      request<unknown>("/v1/oberon/pii-tuning"),
+
+    /** GET /api/v1/oberon/db-broker/status — DB-Broker-Status. */
+    getDbBrokerStatus: (): Promise<unknown> =>
+      request<unknown>("/v1/oberon/db-broker/status"),
+
+    /** GET /api/v1/oberon/contract/capabilities — API-Kontrakt. */
+    getContractCapabilities: (): Promise<unknown> =>
+      request<unknown>("/v1/oberon/contract/capabilities"),
+
+    /** GET /api/v1/oberon/platform/status — Plattform-Status. */
+    getPlatformStatus: (): Promise<unknown> =>
+      request<unknown>("/v1/oberon/platform/status"),
+  },
+
+  // ─── OctoBoss Drilldown-API (neue /api/v1/octoboss/* Routen) ─────────────────
+
+  octoboss: {
+    /** GET /api/v1/octoboss/nodes — Node-Liste mit Hardware/Ollama/Mode/Modules. */
+    getNodes: (): Promise<unknown> =>
+      request<unknown>("/v1/octoboss/nodes"),
+
+    /** GET /api/v1/octoboss/nodes/{node_id} — Node-Detail. */
+    getNode: (nodeId: string): Promise<unknown> =>
+      request<unknown>(`/v1/octoboss/nodes/${encodeURIComponent(nodeId)}`),
+
+    /** GET /api/v1/octoboss/overview — Capability-Summary. */
+    getOverview: (): Promise<unknown> =>
+      request<unknown>("/v1/octoboss/overview"),
+
+    /** GET /api/v1/octoboss/jobs — Scheduler-Queue.
+     *  Optionale Filter: state (pending|running|done|failed), limit. */
+    getJobs: (opts?: { state?: string; limit?: number }): Promise<unknown> => {
+      const params = new URLSearchParams();
+      if (opts?.state) params.set("state", opts.state);
+      if (opts?.limit != null) params.set("limit", String(opts.limit));
+      const q = params.toString() ? `?${params}` : "";
+      return request<unknown>(`/v1/octoboss/jobs${q}`);
+    },
+
+    /** GET /api/v1/octoboss/assets — Asset-Inventar.
+     *  Optionale Filter: type (model|script|...), name (Teilname). */
+    getAssets: (opts?: { type?: string; name?: string }): Promise<unknown> => {
+      const params = new URLSearchParams();
+      if (opts?.type) params.set("type", opts.type);
+      if (opts?.name) params.set("name", opts.name);
+      const q = params.toString() ? `?${params}` : "";
+      return request<unknown>(`/v1/octoboss/assets${q}`);
+    },
+
+    /** GET /api/v1/octoboss/cluster/status — Cluster-Modus/Primary/Replica. */
+    getClusterStatus: (): Promise<unknown> =>
+      request<unknown>("/v1/octoboss/cluster/status"),
+
+    /** GET /api/v1/octoboss/cluster/peers — Mesh-Peers. */
+    getClusterPeers: (): Promise<unknown> =>
+      request<unknown>("/v1/octoboss/cluster/peers"),
+
+    /** GET /api/v1/octoboss/ocr/status — OCR-Gateway-Status. */
+    getOcrStatus: (): Promise<unknown> =>
+      request<unknown>("/v1/octoboss/ocr/status"),
+
+    /** GET /api/v1/octoboss/llm/models — OpenAI-kompatible Model-Liste. */
+    getLlmModels: (): Promise<unknown> =>
+      request<unknown>("/v1/octoboss/llm/models"),
+  },
+
+  // ─── Custos (/api/v1/custos/*) ─────────────────────────────────────────────
+
+  custos: {
+    /** GET /api/v1/custos/health — Liveness-Check. */
+    getHealth: (): Promise<import("./types").CustosHealth> =>
+      request<import("./types").CustosHealth>("/v1/custos/health"),
+
+    /** GET /api/v1/custos/findings — Compliance-Findings (gefiltert). */
+    getFindings: (opts?: {
+      severity?: string;
+      status?: string;
+      limit?: number;
+      offset?: number;
+    }): Promise<import("./types").CustosFindings> => {
+      const params = new URLSearchParams();
+      if (opts?.severity) params.set("severity", opts.severity);
+      if (opts?.status) params.set("status", opts.status);
+      if (opts?.limit !== undefined) params.set("limit", String(opts.limit));
+      if (opts?.offset !== undefined) params.set("offset", String(opts.offset));
+      const qs = params.toString();
+      return request<import("./types").CustosFindings>(`/v1/custos/findings${qs ? `?${qs}` : ""}`);
+    },
+
+    /** GET /api/v1/custos/rules — Liste aller Compliance-Regeln. */
+    getRules: (): Promise<import("./types").CustosRegel[]> =>
+      request<import("./types").CustosRegel[]>("/v1/custos/rules"),
+
+    /** GET /api/v1/custos/rules/{id}/last-run — Regel-Detail inkl. letzter_lauf. */
+    getRuleLastRun: (ruleId: string): Promise<import("./types").CustosRegel> =>
+      request<import("./types").CustosRegel>(
+        `/v1/custos/rules/${encodeURIComponent(ruleId)}/last-run`,
+      ),
+
+    /** GET /api/v1/custos/audit — Engine-Status aller Regeln. */
+    getAudit: (opts?: { limit?: number }): Promise<import("./types").CustosEngineStatus> => {
+      const params = new URLSearchParams();
+      if (opts?.limit !== undefined) params.set("limit", String(opts.limit));
+      const qs = params.toString();
+      return request<import("./types").CustosEngineStatus>(
+        `/v1/custos/audit${qs ? `?${qs}` : ""}`,
+      );
+    },
+  },
+
+  // ─── NasDominator-Drilldown-API (/api/v1/nasdominator/*) ─────────────────────
+
+  nasdominator: {
+    /** GET /api/v1/nasdominator/health — NasDominator SystemStatus */
+    getHealth: () =>
+      request<import("./types").SystemStatus>("/v1/nasdominator/health"),
+
+    /** GET /api/v1/nasdominator/services — Critical-Services-Liste */
+    getServices: () =>
+      request<import("./types").NasDomServicesResponse>("/v1/nasdominator/services"),
+
+    /** GET /api/v1/nasdominator/metrics — CPU/RAM/Storage-Snapshot */
+    getMetrics: () =>
+      request<import("./types").NasDomMetricsResponse>("/v1/nasdominator/metrics"),
+
+    /** GET /api/v1/nasdominator/containers — Container-Liste */
+    getContainers: () =>
+      request<import("./types").NasDomContainersResponse>("/v1/nasdominator/containers"),
+  },
+
+  // ─── OCRexpert-Drilldown-API (/api/v1/ocrexpert/*) ───────────────────────────
+
+  ocrexpert: {
+    /** GET /api/v1/ocrexpert/capabilities — Capability-Snapshot.
+     *  Wrappt GET {OCREXPERT_BASE_URL}/api/v1/health. */
+    getCapabilities: (): Promise<import("./types").OcrexpertCapabilities> =>
+      request<import("./types").OcrexpertCapabilities>("/v1/ocrexpert/capabilities"),
+
+    /** GET /api/v1/ocrexpert/logs — Plain-Text Tail der Pipeline-Logs.
+     *  `n` = Anzahl der letzten Zeilen (Default 100, max 1000). */
+    getLogs: (n = 100): Promise<import("./types").OcrexpertLogTail> =>
+      request<import("./types").OcrexpertLogTail>(`/v1/ocrexpert/logs?n=${n}`),
+
+    /** GET /api/v1/ocrexpert/openapi-summary — Reduzierte Endpoint-Liste. */
+    getOpenApiSummary: (): Promise<import("./types").OcrexpertOpenApiSummary> =>
+      request<import("./types").OcrexpertOpenApiSummary>("/v1/ocrexpert/openapi-summary"),
+  },
 };
 
 export type Api = typeof api;

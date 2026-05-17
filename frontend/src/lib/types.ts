@@ -553,3 +553,288 @@ export interface SmokeResponse {
   summary: CockpitSmokeSummary;
   [key: string]: unknown;
 }
+
+// ─── Oberon Plattform-API-Typen (neue /api/v1/oberon/* Endpoints) ────────────
+
+/** Eine aktive Oberon-Instanz (DevLoop/Chat-Session). */
+export interface OberonInstance {
+  id: string;
+  mode: string;           // z.B. "devloop", "chat"
+  context_size: number;
+  created_at: string | null; // ISO-8601
+  client_id: string | null;
+  [key: string]: unknown;
+}
+
+/** Eintrag in der PII-Tuning-Konfiguration. */
+export interface OberonPiiTuningEntry {
+  entity_type: string;   // z.B. "IBAN", "EMAIL"
+  enabled: boolean;
+  threshold: number | null;
+  description: string | null;
+  [key: string]: unknown;
+}
+
+/** Status einer via Oberon-Broker provisionierten Datenbank. */
+export interface OberonDbBrokerStatus {
+  databases: Array<{
+    app_name: string;
+    db_name: string;
+    status: string;      // "ok" | "error" | "provisioning"
+    host: string | null;
+    error: string | null;
+    [key: string]: unknown;
+  }>;
+  total: number;
+  [key: string]: unknown;
+}
+
+/** Eine API-Fähigkeit aus dem Oberon-Kontrakt. */
+export interface OberonContractCapability {
+  name: string;
+  version: string | null;
+  path: string;
+  method: string;        // "GET" | "POST" | ...
+  requires_auth: boolean;
+  description: string | null;
+  [key: string]: unknown;
+}
+
+// ─── OctoBoss Drilldown-Typen (neue /api/v1/octoboss/* Endpoints) ────────────
+
+/** Detaillierter Node-Status vom OctoBoss-Hub (/seti/nodes/{node_id}). */
+export interface OctoBossNodeDetail {
+  node_id: string;
+  hostname: string;
+  connected: boolean;
+  mode: string | null;          // "IDLE" | "ACTIVE" | "OFFLINE" | ...
+  last_heartbeat: string | null; // ISO-8601
+  last_known_ip: string | null;
+  hardware: {
+    gpu_name: string | null;
+    gpu_load_percent: number | null;
+    cpu_load_percent: number | null;
+    cpu_model: string | null;
+    ram_free_gb: number | null;
+    vram_free_gb: number | null;
+    [key: string]: unknown;
+  } | null;
+  ollama: {
+    running: boolean;
+    models: string[];
+    version: string | null;
+    [key: string]: unknown;
+  } | null;
+  modules: Array<{ name: string; version: string }>;
+  engines: string[];
+  [key: string]: unknown;
+}
+
+/** Job aus dem OctoBoss-Scheduler (/jobs). */
+export interface OctoBossJob {
+  id: string;
+  job_id?: string;    // manche Hubs nutzen "job_id" statt "id"
+  state: string;      // "pending" | "running" | "done" | "failed"
+  workload_type: string | null;
+  target_node_id: string | null;
+  created_at: string | null;  // ISO-8601
+  started_at: string | null;
+  finished_at: string | null;
+  error: string | null;
+  [key: string]: unknown;
+}
+
+/** Asset aus dem OctoBoss-Inventar (/api/v1/assets). */
+export interface OctoBossAsset {
+  name: string;
+  type: string;       // "model" | "script" | ...
+  size_bytes: number | null;
+  node_id: string | null;
+  path: string | null;
+  created_at: string | null;
+  [key: string]: unknown;
+}
+
+/** Cluster-Status-Alias fuer OctoBoss-Drilldown (basiert auf ClusterStatus). */
+export type OctoBossClusterStatus = ClusterStatus;
+
+/** Peer-Eintrag aus /api/v1/mesh/peers. */
+export interface OctoBossPeer {
+  id: string;
+  instance_id?: string;
+  hostname: string | null;
+  address: string;
+  port: number;
+  url: string;
+  mode: string;
+  online: boolean;
+  last_seen: string | null;
+  [key: string]: unknown;
+}
+
+/** Ollama-Modell-Eintrag aus /v1/models (OpenAI-kompatibel). */
+export interface OctoBossLlmModel {
+  id: string;          // z.B. "llama3.2:3b"
+  object: string;      // "model"
+  created: number | null; // Unix-Timestamp
+  owned_by: string | null;
+  [key: string]: unknown;
+}
+
+// ─── Custos-API-Typen (/api/v1/custos/*) ─────────────────────────────────────
+// Mirror der Custos-Pydantic-Schemas (custos/schemas/finding.py + regel.py).
+
+export type CustosSchwere = "INFO" | "WARN" | "CRIT";
+export type CustosStatus = "OFFEN" | "IN_ARBEIT" | "GELOEST" | "IRRELEVANT";
+export type CustosUserFeedback = "RELEVANT" | "FEHLALARM" | "IRRELEVANT";
+export type CustosKategorie =
+  | "DOKUMENTATION"
+  | "FINANZIELL"
+  | "ZEITLICH"
+  | "KONSISTENZ"
+  | "CHANCE";
+
+/** GET /api/v1/custos/findings — ein einzelnes Compliance-Finding. */
+export interface CustosFinding {
+  id: string;
+  entdeckt_am: string;          // ISO-8601
+  regel_id: string;
+  quelle_app: string;
+  schwere: CustosSchwere;
+  entitaet_typ: string;
+  entitaet_id: string | null;
+  titel: string;
+  beschreibung: string;
+  ki_kontext: Record<string, unknown> | null;
+  prioritaet_score: string | number;
+  status: CustosStatus;
+  user_feedback: CustosUserFeedback | null;
+  zugewiesen_an: string | null;
+  geloest_am: string | null;
+  erstellt_am: string;
+  geaendert_am: string;
+}
+
+/** GET /api/v1/custos/findings — Antwort (Liste). */
+export type CustosFindings = CustosFinding[];
+
+/** GET /api/v1/custos/rules — eine Compliance-Regel. */
+export interface CustosRegel {
+  id: string;
+  quelle_app: string;
+  titel: string;
+  beschreibung: string;
+  kategorie: CustosKategorie;
+  schwere_default: CustosSchwere;
+  sql_query: string;
+  aktiv: boolean;
+  laufintervall_minuten: number;
+  letzter_lauf: string | null;
+  erstellt_am: string;
+}
+
+/** GET /api/v1/custos/audit — ein Eintrag im Engine-Status (pro Regel). */
+export interface CustosAuditEintrag {
+  regel_id: string;
+  aktiv: boolean;
+  laufintervall_minuten: number;
+  letzter_lauf: string | null;
+}
+
+/** GET /api/v1/custos/audit — Antwort des Engine-Status-Endpoints. */
+export interface CustosEngineStatus {
+  regeln: CustosAuditEintrag[];
+  count_aktiv: number;
+  count_gesamt: number;
+}
+
+/** GET /api/v1/custos/health — Liveness-Check. */
+export interface CustosHealth {
+  status: string;
+  service: string;
+  version: string;
+}
+
+// ─── NasDominator-Typen (Endpoints unter /api/v1/nasdominator/*) ──────────────
+
+/** Antwort von GET /api/v1/nasdominator/services */
+export interface NasDomService {
+  name: string;
+  status: string;
+  /** z.B. "up" | "down" | "running" | "ok" | "healthy" */
+  [key: string]: unknown;
+}
+
+export interface NasDomServicesResponse {
+  services: NasDomService[];
+  auth_required: boolean;
+  error?: string | null;
+  fetched_at: string;
+}
+
+/** Antwort von GET /api/v1/nasdominator/metrics */
+export interface NasDomMetrics {
+  cpu_percent?: number | null;
+  ram_percent?: number | null;
+  storage_percent?: number | null;
+  cpu_usage?: number | null;
+  ram_usage?: number | null;
+  [key: string]: unknown;
+}
+
+export interface NasDomMetricsResponse {
+  metrics: NasDomMetrics;
+  auth_required: boolean;
+  error?: string | null;
+  fetched_at: string;
+}
+
+/** Antwort von GET /api/v1/nasdominator/containers */
+export interface NasDomContainer {
+  name: string;
+  status: string;
+  image?: string | null;
+  [key: string]: unknown;
+}
+
+export interface NasDomContainersResponse {
+  containers: NasDomContainer[];
+  auth_required: boolean;
+  error?: string | null;
+  fetched_at: string;
+}
+
+// ─── OCRexpert-spezifische Typen (Namespace ocrexpert) ───────────────────────
+// Quelle: backend/moag/routes_ocrexpert.py (GET /api/v1/ocrexpert/*)
+
+/** GET /api/v1/ocrexpert/capabilities — Capability-Snapshot. */
+export interface OcrexpertCapabilities {
+  status: string;
+  version: string;
+  engines_local: string[];
+  engines_octoboss: string[];
+  octoboss_reachable: boolean;
+  libreoffice_available: boolean;
+  shadow_writable: boolean;
+  /** Vollstaendige URL die abgefragt wurde. */
+  source_url: string;
+}
+
+/** GET /api/v1/ocrexpert/logs — Plain-Text Tail der Pipeline-Logs (n Zeilen). */
+export type OcrexpertLogTail = string;
+
+/** Einzelner Endpoint-Eintrag in der OpenAPI-Summary. */
+export interface OcrexpertOpenApiEndpoint {
+  path: string;
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
+  summary: string;
+  tags: string[];
+}
+
+/** GET /api/v1/ocrexpert/openapi-summary — Reduzierte Endpoint-Liste. */
+export interface OcrexpertOpenApiSummary {
+  title: string;
+  version: string;
+  endpoints: OcrexpertOpenApiEndpoint[];
+  source_url: string;
+}

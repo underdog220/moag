@@ -510,6 +510,21 @@ def create_app(
     app.include_router(build_cluster_router(settings_store))
     app.include_router(build_cockpit_router(settings_store))
 
+    from .routes_ocrexpert import build_ocrexpert_router
+    app.include_router(build_ocrexpert_router(settings_store))
+
+    from moag.routes_oberon import build_oberon_router
+    app.include_router(build_oberon_router(settings_store))
+
+    from moag.routes_octoboss import build_octoboss_router
+    app.include_router(build_octoboss_router(settings_store))
+
+    from moag.routes_custos import build_custos_router
+    app.include_router(build_custos_router(settings_store))
+
+    from moag.routes_nasdominator import build_nasdominator_router
+    app.include_router(build_nasdominator_router(settings_store))
+
     # ── Jobs ─────────────────────────────────────────────────────────────────
 
     @app.post("/api/jobs/upload", response_model=JobUploadResult)
