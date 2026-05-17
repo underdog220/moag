@@ -214,8 +214,8 @@ export function ActionCard({ action, onResult }: ActionCardProps) {
               disabled={isDisabled}
               onClick={handleButtonClick}
               aria-busy={running}
-              className={`w-full rounded-lg px-4 py-2 text-sm font-medium transition-colors
-                          focus:outline-none focus:ring-2 ${
+              className={`w-full rounded-lg px-4 py-3 text-sm font-medium transition-colors
+                          min-h-[44px] focus:outline-none focus:ring-2 ${
                             isDisabled
                               ? "cursor-not-allowed bg-bg-elevated text-fg-subtle"
                               : action.is_destructive

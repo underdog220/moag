@@ -85,9 +85,9 @@ export function ServicesPage() {
           <button
             onClick={() => setConfirmOpen(true)}
             disabled={refreshPending || authRequired}
-            className="rounded border border-white/10 bg-bg-panel px-3 py-1.5 text-xs
-                       text-fg hover:bg-bg-subtle disabled:opacity-40 disabled:cursor-not-allowed
-                       transition-colors"
+            className="rounded border border-white/10 bg-bg-panel px-3 py-3 text-xs
+                       min-h-[44px] text-fg hover:bg-bg-subtle
+                       disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             {refreshPending ? "Wird aktualisiert..." : "Status aktualisieren"}
           </button>
@@ -120,7 +120,7 @@ export function ServicesPage() {
       )}
 
       {!isLoading && services.length > 0 && (
-        <div className="overflow-hidden rounded border border-white/10 bg-bg-panel">
+        <div className="overflow-x-auto rounded border border-white/10 bg-bg-panel">
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/10 bg-bg-subtle">

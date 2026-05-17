@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { Tooltip } from "./Tooltip";
 
 describe("Tooltip", () => {
@@ -40,5 +40,72 @@ describe("Tooltip", () => {
     expect(screen.getByTestId("tooltip-card")).toBeInTheDocument();
     fireEvent.mouseLeave(wrapper);
     expect(screen.queryByTestId("tooltip-card")).not.toBeInTheDocument();
+  });
+
+  describe("Long-Press (Mobile)", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("öffnet Tooltip nach 500ms Long-Press (onTouchStart → Timer abwarten)", () => {
+      render(
+        <Tooltip title="Mobile-Erklärung" source="/api/test">
+          <button type="button">Touch-Ziel</button>
+        </Tooltip>
+      );
+      const wrapper = screen.getByText("Touch-Ziel").closest("span")!;
+
+      // Tooltip noch nicht sichtbar
+      expect(screen.queryByTestId("tooltip-card")).not.toBeInTheDocument();
+
+      // Touch starten
+      fireEvent.touchStart(wrapper);
+
+      // Nach 499ms: noch kein Tooltip
+      act(() => { vi.advanceTimersByTime(499); });
+      expect(screen.queryByTestId("tooltip-card")).not.toBeInTheDocument();
+
+      // Nach 500ms (Gesamt): Tooltip muss erscheinen
+      act(() => { vi.advanceTimersByTime(1); });
+      expect(screen.getByTestId("tooltip-card")).toBeInTheDocument();
+      expect(screen.getByTestId("tooltip-card").textContent).toContain("Mobile-Erklärung");
+    });
+
+    it("öffnet keinen Tooltip bei kurzem Tap (<500ms, onTouchEnd vor Timer)", () => {
+      render(
+        <Tooltip title="Kurzer Tap">
+          <button type="button">Tap-Ziel</button>
+        </Tooltip>
+      );
+      const wrapper = screen.getByText("Tap-Ziel").closest("span")!;
+
+      fireEvent.touchStart(wrapper);
+      // Sofort onTouchEnd (kurzer Tap — < 500ms)
+      fireEvent.touchEnd(wrapper);
+
+      // Timer voll abwarten — Tooltip darf nicht erscheinen
+      act(() => { vi.advanceTimersByTime(600); });
+      expect(screen.queryByTestId("tooltip-card")).not.toBeInTheDocument();
+    });
+
+    it("bricht Long-Press bei onTouchMove ab (Scroll-Geste)", () => {
+      render(
+        <Tooltip title="Scroll-Test">
+          <button type="button">Scroll-Ziel</button>
+        </Tooltip>
+      );
+      const wrapper = screen.getByText("Scroll-Ziel").closest("span")!;
+
+      fireEvent.touchStart(wrapper);
+      act(() => { vi.advanceTimersByTime(300); });
+      // Finger bewegt sich (Scroll) → bricht Long-Press ab
+      fireEvent.touchMove(wrapper);
+      act(() => { vi.advanceTimersByTime(300); });
+      // Kein Tooltip trotz 600ms Gesamt-Wartezeit
+      expect(screen.queryByTestId("tooltip-card")).not.toBeInTheDocument();
+    });
   });
 });

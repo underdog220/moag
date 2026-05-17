@@ -97,8 +97,8 @@ export function ConfirmDialog({
             type="button"
             data-testid="confirm-dialog-cancel"
             onClick={onCancel}
-            className="rounded-lg border border-white/10 bg-bg-subtle px-4 py-2
-                       text-sm font-medium text-fg-muted transition-colors
+            className="rounded-lg border border-white/10 bg-bg-subtle px-4 py-3
+                       text-sm font-medium text-fg-muted transition-colors min-h-[44px]
                        hover:border-white/20 hover:text-fg focus:outline-none
                        focus:ring-2 focus:ring-brand/60"
           >
@@ -108,8 +108,8 @@ export function ConfirmDialog({
             type="button"
             data-testid="confirm-dialog-confirm"
             onClick={onConfirm}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors
-                        focus:outline-none focus:ring-2 ${
+            className={`rounded-lg px-4 py-3 text-sm font-semibold transition-colors
+                        min-h-[44px] focus:outline-none focus:ring-2 ${
                           danger
                             ? "bg-status-error text-white hover:bg-status-error/80 focus:ring-status-error/60"
                             : "bg-brand text-white hover:bg-brand/80 focus:ring-brand/60"

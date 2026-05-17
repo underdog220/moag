@@ -27,14 +27,17 @@ export function OctoBossLayout() {
   return (
     <div className="flex flex-col gap-4 p-4">
       {/* Sub-Tab-Navigation */}
-      <nav className="flex gap-1 border-b border-white/10 pb-0" aria-label="OctoBoss Sub-Navigation">
+      <nav
+        className="flex gap-1 border-b border-white/10 pb-0 overflow-x-auto scrollbar-none"
+        aria-label="OctoBoss Sub-Navigation"
+      >
         {TABS.map(({ to, label }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
-              `px-3 py-1.5 text-sm font-medium transition-colors rounded-t
-               border-b-2 -mb-px
+              `px-3 py-2.5 text-sm font-medium transition-colors rounded-t
+               border-b-2 -mb-px whitespace-nowrap min-h-[44px] flex items-center
                ${isActive
                  ? "border-brand text-brand"
                  : "border-transparent text-fg-muted hover:text-fg hover:border-white/20"

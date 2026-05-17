@@ -5,7 +5,7 @@
 import { NavLink, Navigate, Route, Routes, useResolvedPath } from "react-router-dom";
 import { PageBadge } from "../../components/PageBadge";
 import { Breadcrumb } from "../../components/Breadcrumb";
-import JobsPage from "../job-queue";
+import { JobsPage } from "./pages/Jobs";
 import HistoryPage from "../history";
 import ChartsPage from "../charts";
 import { CapabilitiesPage } from "./pages/Capabilities";
@@ -27,14 +27,16 @@ function OcrSubNav() {
   return (
     <nav
       aria-label="OCRexpert Sub-Navigation"
-      className="flex gap-0.5 border-b border-white/10 bg-bg-subtle px-4 pt-2"
+      className="flex gap-0.5 overflow-x-auto scrollbar-none border-b border-white/10
+                 bg-bg-subtle px-4 pt-2"
     >
       {TABS.map(({ to, label }) => (
         <NavLink
           key={to}
           to={`${base}/${to}`}
           className={({ isActive }) =>
-            `rounded-t border border-b-0 px-3 py-1.5 text-xs font-medium transition-colors ${
+            `rounded-t border border-b-0 px-3 py-2.5 text-xs font-medium
+             whitespace-nowrap min-h-[44px] flex items-center transition-colors ${
               isActive
                 ? "border-white/15 bg-bg-panel text-fg"
                 : "border-transparent text-fg-muted hover:text-fg"

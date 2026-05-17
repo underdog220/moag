@@ -38,7 +38,8 @@ export function NavBar() {
           end
           data-testid="nav-achse-uebersicht"
           className={() =>
-            `relative whitespace-nowrap px-4 py-2.5 text-sm font-semibold
+            `relative whitespace-nowrap px-4 py-3 text-sm font-semibold
+             min-h-[44px] flex items-center
              transition-colors ${
                uebersichtActive
                  ? "text-fg after:absolute after:bottom-0 after:left-2 after:right-2 after:h-0.5 after:bg-brand"
@@ -54,7 +55,8 @@ export function NavBar() {
           to="/aktionen"
           data-testid="nav-achse-aktionen"
           className={({ isActive }) =>
-            `relative whitespace-nowrap px-4 py-2.5 text-sm font-semibold
+            `relative whitespace-nowrap px-4 py-3 text-sm font-semibold
+             min-h-[44px] flex items-center
              transition-colors ${
                isActive
                  ? "text-fg after:absolute after:bottom-0 after:left-2 after:right-2 after:h-0.5 after:bg-brand"
@@ -79,7 +81,8 @@ export function NavBar() {
               to={item.to}
               end={item.to === "/"}
               className={({ isActive }) =>
-                `relative whitespace-nowrap px-3 py-1.5 text-xs transition-colors ${
+                `relative whitespace-nowrap px-3 py-2.5 text-xs min-h-[44px] flex items-center
+                 transition-colors ${
                   isActive
                     ? "text-fg after:absolute after:bottom-0 after:left-1 after:right-1 after:h-0.5 after:bg-brand"
                     : "text-fg-muted hover:text-fg"

@@ -30,9 +30,12 @@ export function PageBadge({ id }: PageBadgeProps) {
                  text-fg-muted shadow-md backdrop-blur-sm"
       title={`Page-Identitaet, Commit ${BUILD_HASH}, Build ${BUILD_TS}`}
     >
-      <span className="text-fg-muted">pg:</span>
-      <span className="text-fg">{id}</span>
-      <span className="mx-1 text-fg-subtle">·</span>
+      {/* Routen-Text nur auf größeren Viewports (Mobile: Platzverschwendung) */}
+      <span className="hidden sm:inline">
+        <span className="text-fg-muted">pg:</span>
+        <span className="text-fg">{id}</span>
+        <span className="mx-1 text-fg-subtle">·</span>
+      </span>
       <span className="text-fg-muted">{BUILD_HASH}</span>
       <span className="mx-1 text-fg-subtle">·</span>
       <span className="text-fg-muted">{shortTs(BUILD_TS)}</span>

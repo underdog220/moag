@@ -36,17 +36,31 @@ export function Tooltip({
   const show = useCallback(() => setVisible(true), []);
   const hide = useCallback(() => setVisible(false), []);
 
-  // Long-Press für Mobile
+  // Long-Press für Mobile (ADR-004 / Phase 7)
+  // onTouchStart: startet 500ms-Timer — erst danach wird der Tooltip geöffnet.
+  // onTouchEnd / onTouchCancel / onTouchMove: Timer abbrechen.
+  // Kurzer Tap (<500ms) öffnet den Tooltip NICHT und löst den darunter liegenden
+  // Button normal aus — daher kein preventDefault() in onTouchStart.
   const onTouchStart = useCallback(() => {
     longPressTimer.current = setTimeout(() => setVisible(true), 500);
   }, []);
-  const onTouchEnd = useCallback(() => {
+
+  const cancelTouch = useCallback(() => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
-    // Tooltip nach 2s automatisch wieder ausblenden (Mobile)
+    // Wenn Tooltip bereits durch Long-Press offen ist, nach 2s schließen
     setTimeout(() => setVisible(false), 2000);
+  }, []);
+
+  const onTouchMove = useCallback(() => {
+    // Scrollen bricht Long-Press ab; offener Tooltip bleibt nicht offen
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    setVisible(false);
   }, []);
 
   const positionClass =
@@ -62,7 +76,9 @@ export function Tooltip({
       onFocus={show}
       onBlur={hide}
       onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
+      onTouchEnd={cancelTouch}
+      onTouchCancel={cancelTouch}
+      onTouchMove={onTouchMove}
     >
       {children}
 

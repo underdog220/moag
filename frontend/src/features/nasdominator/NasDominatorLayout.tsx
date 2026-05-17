@@ -14,13 +14,14 @@ export function NasDominatorLayout() {
   return (
     <div className="flex flex-col min-h-0 flex-1">
       <Breadcrumb />
-      <div className="flex gap-1 border-b border-white/10 px-4 pt-2">
+      <div className="flex gap-1 border-b border-white/10 px-4 pt-2 overflow-x-auto scrollbar-none">
         {TABS.map((tab) => (
           <NavLink
             key={tab.to}
             to={tab.to}
             className={({ isActive }) =>
-              `px-3 py-1.5 text-sm rounded-t transition-colors border-b-2 -mb-px ` +
+              `px-3 py-2.5 text-sm rounded-t transition-colors border-b-2 -mb-px
+               whitespace-nowrap min-h-[44px] flex items-center ` +
               (isActive
                 ? "border-accent text-fg font-medium"
                 : "border-transparent text-fg-muted hover:text-fg hover:border-white/20")

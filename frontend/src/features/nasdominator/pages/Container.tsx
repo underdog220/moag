@@ -85,7 +85,7 @@ export function ContainerPage() {
       )}
 
       {!isLoading && containers.length > 0 && (
-        <div className="overflow-hidden rounded border border-white/10 bg-bg-panel">
+        <div className="overflow-x-auto rounded border border-white/10 bg-bg-panel">
           <table className="w-full">
             <thead>
               <tr className="border-b border-white/10 bg-bg-subtle">

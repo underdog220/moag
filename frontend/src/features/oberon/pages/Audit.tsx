@@ -40,7 +40,8 @@ export function AuditPage() {
             placeholder="PII-Typ (z.B. IBAN)"
             value={piiType}
             onChange={(e) => setPiiType(e.target.value)}
-            className="rounded border border-white/10 bg-bg-elevated px-2 py-1 text-fg"
+            className="rounded border border-white/10 bg-bg-elevated px-3 py-2 text-fg
+                       min-h-[44px]"
           />
         </Tooltip>
         <Tooltip
@@ -53,7 +54,8 @@ export function AuditPage() {
             placeholder="Client-ID"
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
-            className="rounded border border-white/10 bg-bg-elevated px-2 py-1 text-fg"
+            className="rounded border border-white/10 bg-bg-elevated px-3 py-2 text-fg
+                       min-h-[44px]"
           />
         </Tooltip>
         <Tooltip
@@ -64,7 +66,8 @@ export function AuditPage() {
           <select
             value={limit}
             onChange={(e) => setLimit(Number(e.target.value))}
-            className="rounded border border-white/10 bg-bg-elevated px-2 py-1 text-fg"
+            className="rounded border border-white/10 bg-bg-elevated px-3 py-2 text-fg
+                       min-h-[44px]"
           >
             {[25, 50, 100, 200].map((n) => (
               <option key={n} value={n}>{n} Eintraege</option>

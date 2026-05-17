@@ -42,7 +42,8 @@ export function OberonLayout() {
       {/* Sub-Tab-Navigation — dezent, kein Eingriff in globale NavBar */}
       <nav
         aria-label="Oberon-Unterbereiche"
-        className="flex shrink-0 flex-wrap gap-1 border-b border-white/5 bg-bg-subtle px-3 py-1"
+        className="flex shrink-0 overflow-x-auto scrollbar-none gap-1
+                   border-b border-white/5 bg-bg-subtle px-3 py-1"
       >
         {SUB_TABS.map((tab) => (
           <Tooltip
@@ -53,7 +54,8 @@ export function OberonLayout() {
             <NavLink
               to={tab.to}
               className={({ isActive }) =>
-                `rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                `rounded-md whitespace-nowrap px-3 py-2.5 text-xs font-medium
+                 min-h-[44px] flex items-center transition-colors ${
                   isActive
                     ? "bg-brand/15 text-brand"
                     : "text-fg-muted hover:bg-white/5 hover:text-fg"

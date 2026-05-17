@@ -82,8 +82,9 @@ export function AktionenPage() {
         <button
           type="button"
           onClick={() => void refetch()}
-          className="shrink-0 rounded-lg border border-white/10 bg-bg-subtle px-3 py-1.5
-                     text-sm text-fg-muted transition-colors hover:border-white/20 hover:text-fg
+          className="shrink-0 rounded-lg border border-white/10 bg-bg-subtle px-3 py-3
+                     text-sm text-fg-muted min-h-[44px] transition-colors
+                     hover:border-white/20 hover:text-fg
                      focus:outline-none focus:ring-2 focus:ring-brand/60"
           title="Aktions-Liste neu laden"
         >

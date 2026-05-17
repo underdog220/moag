@@ -57,7 +57,8 @@ function GroupIndicator({ group }: { group: GroupHealth }) {
       <button
         type="button"
         className={`flex items-center gap-1 rounded border border-white/10 bg-bg-panel
-                    px-2 py-1 text-xs hover:bg-bg-subtle hover:border-white/20`}
+                    px-3 py-2 text-xs min-h-[44px] sm:min-h-0 sm:px-2 sm:py-1
+                    hover:bg-bg-subtle hover:border-white/20`}
         title={`${group.name}: ${group.score}%`}
       >
         <span className="text-fg-subtle">{group.name}</span>
@@ -224,7 +225,8 @@ export function TopBar(_props: TopBarProps) {
           <Link
             to="/"
             className="relative rounded border border-status-error/40 bg-status-error/10
-                       px-2 py-1 text-xs text-status-error hover:bg-status-error/20"
+                       px-3 py-2 text-xs text-status-error min-h-[44px] flex items-center
+                       sm:min-h-0 sm:px-2 sm:py-1 hover:bg-status-error/20"
             title={`${health.alert_count} aktive Alerts`}
             data-testid="alert-counter"
           >
@@ -237,7 +239,8 @@ export function TopBar(_props: TopBarProps) {
           onClick={toggleTheme}
           aria-label={theme === "dark" ? "Light-Mode aktivieren" : "Dark-Mode aktivieren"}
           title={theme === "dark" ? "Light-Mode" : "Dark-Mode"}
-          className="rounded border border-white/10 bg-bg-panel px-2 py-1 text-xs text-fg
+          className="rounded border border-white/10 bg-bg-panel px-3 py-2 text-xs text-fg
+                     min-h-[44px] sm:min-h-0 sm:px-2 sm:py-1
                      hover:bg-bg-subtle hover:border-white/20"
         >
           {theme === "dark" ? "Hell" : "Dunkel"}
@@ -247,7 +250,8 @@ export function TopBar(_props: TopBarProps) {
           to="/settings"
           aria-label="Einstellungen"
           title="Einstellungen"
-          className="rounded border border-white/10 bg-bg-panel px-2 py-1 text-xs text-fg
+          className="rounded border border-white/10 bg-bg-panel px-3 py-2 text-xs text-fg
+                     min-h-[44px] flex items-center sm:min-h-0 sm:px-2 sm:py-1
                      hover:bg-bg-subtle hover:border-white/20"
         >
           Settings
