@@ -66,17 +66,25 @@ async def handle_octoboss_bench_start(body: dict) -> ActionTriggerResponse:
         headers["Authorization"] = f"Bearer {token}"
         headers["X-DevLoop-Token"] = token
 
-    # Payload — Hub entscheidet selbst welche Node, wenn keine angegeben
+    # Payload — Hub entscheidet selbst welche Node, wenn keine angegeben.
+    # OctoBoss /jobs/submit erwartet nested: {"workload": {"workload_type": ..., "params": {...}}, ...}
     target_node_id: str | None = body.get("target_node_id") or None
     prompt: str = body.get("prompt") or "Antworte in einem Satz: Was ist 2+2?"
 
-    payload: dict = {
-        "workload_type": "llm_inference",
+    workload_params: dict = {
         "prompt": prompt,
-        "max_tokens": 64,
+        "model": "tinyllama",
+    }
+    payload: dict = {
+        "workload": {
+            "workload_type": "llm_inference",
+            "params": workload_params,
+        },
+        "priority": 0,
+        "timeout_s": 120,
     }
     if target_node_id:
-        payload["target_node_id"] = target_node_id
+        payload["workload"]["params"]["target_node_id"] = target_node_id
 
     plog.step(
         "actions.octoboss.bench.start",
@@ -173,7 +181,7 @@ async def handle_octoboss_bench_start(body: dict) -> ActionTriggerResponse:
             result_summary="OctoBoss nicht erreichbar (Timeout).",
             payload={},
             duration_ms=duration_ms,
-            error=f"Timeout nach 15s: {exc}",
+            error=f"Timeout nach 15s (HTTP-Call): {exc}",
         )
 
     except (httpx.ConnectError, httpx.HTTPError) as exc:

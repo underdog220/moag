@@ -83,7 +83,7 @@ async def test_reachable_no_auth(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_reachable_with_auth_and_services(monkeypatch):
-    """Erreichbar mit Auth und Services — Score sollte hoch sein."""
+    """Erreichbar mit Auth und Containers — Score sollte hoch sein."""
     def handler(req: httpx.Request) -> httpx.Response:
         path = str(req.url.path)
         if path == "/api/auth/status":
@@ -92,16 +92,18 @@ async def test_reachable_with_auth_and_services(monkeypatch):
             return httpx.Response(200, json={
                 "system": {"cpu_usage": 25.5, "ram_usage": 60.0},
                 "raid": [{"name": "md0", "status": "NORMAL"}],
+                # Dashboard-Containers haben "state" (nicht "status")
                 "containers": [
-                    {"name": "oberon", "status": "running"},
-                    {"name": "octoboss", "status": "running"},
+                    {"name": "oberon", "state": "running"},
+                    {"name": "octoboss", "state": "running"},
                 ],
             })
-        if path == "/api/services/monitored":
+        # Adapter ruft jetzt /api/services/containers (mit "state"-Feld)
+        if path == "/api/services/containers":
             return httpx.Response(200, json=[
-                {"name": "Oberon", "status": "up"},
-                {"name": "OctoBoss", "status": "up"},
-                {"name": "Postgres", "status": "up"},
+                {"name": "oberon", "state": "running"},
+                {"name": "octoboss", "state": "running"},
+                {"name": "postgres", "state": "running"},
             ])
         if path == "/api/metrics/latest":
             return httpx.Response(200, json={"cpu_percent": 25.5, "ram_percent": 60.0})
@@ -114,6 +116,7 @@ async def test_reachable_with_auth_and_services(monkeypatch):
     status = await nasdominator.get_status(base_url="http://127.0.0.1:9090")
     assert status.ok is True
     assert status.score >= 80
+    # services_up/total = Container-Zaehlung aus /api/services/containers
     assert status.metrics.get("services_up") == 3
     assert status.metrics.get("services_total") == 3
     assert status.metrics.get("has_auth") is True
@@ -122,7 +125,7 @@ async def test_reachable_with_auth_and_services(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_score_drops_with_service_down(monkeypatch):
-    """Score faellt wenn ein Service down ist."""
+    """Score faellt wenn ein Container exited ist (via /api/services/containers)."""
     def handler(req: httpx.Request) -> httpx.Response:
         path = str(req.url.path)
         if path == "/api/auth/status":
@@ -133,11 +136,12 @@ async def test_score_drops_with_service_down(monkeypatch):
                 "raid": [],
                 "containers": [],
             })
-        if path == "/api/services/monitored":
+        # Adapter nutzt /api/services/containers mit "state"-Feld
+        if path == "/api/services/containers":
             return httpx.Response(200, json=[
-                {"name": "Oberon", "status": "up"},
-                {"name": "OctoBoss", "status": "down"},  # down
-                {"name": "Postgres", "status": "up"},
+                {"name": "oberon", "state": "running"},
+                {"name": "octoboss", "state": "exited"},   # nicht running
+                {"name": "postgres", "state": "running"},
             ])
         return httpx.Response(404)
 
@@ -147,18 +151,18 @@ async def test_score_drops_with_service_down(monkeypatch):
 
     status_partial = await nasdominator.get_status(base_url="http://127.0.0.1:9090")
 
-    # Jetzt alle Services up
+    # Jetzt alle Container running
     def handler_full(req: httpx.Request) -> httpx.Response:
         path = str(req.url.path)
         if path == "/api/auth/status":
             return httpx.Response(200, json={"setup_complete": True})
         if path == "/api/dashboard":
             return httpx.Response(200, json={"system": {"cpu_usage": 10.0}, "raid": [], "containers": []})
-        if path == "/api/services/monitored":
+        if path == "/api/services/containers":
             return httpx.Response(200, json=[
-                {"name": "Oberon", "status": "up"},
-                {"name": "OctoBoss", "status": "up"},
-                {"name": "Postgres", "status": "up"},
+                {"name": "oberon", "state": "running"},
+                {"name": "octoboss", "state": "running"},
+                {"name": "postgres", "state": "running"},
             ])
         return httpx.Response(404)
 
@@ -181,8 +185,9 @@ async def test_metrics_present_in_metrics_dict(monkeypatch):
                 "system": {"cpu_usage": 42.1, "ram_usage": 77.3},
                 "raid": [], "containers": [],
             })
-        if path == "/api/services/monitored":
-            return httpx.Response(200, json=[{"name": "Oberon", "status": "up"}])
+        # Adapter nutzt /api/services/containers
+        if path == "/api/services/containers":
+            return httpx.Response(200, json=[{"name": "oberon", "state": "running"}])
         return httpx.Response(404)
 
     transport = httpx.MockTransport(handler)
@@ -348,10 +353,11 @@ async def test_login_caches_cookie(monkeypatch):
                     "raid": [], "containers": [],
                 })
             return httpx.Response(401, json={"detail": "Nicht angemeldet"})
-        if path == "/api/services/monitored":
+        # Adapter ruft jetzt /api/services/containers (kein monitored mehr)
+        if path == "/api/services/containers":
             cookie = req.headers.get("Cookie", "")
             if "nasdom_token" in cookie:
-                return httpx.Response(200, json=[{"name": "Oberon", "status": "up"}])
+                return httpx.Response(200, json=[{"name": "oberon", "state": "running"}])
             return httpx.Response(401, json={"detail": "Nicht angemeldet"})
         return httpx.Response(404)
 
@@ -416,12 +422,13 @@ async def test_401_invalidates_and_retries(monkeypatch):
                 })
             # Altes Token oder kein Token -> 401
             return httpx.Response(401, json={"detail": "Token abgelaufen"})
-        if path == "/api/services/monitored":
+        # Adapter ruft /api/services/containers
+        if path == "/api/services/containers":
             cookie = req.headers.get("Cookie", "")
             if "new-fresh-token" in cookie:
                 return httpx.Response(200, json=[
-                    {"name": "Oberon", "status": "up"},
-                    {"name": "Postgres", "status": "up"},
+                    {"name": "oberon", "state": "running"},
+                    {"name": "postgres", "state": "running"},
                 ])
             return httpx.Response(401)
         return httpx.Response(404)
@@ -486,7 +493,9 @@ async def test_login_failed(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_get_services_with_cookie_auth(monkeypatch):
-    """get_services nutzt Cookie-Auth wenn username/password vorhanden."""
+    """get_services nutzt Cookie-Auth wenn username/password vorhanden.
+    get_services ruft jetzt /api/services/containers (Laufzeit-Status).
+    """
     nasdominator._cookie_cache.clear()
 
     def handler(req: httpx.Request) -> httpx.Response:
@@ -497,11 +506,12 @@ async def test_get_services_with_cookie_auth(monkeypatch):
                 json={"status": "ok", "token": "svc-token"},
                 headers={"Set-Cookie": "nasdom_token=svc-token; HttpOnly"},
             )
-        if path == "/api/services/monitored":
+        # get_services ruft /api/services/containers
+        if path == "/api/services/containers":
             cookie = req.headers.get("Cookie", "")
             if "svc-token" in cookie:
                 return httpx.Response(200, json=[
-                    {"name": "Oberon", "status": "up"},
+                    {"name": "oberon", "state": "running"},
                 ])
             return httpx.Response(401, json={"detail": "Nicht angemeldet"})
         return httpx.Response(404)

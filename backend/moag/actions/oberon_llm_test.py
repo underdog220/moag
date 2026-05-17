@@ -64,7 +64,7 @@ def _do_llm_test_sync() -> dict:
         "maxTokens": 10,
     }
 
-    with httpx.Client(timeout=15.0) as client:
+    with httpx.Client(timeout=35.0) as client:
         resp = client.post(f"{base_url}/api/v2/dsgvo/proxy", json=payload, headers=headers)
         resp.raise_for_status()
         return resp.json()

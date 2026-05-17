@@ -67,9 +67,11 @@ async def test_bench_start_custom_prompt(monkeypatch):
     result = await handle_octoboss_bench_start({"prompt": "Hallo Welt!", "target_node_id": "n42"})
 
     assert result.status == "started"
-    assert received_body.get("prompt") == "Hallo Welt!"
-    assert received_body.get("target_node_id") == "n42"
-    assert received_body.get("workload_type") == "llm_inference"
+    # Neue Nested-Struktur: {"workload": {"workload_type": ..., "params": {...}}, ...}
+    workload = received_body.get("workload", {})
+    assert workload.get("workload_type") == "llm_inference"
+    assert workload.get("params", {}).get("prompt") == "Hallo Welt!"
+    assert workload.get("params", {}).get("target_node_id") == "n42"
 
 
 @pytest.mark.asyncio

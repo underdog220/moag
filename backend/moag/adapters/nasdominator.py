@@ -217,13 +217,13 @@ async def get_status(
                             if str(r.get("status", "")).upper() not in ("NORMAL", "OK", "HEALTHY"):
                                 warn_count += 1
 
-                    # Container aus Dashboard
+                    # Container aus Dashboard (Feld "state": "running"/"exited"/"created")
                     containers_dash = dashboard_data.get("containers") or []
                     if isinstance(containers_dash, list):
                         containers_total = len(containers_dash)
                         containers_running = sum(
                             1 for c in containers_dash
-                            if str(c.get("status", "")).lower() in ("running", "up")
+                            if str(c.get("state", c.get("status", ""))).lower() in ("running", "up")
                         )
 
                     # System-Load aus Dashboard
@@ -281,11 +281,13 @@ async def get_status(
             except Exception as exc:
                 logger.debug("NasDominator /api/dashboard: %s", exc)
 
-            # ── Schritt 3: Services/Monitored (wenn Auth vorhanden) ────────────
+            # ── Schritt 3: Container-Status via /api/services/containers ─────────
+            # /api/services/monitored liefert nur Konfiguration (kein Status-Feld).
+            # /api/services/containers liefert Laufzeit-Status mit "state" (running/exited/created).
             if has_auth:
                 try:
                     resp_svc = await client.get(
-                        f"{base}/api/services/monitored", headers=auth_headers
+                        f"{base}/api/services/containers", headers=auth_headers
                     )
                     if resp_svc.is_success:
                         svc_data = resp_svc.json() or []
@@ -293,18 +295,18 @@ async def get_status(
                             services_total = len(svc_data)
                             services_up = sum(
                                 1 for s in svc_data
-                                if str(s.get("status", "")).lower() in ("up", "running", "ok", "healthy")
+                                if str(s.get("state", "")).lower() in ("running",)
                             )
                         elif isinstance(svc_data, dict):
-                            # Manche APIs wrappen in {"services": [...]}
-                            inner = svc_data.get("services") or []
+                            # Manche APIs wrappen in {"containers": [...]}
+                            inner = svc_data.get("containers") or svc_data.get("services") or []
                             services_total = len(inner)
                             services_up = sum(
                                 1 for s in inner
-                                if str(s.get("status", "")).lower() in ("up", "running", "ok", "healthy")
+                                if str(s.get("state", "")).lower() in ("running",)
                             )
                 except Exception as exc:
-                    logger.debug("NasDominator /api/services/monitored: %s", exc)
+                    logger.debug("NasDominator /api/services/containers: %s", exc)
 
                 # ── Schritt 4: Metriken (wenn Dashboard keine lieferte) ─────────
                 if not has_metrics:
@@ -378,9 +380,9 @@ async def get_status(
             elif not has_auth:
                 summary = "NasDominator erreichbar, aber Setup nicht abgeschlossen."
             elif services_total > 0:
+                # services_total/services_up = Container-Zählung aus /api/services/containers
                 summary = (
-                    f"NasDominator: {services_up}/{services_total} Services up"
-                    + (f" · {containers_running}/{containers_total} Container" if containers_total > 0 else "")
+                    f"NasDominator: {services_up}/{services_total} Container running"
                     + (f" · CPU {cpu_pct:.0f}%" if cpu_pct is not None else "")
                     + (f" · RAM {ram_pct:.0f}%" if ram_pct is not None else "")
                     + (f" · {warn_count} Warnungen" if warn_count > 0 else "")
@@ -458,9 +460,10 @@ async def get_services(
     password: str | None = None,
 ) -> dict:
     """
-    Liefert die Liste der ueberwachten Services (Critical-Services-Layer).
+    Liefert die Liste der Container mit Laufzeit-Status.
 
-    Ruft /api/services/monitored auf.
+    Ruft /api/services/containers auf (hat "state": running/exited/created).
+    /api/services/monitored enthaelt nur Konfiguration (kein Status-Feld).
     Bei 401 nach Re-Login: leere Liste mit Auth-Hinweis.
     """
     base = base_url.rstrip("/")
@@ -472,7 +475,7 @@ async def get_services(
                 auth_headers = {"Authorization": f"Bearer {token}"}
 
             resp = await client.get(
-                f"{base}/api/services/monitored", headers=auth_headers
+                f"{base}/api/services/containers", headers=auth_headers
             )
 
             # Bei 401: einmal Cache leeren + Re-Login
@@ -481,7 +484,7 @@ async def get_services(
                 auth_headers = await _get_auth_headers(client, base, username, password)
                 if auth_headers:
                     resp = await client.get(
-                        f"{base}/api/services/monitored", headers=auth_headers
+                        f"{base}/api/services/containers", headers=auth_headers
                     )
 
             if resp.status_code == 401:
@@ -493,7 +496,8 @@ async def get_services(
                 }
             resp.raise_for_status()
             data = resp.json()
-            services = data if isinstance(data, list) else data.get("services", [])
+            # Containers haben "state" (running/exited/created), kein "status"
+            services = data if isinstance(data, list) else data.get("containers", data.get("services", []))
             return {
                 "services": services,
                 "auth_required": False,
