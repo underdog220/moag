@@ -862,3 +862,40 @@ export interface OcrexpertProcessResponse {
   /** Alle weiteren service-spezifischen Felder. */
   [key: string]: unknown;
 }
+
+// ─── Upload-Hub-Typen (Endpoints unter /api/v1/upload*) ──────────────────────
+// Mirror der docs/UPLOAD_SCHEMA.md Pydantic-Schemas (verbindlich).
+
+/** Metadaten-Eintrag eines Uploads (nach POST /api/v1/upload oder GET /api/v1/uploads/{id}). */
+export interface Upload {
+  upload_id: string;                         // ULID (26 chars)
+  operation: string;                         // operation_id aus UPLOAD_SCHEMA.md
+  filename: string;                          // Original-Filename vom Client
+  size_bytes: number;
+  mime: string;                              // erkanntes MIME (Magic-Bytes + Endung)
+  uploaded_at: string;                       // ISO-8601 UTC
+  status: "queued" | "processing" | "completed" | "failed";
+  params: Record<string, unknown>;           // operation-spezifische Parameter
+}
+
+/** Ergebnis nach Operation-Abschluss (GET /api/v1/uploads/{id}/result). */
+export interface UploadResult {
+  upload_id: string;
+  status: "queued" | "processing" | "completed" | "failed";
+  operation: string;
+  completed_at: string | null;               // ISO-8601 UTC
+  duration_ms: number | null;
+  result_summary: string | null;             // 1-Satz-Zusammenfassung (deutsch)
+  result_payload: Record<string, unknown>;   // adapter-spezifische strukturierte Ergebnisdaten
+  artifact_url: string | null;              // /api/v1/uploads/{id}/artifact wenn Output-Datei existiert
+  artifact_mime: string | null;
+  error: string | null;                      // bei status=failed
+}
+
+/** Antwort von GET /api/v1/uploads (Liste mit Filter). */
+export interface UploadListResponse {
+  uploads: Upload[];
+  total: number;
+  limit: number;
+  offset: number;
+}

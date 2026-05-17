@@ -1,5 +1,5 @@
 // NavBar — MOAG-Hauptnavigation.
-// Zwei klar unterschiedliche Top-Achsen: "Übersicht" und "Aktionen".
+// Drei Top-Achsen: "Übersicht", "Aktionen", "Upload".
 // Sekundäre System-Links erscheinen nur unter der Übersicht-Achse.
 
 import { NavLink, useLocation } from "react-router-dom";
@@ -21,11 +21,17 @@ function isAktionenPath(pathname: string): boolean {
   return pathname.startsWith("/aktionen");
 }
 
+/** Prüft ob der aktuelle Pfad zur Upload-Achse gehört. */
+function isUploadPath(pathname: string): boolean {
+  return pathname.startsWith("/upload");
+}
+
 export function NavBar() {
   const { pathname } = useLocation();
   const aktionenActive = isAktionenPath(pathname);
-  // Übersicht-Achse ist aktiv wenn nicht Aktionen-Achse
-  const uebersichtActive = !aktionenActive;
+  const uploadActive = isUploadPath(pathname);
+  // Übersicht-Achse ist aktiv wenn keine andere Achse aktiv ist
+  const uebersichtActive = !aktionenActive && !uploadActive;
 
   return (
     <nav aria-label="Hauptnavigation" className="shrink-0">
@@ -65,6 +71,23 @@ export function NavBar() {
           }
         >
           Aktionen
+        </NavLink>
+
+        {/* Achse 3: Upload */}
+        <NavLink
+          to="/upload"
+          data-testid="nav-achse-upload"
+          className={({ isActive }) =>
+            `relative whitespace-nowrap px-4 py-3 text-sm font-semibold
+             min-h-[44px] flex items-center
+             transition-colors ${
+               isActive
+                 ? "text-fg after:absolute after:bottom-0 after:left-2 after:right-2 after:h-0.5 after:bg-brand"
+                 : "text-fg-muted hover:text-fg"
+             }`
+          }
+        >
+          Upload
         </NavLink>
       </div>
 

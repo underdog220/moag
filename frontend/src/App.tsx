@@ -9,6 +9,7 @@ import { useUiStore } from "./lib/store";
 // Top-Level-Features
 import Overview from "./features/overview";
 import AktionenFeature from "./features/aktionen";
+import UploadHubPage from "./features/upload";
 import OberonFeature from "./features/oberon";
 import OctoBossFeature from "./features/octoboss";
 import OCRexpertFeature from "./features/ocrexpert";
@@ -44,6 +45,9 @@ export function App() {
 
         {/* Aktionen: zweite Top-Achse — alle ausführbaren Operationen */}
         <Route path="/aktionen" element={<AktionenFeature />} />
+
+        {/* Upload-Hub: dritte Top-Achse — Datei-Upload + Verarbeitung */}
+        <Route path="/upload/*" element={<UploadHubPage />} />
 
         {/* KI-Backbone (SonOfSETI ist ueber /octoboss/* erreichbar) */}
         <Route path="/oberon/*" element={<OberonFeature />} />

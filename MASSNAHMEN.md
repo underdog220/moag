@@ -57,3 +57,17 @@ Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
   - A) Token-Storage: `scripts/deploy-vdr.ps1` neu (env-file-Pattern: `/etc/moag.env`, chmod 600, root). `docs/DEPLOYMENT_VDR.md` neu (Deploy-Anleitung + Token-Rotation). `.env.example`-Header mit ACHTUNG-Hinweis. `.gitignore` um `secrets.local.env` + `*.secrets.env` erweitert. Token-Storage-Offener-Punkt aus PROJEKT_STATUS.md entfernt.
   - B) SonOfSETI aufgeräumt: `backend/moag/adapters/sonofseti.py` gelöscht, `backend/tests/test_adapter_sonofseti.py` gelöscht (3 Tests), `frontend/src/features/sonofseti/index.tsx` + Ordner gelöscht. Kommentare in aggregator.py + test_api.py aktualisiert. FEATURES.md Deprecated-Eintrag auf "gelöscht 2026-05-17" angepasst. Legacy-Redirect `/sonofseti → /octoboss` in App.tsx bleibt.
   - Tests: 259/259 Backend grün (minus 7 gelöschte sonofseti-Tests), 355/355 Frontend grün, Build grün.
+
+## 2026-05-17 (Upload-Hub Frontend-Skelett)
+
+- [2026-05-17] [v0.1.0] **Upload-Hub — dritte Top-Achse `/upload` (Frontend-Skelett):**
+  - `frontend/src/lib/uploadOperations.ts` (NEU): `UploadOperation`-Interface + `UPLOAD_OPERATIONS[]` (alle 10 Operationen exakt nach `docs/UPLOAD_SCHEMA.md`), `compatibleOperations(mime)`, `detectMime(file)`, `formatBytes(n)`, `acceptString(op)`.
+  - `frontend/src/lib/types.ts` (Append): `Upload`, `UploadResult`, `UploadListResponse`.
+  - `frontend/src/lib/queryKeys.ts` (Append): `qk.uploads.{list,detail,result}`.
+  - `frontend/src/lib/api.ts` (Append): `api.upload.{submit,list,get,result,artifactUrl,delete}` + `UploadListFilter`-Interface. Mock-Modus bedient POST sofort mit completed-Result.
+  - `frontend/src/features/upload/` (NEU): 6 Dateien — `ParamsForm.tsx`, `ResultPanel.tsx`, `OperationCard.tsx`, `MultiDropZone.tsx`, `UploadHistory.tsx`, `UploadHubPage.tsx`, `index.tsx`.
+  - `frontend/src/components/NavBar.tsx`: dritte Achse "Upload" ergänzt, `isUploadPath()` korrekt.
+  - `frontend/src/App.tsx`: Route `/upload/*` → `UploadHubPage` registriert.
+  - `frontend/src/mocks/payloads.json` (Append): `GET /api/v1/uploads` (7 Beispiele verschiedener Operations+Status), `GET /api/v1/uploads/{id}/result`, `POST /api/v1/upload`.
+  - Tests (5 neue Dateien, 56 neue Tests): `uploadOperations.test.ts`, `ParamsForm.test.tsx`, `OperationCard.test.tsx`, `MultiDropZone.test.tsx`, `UploadHubPage.test.tsx`.
+  - **Ergebnis:** 73 Test-Files / 399 Tests grün, `npm run build` grün.

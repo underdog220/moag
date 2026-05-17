@@ -1149,5 +1149,123 @@
         "implemented": false
       }
     ]
+  },
+
+  "GET /api/v1/uploads": {
+    "uploads": [
+      {
+        "upload_id": "01HZ8ABCDE1FGHIJK2LMNOP3",
+        "operation": "ocr.standard",
+        "filename": "Rechnung_2026_05.pdf",
+        "size_bytes": 245760,
+        "mime": "application/pdf",
+        "uploaded_at": "2026-05-17T08:22:00Z",
+        "status": "completed",
+        "params": {}
+      },
+      {
+        "upload_id": "01HZ8ABCDE2FGHIJK3LMNOP4",
+        "operation": "llm.text",
+        "filename": "Vertrag_Muster.docx",
+        "size_bytes": 98304,
+        "mime": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "uploaded_at": "2026-05-17T09:05:00Z",
+        "status": "completed",
+        "params": { "prompt": "Fasse die wichtigsten Vertragsklauseln zusammen." }
+      },
+      {
+        "upload_id": "01HZ8ABCDE3FGHIJK4LMNOP5",
+        "operation": "audio.transcribe",
+        "filename": "Besprechung_2026_05_17.mp3",
+        "size_bytes": 5242880,
+        "mime": "audio/mpeg",
+        "uploaded_at": "2026-05-17T09:30:00Z",
+        "status": "processing",
+        "params": {}
+      },
+      {
+        "upload_id": "01HZ8ABCDE4FGHIJK5LMNOP6",
+        "operation": "dsgvo.redact",
+        "filename": "Kundendaten_Export.pdf",
+        "size_bytes": 1048576,
+        "mime": "application/pdf",
+        "uploaded_at": "2026-05-17T10:00:00Z",
+        "status": "failed",
+        "params": {}
+      },
+      {
+        "upload_id": "01HZ8ABCDE5FGHIJK6LMNOP7",
+        "operation": "pdf.split",
+        "filename": "Großes_Dokument_100S.pdf",
+        "size_bytes": 10485760,
+        "mime": "application/pdf",
+        "uploaded_at": "2026-05-17T10:15:00Z",
+        "status": "queued",
+        "params": {}
+      },
+      {
+        "upload_id": "01HZ8ABCDE6FGHIJK7LMNOP8",
+        "operation": "ocr.direct",
+        "filename": "Scan_Lageplan.tiff",
+        "size_bytes": 3145728,
+        "mime": "image/tiff",
+        "uploaded_at": "2026-05-17T10:20:00Z",
+        "status": "completed",
+        "params": { "engine": "surya" }
+      },
+      {
+        "upload_id": "01HZ8ABCDE7FGHIJK8LMNOP9",
+        "operation": "pii.scan",
+        "filename": "Patientendaten.txt",
+        "size_bytes": 8192,
+        "mime": "text/plain",
+        "uploaded_at": "2026-05-17T10:45:00Z",
+        "status": "completed",
+        "params": {}
+      }
+    ],
+    "total": 7,
+    "limit": 20,
+    "offset": 0
+  },
+
+  "GET /api/v1/uploads/01HZ8ABCDE1FGHIJK2LMNOP3/result": {
+    "upload_id": "01HZ8ABCDE1FGHIJK2LMNOP3",
+    "status": "completed",
+    "operation": "ocr.standard",
+    "completed_at": "2026-05-17T08:22:18Z",
+    "duration_ms": 18342,
+    "result_summary": "OCR erfolgreich: 3 Seiten, 1.847 Zeichen erkannt, Doctype: Rechnung (94%), 0 PII-Funde.",
+    "result_payload": {
+      "n_chars": 1847,
+      "pages": 3,
+      "doctype": "Rechnung",
+      "doctype_confidence": 0.94,
+      "pii_count": 0,
+      "engines_used": ["tesseract"]
+    },
+    "artifact_url": "/api/v1/uploads/01HZ8ABCDE1FGHIJK2LMNOP3/artifact",
+    "artifact_mime": "application/pdf",
+    "error": null
+  },
+
+  "POST /api/v1/upload": {
+    "upload_id": "01MOCK000000000000000001",
+    "status": "completed",
+    "operation": "ocr.standard",
+    "completed_at": "2026-05-17T10:50:00Z",
+    "duration_ms": 12500,
+    "result_summary": "Mock-OCR abgeschlossen: 2 Seiten, 956 Zeichen, Doctype: Unbekannt.",
+    "result_payload": {
+      "n_chars": 956,
+      "pages": 2,
+      "doctype": "Unbekannt",
+      "doctype_confidence": 0.42,
+      "pii_count": 0,
+      "engines_used": ["tesseract"]
+    },
+    "artifact_url": null,
+    "artifact_mime": null,
+    "error": null
   }
 }

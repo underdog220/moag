@@ -33,6 +33,9 @@ import type {
   OverviewResponse,
   ActionsResponse,
   ActionTriggerResponse,
+  Upload,
+  UploadResult,
+  UploadListResponse,
 } from "./types";
 
 const API_BASE = "/api";
@@ -138,6 +141,14 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     return (await res.json()) as T;
   }
   return (await res.text()) as unknown as T;
+}
+
+// --- Hilfst-Typen für Upload-Namespace ---
+export interface UploadListFilter {
+  status?: string;
+  operation?: string;
+  limit?: number;
+  offset?: number;
 }
 
 // --- High-level API ---
@@ -546,6 +557,96 @@ export const api = {
         method: "POST",
         body: { pfad },
       }),
+  },
+
+  // ─── Upload-Hub-API (/api/v1/upload*) ────────────────────────────────────────
+
+  upload: {
+    /**
+     * POST /api/v1/upload — Datei hochladen + Operation starten.
+     * Multipart/form-data mit Feldern: file, operation, params (JSON-String).
+     * Sync-Fall: 200 OK mit UploadResult.
+     * Async-Fall: 202 Accepted mit Upload (status=processing).
+     */
+    submit: async (
+      file: File,
+      operation: string,
+      params: Record<string, unknown> = {},
+    ): Promise<UploadResult> => {
+      if (isMockMode()) {
+        // Mock: sofort completed-Ergebnis zurückgeben
+        const mockResult: UploadResult = {
+          upload_id: `01MOCK${Date.now().toString(36).toUpperCase()}`,
+          status: "completed",
+          operation,
+          completed_at: new Date().toISOString(),
+          duration_ms: 1234,
+          result_summary: `Mock-Ergebnis für ${operation} auf „${file.name}"`,
+          result_payload: { mock: true, filename: file.name, operation },
+          artifact_url: null,
+          artifact_mime: null,
+          error: null,
+        };
+        return mockResult;
+      }
+      const fd = new FormData();
+      fd.append("file", file, file.name);
+      fd.append("operation", operation);
+      if (Object.keys(params).length > 0) {
+        fd.append("params", JSON.stringify(params));
+      }
+      const res = await fetch(`${API_BASE}/v1/upload`, {
+        method: "POST",
+        body: fd,
+        credentials: "same-origin",
+      });
+      if (!res.ok) {
+        let detail = res.statusText;
+        try {
+          const data = await res.json();
+          detail = typeof data?.detail === "string" ? data.detail : JSON.stringify(data);
+        } catch {
+          try { detail = await res.text(); } catch { /* ignore */ }
+        }
+        throw new ApiError(res.status, "/v1/upload", detail || `HTTP ${res.status}`);
+      }
+      return (await res.json()) as UploadResult;
+    },
+
+    /** GET /api/v1/uploads — Liste aller Uploads (mit Filter). */
+    list: (filter?: UploadListFilter): Promise<UploadListResponse> => {
+      const params = new URLSearchParams();
+      if (filter?.status) params.set("status", filter.status);
+      if (filter?.operation) params.set("operation", filter.operation);
+      if (filter?.limit != null) params.set("limit", String(filter.limit));
+      if (filter?.offset != null) params.set("offset", String(filter.offset));
+      const q = params.toString() ? `?${params}` : "";
+      return request<UploadListResponse>(`/v1/uploads${q}`);
+    },
+
+    /** GET /api/v1/uploads/{upload_id} — Upload-Metadaten. */
+    get: (id: string): Promise<Upload> =>
+      request<Upload>(`/v1/uploads/${encodeURIComponent(id)}`),
+
+    /** GET /api/v1/uploads/{upload_id}/result — Result-Payload (nach Abschluss). */
+    result: (id: string): Promise<UploadResult> =>
+      request<UploadResult>(`/v1/uploads/${encodeURIComponent(id)}/result`),
+
+    /** Helper: direkte URL für Artifact-Download (<a href> oder <img src>). */
+    artifactUrl: (id: string): string =>
+      `${API_BASE}/v1/uploads/${encodeURIComponent(id)}/artifact`,
+
+    /** DELETE /api/v1/uploads/{upload_id} — Upload + Result + Artifact löschen. */
+    delete: async (id: string): Promise<void> => {
+      if (isMockMode()) return;
+      const res = await fetch(`${API_BASE}/v1/uploads/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      if (!res.ok && res.status !== 204) {
+        throw new ApiError(res.status, `/v1/uploads/${id}`, res.statusText);
+      }
+    },
   },
 };
 

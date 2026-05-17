@@ -81,4 +81,12 @@ export const qk = {
     ruleLastRun: (ruleId: string) => ["custos", "rules", ruleId, "last-run"] as const,
     audit: ["custos", "audit"] as const,
   },
+
+  // Upload-Hub-API (/api/v1/upload*)
+  uploads: {
+    list: (filter?: { status?: string; operation?: string; limit?: number; offset?: number }) =>
+      ["uploads", "list", filter ?? null] as const,
+    detail: (id: string) => ["uploads", "detail", id] as const,
+    result: (id: string) => ["uploads", "result", id] as const,
+  },
 } as const;
