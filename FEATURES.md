@@ -115,6 +115,11 @@ _(noch leer)_
 
 ---
 
+### Aktionen-API (Phase 1, V1)
+- Was: GET /api/v1/actions (Registry-Liste) + POST /api/v1/actions/{id}/trigger. 3 echte Aktionen (oberon.smoke, ocrexpert.health.check, octoboss.cluster.status) + 9 Stubs. Registry-Pattern mit @register-Dekorator. Pipeline-Logging via plog. ActionTriggerResponse-Schema per docs/ACTIONS_SCHEMA.md.
+- Code: `backend/moag/actions/`, `backend/moag/schemas.py`
+- Tests: `tests/test_actions_oberon_smoke.py`, `tests/test_actions_ocrexpert_health.py`, `tests/test_actions_octoboss_cluster_status.py`, `tests/test_actions_stubs.py`, `tests/test_api.py` (Aktionen-Section)
+
 ## Geplante Features (V1, aus Architektur-Konsens 2026-05-16)
 
 Diese Liste rutscht nach Implementierung in `Aktiv`. Heute sind sie Planungs-Backlog.

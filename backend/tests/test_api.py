@@ -533,3 +533,94 @@ def test_settings_doctype_gewichte_round_trip(client):
     r2 = client.get("/api/settings")
     assert r2.status_code == 200
     assert r2.json()["doctype_text_gewicht"] == 0.6
+
+
+# ── Aktionen-API Tests ─────────────────────────────────────────────────────────
+
+
+def test_list_actions_returns_min_10(client):
+    """GET /api/v1/actions liefert ≥10 Aktionen (3 echte + 9 Stubs = 12 gesamt)."""
+    r = client.get("/api/v1/actions")
+    assert r.status_code == 200
+    data = r.json()
+    assert "actions" in data
+    assert "fetched_at" in data
+    actions = data["actions"]
+    assert len(actions) >= 10, f"Erwartet ≥10 Aktionen, bekommen: {len(actions)}"
+
+
+def test_list_actions_schema_valid(client):
+    """Jede Aktion im Response muss das verbindliche Schema erfuellen."""
+    r = client.get("/api/v1/actions")
+    assert r.status_code == 200
+    actions = r.json()["actions"]
+
+    required_fields = {
+        "action_id", "system_id", "name", "description",
+        "category", "requires_confirm", "is_destructive", "implemented",
+    }
+    for action in actions:
+        for field in required_fields:
+            assert field in action, f"Feld '{field}' fehlt in Aktion {action.get('action_id')!r}"
+        assert action["category"] in ("diagnose", "config", "operation"), \
+            f"Ungueltige category in {action['action_id']!r}: {action['category']!r}"
+
+
+def test_list_actions_contains_real_and_stubs(client):
+    """Registry enthaelt sowohl echte (implemented=True) als auch Stubs (implemented=False)."""
+    r = client.get("/api/v1/actions")
+    actions = r.json()["actions"]
+    implemented = [a for a in actions if a["implemented"] is True]
+    stubs = [a for a in actions if a["implemented"] is False]
+    assert len(implemented) >= 3, f"Erwartet ≥3 echte Aktionen, bekommen: {len(implemented)}"
+    assert len(stubs) >= 7, f"Erwartet ≥7 Stubs, bekommen: {len(stubs)}"
+
+
+def test_trigger_action_404_unknown(client):
+    """Unbekannte action_id muss 404 liefern."""
+    r = client.post("/api/v1/actions/does.not.exist/trigger")
+    assert r.status_code == 404
+    assert "nicht registriert" in r.json()["detail"]
+
+
+def test_trigger_action_stub_returns_200(client):
+    """Ein Stub liefert HTTP 200 mit status=not_implemented (kein 4xx)."""
+    r = client.post("/api/v1/actions/oberon.llm.test/trigger")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "not_implemented"
+    assert data["action_id"] == "oberon.llm.test"
+    assert "implementiert" in (data["result_summary"] or "").lower()
+
+
+def test_trigger_action_stub_with_body(client):
+    """Stub nimmt Body entgegen ohne zu crashen."""
+    r = client.post(
+        "/api/v1/actions/octoboss.node.reboot/trigger",
+        json={"node_id": "test-node"},
+    )
+    assert r.status_code == 200
+    data = r.json()
+    assert data["status"] == "not_implemented"
+
+
+def test_list_actions_includes_mandatory_ids(client):
+    """Alle Pflicht-Aktions-IDs gemaess Schema-Spec muessen vorhanden sein."""
+    r = client.get("/api/v1/actions")
+    ids = {a["action_id"] for a in r.json()["actions"]}
+    mandatory = {
+        "oberon.smoke",
+        "ocrexpert.health.check",
+        "octoboss.cluster.status",
+        "oberon.llm.test",
+        "oberon.dsgvo.check",
+        "octoboss.bench.start",
+        "octoboss.node.reboot",
+        "octoboss.ollama.pull",
+        "ocrexpert.shadow.batch",
+        "nasdominator.services.refresh",
+        "custos.rules.run",
+        "panopticor.scenario.trigger",
+    }
+    missing = mandatory - ids
+    assert not missing, f"Fehlende action_ids: {missing}"

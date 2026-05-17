@@ -26,6 +26,7 @@ from typing import Any, Optional
 
 from fastapi import (
     BackgroundTasks,
+    Body,
     FastAPI,
     File,
     Form,
@@ -401,6 +402,39 @@ def create_app(
             "groups": groups_array,
             "computed_at": raw["computed_at"],
         }
+
+    # ── Aktionen-API ───────────────────────────────────────────────────────
+
+    # Import erzwingt Ausfuehren aller @register-Dekoratoren (einmalig beim App-Start)
+    import moag.actions as _actions_pkg  # noqa: F401 — Side-Effect: Registry befuellen
+    from moag.actions.registry import ACTION_REGISTRY
+    from moag.schemas import ActionTriggerResponse
+
+    @app.get("/api/v1/actions")
+    async def list_actions() -> dict:
+        """Liefert die vollstaendige Aktions-Registry (implementierte + Stubs)."""
+        return {
+            "actions": [a.meta.model_dump() for a in ACTION_REGISTRY.values()],
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    @app.post("/api/v1/actions/{action_id}/trigger", response_model=ActionTriggerResponse)
+    async def trigger_action(
+        action_id: str,
+        body: dict | None = Body(default=None),
+    ) -> dict:
+        """Fuehrt eine Aktion aus. 404 wenn action_id unbekannt.
+
+        Stub-Aktionen liefern HTTP 200 mit status='not_implemented'.
+        """
+        if action_id not in ACTION_REGISTRY:
+            raise HTTPException(
+                status_code=404,
+                detail=f"action_id '{action_id}' nicht registriert",
+            )
+        defn = ACTION_REGISTRY[action_id]
+        result = await defn.handler(body or {})
+        return result.model_dump()
 
     # ── Pipeline-Log-Export ────────────────────────────────────────────────
 

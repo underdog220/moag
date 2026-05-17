@@ -21,4 +21,4 @@ Phase 2: Top-Health-Leiste echte Daten + Pflicht-Tooltip-Komponente verfeinern +
 - sonofseti-Adapter: node_addresses aus Settings versorgen
 
 ## Letzte Änderung
-2026-05-17 — SonOfSETI-Karte raus (jetzt 7 Top-Karten, Nodes via OctoBoss-Drilldown), SystemCard komplett klickbar, OctoBoss-Score-Formel ehrlich gemacht (Hardware/Ollama/Mode-gewichtet) — Live-Score springt von trügerischen 92 auf realistische 42. 124/124 Tests grün, Smoke 5/5.
+2026-05-17 — Aktionen-API V1: 12 Aktionen in Registry (3 echt + 9 Stubs), GET /api/v1/actions + POST /trigger. 154/154 Tests grün.
