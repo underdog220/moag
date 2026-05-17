@@ -1,33 +1,23 @@
-// NasDominator-Feature — Stub (Phase 3 — noch nicht angebunden).
+// NasDominator-Feature — Drilldown mit Sub-Tabs: Services | Metriken | Container
+// Phase 3: echte HTTP-Anbindung an FastAPI Port 9090 auf QNAP-NAS.
 
-import { PageBadge } from "../../components/PageBadge";
-import { Breadcrumb } from "../../components/Breadcrumb";
+import { Navigate, Route, Routes } from "react-router-dom";
+import { NasDominatorLayout } from "./NasDominatorLayout";
+import ServicesPage from "./pages/Services";
+import MetricsPage from "./pages/Metrics";
+import ContainerPage from "./pages/Container";
 
 export function NasDominatorFeature() {
   return (
-    <div className="flex flex-col" data-testid="nasdominator">
-      <Breadcrumb />
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-        <div className="rounded-full bg-status-warn/10 p-4">
-          <span className="text-3xl">🏗</span>
-        </div>
-        <h1 className="text-xl font-semibold text-fg">NasDominator</h1>
-        <p className="max-w-sm text-sm text-fg-muted">
-          Phase 3 — noch nicht angebunden. Die NAS-Health-Karte und Critical-Services-Drilldown
-          werden in Phase 3 implementiert. API-Endpoint: FastAPI Port 9090 auf QNAP.
-        </p>
-        <a
-          href="http://192.168.200.169:9090"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="rounded border border-white/10 bg-bg-panel px-4 py-2 text-sm text-fg
-                     hover:bg-bg-subtle"
-        >
-          NasDominator direkt öffnen →
-        </a>
-      </div>
-      <PageBadge id="nasdominator" />
-    </div>
+    <Routes>
+      <Route element={<NasDominatorLayout />}>
+        <Route index element={<Navigate to="services" replace />} />
+        <Route path="services" element={<ServicesPage />} />
+        <Route path="metrics" element={<MetricsPage />} />
+        <Route path="containers" element={<ContainerPage />} />
+        <Route path="*" element={<Navigate to="services" replace />} />
+      </Route>
+    </Routes>
   );
 }
 

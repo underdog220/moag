@@ -6,17 +6,33 @@ Alle Stubs muessen:
 - implemented=False haben
 - status=not_implemented liefern
 - keine Exception werfen
+
+Aktueller Stand: die meisten ehemals als Stubs deklarierten Aktionen sind
+inzwischen echt implementiert. Nur 3 verbliebene echte Stubs werden hier
+geprueft. Alle echten Aktionen haben eigene Test-Dateien.
 """
 from __future__ import annotations
 
 import pytest
 
-import moag.actions  # noqa: F401 — stellt sicher dass Registry befuellt ist
+import moag.actions  # noqa: F401 -- stellt sicher dass Registry befuellt ist
 from moag.actions.registry import ACTION_REGISTRY
 from moag.schemas import ActionTriggerResponse
 
-# Liste aller erwarteten Stubs gemaess docs/ACTIONS_SCHEMA.md V1-Mindestmenge
+# Verbleibende Stubs (implemented=False) nach aktueller Registry
 STUB_IDS = [
+    # nasdominator.services.refresh ist seit Phase 3 ECHT (implemented=True)
+    # Eigen-Test: test_actions_nasdominator_services_refresh.py
+    "octoboss.node.reboot",
+    "panopticor.scenario.trigger",
+]
+
+# Alle Pflicht-Aktions-IDs gemaess Schema-Spec muessen vorhanden sein --
+# einige davon sind jetzt echt (implemented=True), einige sind Stubs
+ALL_MANDATORY_IDS = [
+    "oberon.smoke",
+    "ocrexpert.health.check",
+    "octoboss.cluster.status",
     "oberon.llm.test",
     "oberon.dsgvo.check",
     "octoboss.bench.start",
@@ -29,14 +45,20 @@ STUB_IDS = [
 ]
 
 
+def test_all_mandatory_in_registry():
+    """Alle Pflicht-Aktions-IDs aus ACTIONS_SCHEMA.md muessen vorhanden sein."""
+    for action_id in ALL_MANDATORY_IDS:
+        assert action_id in ACTION_REGISTRY, f"Pflicht-ID '{action_id}' fehlt in ACTION_REGISTRY"
+
+
 def test_all_stubs_in_registry():
-    """Alle Stub-IDs muessen in der Registry sein."""
+    """Alle verbleibenden Stub-IDs muessen in der Registry sein."""
     for action_id in STUB_IDS:
         assert action_id in ACTION_REGISTRY, f"Stub '{action_id}' fehlt in ACTION_REGISTRY"
 
 
 def test_stubs_have_implemented_false():
-    """Alle Stubs muessen implemented=False haben."""
+    """Verbleibende Stubs muessen implemented=False haben."""
     for action_id in STUB_IDS:
         meta = ACTION_REGISTRY[action_id].meta
         assert meta.implemented is False, f"Stub '{action_id}' hat implemented=True (erwartet False)"
