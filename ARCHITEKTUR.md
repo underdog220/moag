@@ -140,19 +140,27 @@ C:\code\moag\
 
 MOAG wird in `C:\code\docs\projects.yaml` eingetragen. Capabilities-File `docs/capabilities/moag.yaml` wird gegen `_schema.yaml` validiert (Task #5). Drift-Check vor jedem Push.
 
-## 9. Phasenplan
+## 9. Phasenplan (Stand 2026-05-17)
 
-| Phase | Inhalt | Akzeptanzkriterium |
+| Phase | Inhalt | Akzeptanzkriterium | Status |
+|---|---|---|---|
+| **0** | Pflicht-Doku + GitHub-Repo + Cross-Projekt-Doku-Eintrag | Repo `underdog220/moag` existiert | ✅ done |
+| **1** | Hard-Fork OCRexpert-GUI nach moag, Rename, Container `moag:0.1.0` auf VDR live | Container läuft, KI-Backbone-Cards rendern | ✅ done |
+| **2** | Top-Health-Leiste + Gruppen-Score + Pflicht-Tooltip + PageBadge | Top-Leiste sichtbar, Tooltips überall | ✅ done |
+| **3** | NasDominator-Adapter + Card + Drilldown | Card zeigt Live-Daten, Drilldown listet Services/Container/Metrics | ✅ done (Cookie-Auth + Score 85 live) |
+| **4** | Custos-Adapter + Findings-Card + Drilldown | Card zeigt Findings, Drilldown listet Rules | ✅ done (Adapter echt, Service heute aus → score=0) |
+| **5** | qnapbackup-CR (#3) umgesetzt → Adapter + Card + iframe | Card zeigt last_backup, iframe öffnet Web-UI | ⏳ wartet auf qnapbackup-CR-Umsetzung |
+| **6** | Panopticor-CR (#4) umgesetzt → Adapter + Card + Action-Buttons | Card zeigt last_run, Scenario-Trigger funktioniert | ⏳ wartet auf Panopticor-CR-Umsetzung |
+| **7** | Mobile-Optimierung + Long-Press-Tooltips + Touch-Targets | Lighthouse Mobile ≥ 90, alle Cards lesbar auf 360px | ✅ done (Lighthouse-Messung optional) |
+| **8** | OCRexpert-GUI-Code deaktivieren (Container stoppen, Branch archivieren) | OCRexpert hat keine `gui/`-Routen mehr | ⏳ ausstehend |
+
+### Zusätzliche Phasen (nach 2026-05-17 ergänzt)
+
+| Phase | Inhalt | Status |
 |---|---|---|
-| **0** | Pflicht-Doku + GitHub-Repo + Cross-Projekt-Doku-Eintrag | Repo `underdog220/moag` existiert, `yaml-validate.py` grün |
-| **1** | Hard-Fork OCRexpert-GUI nach moag, Rename, Container `moag:0.1.0` auf VDR live | Container läuft, alle 4 KI-Backbone-Cards rendern, Tests grün |
-| **2** | Top-Health-Leiste + Gruppen-Score + Pflicht-Tooltip-Komponente + PageBadge | Top-Leiste sichtbar auf jeder Route, jeder Button hat Tooltip |
-| **3** | NasDominator-Adapter + Card + Drilldown Tiefe 2 | Card zeigt Live-Daten, Drilldown listet Critical-Services |
-| **4** | Custos-Adapter + Findings-Card + Drilldown | Card zeigt Top-3-offene-Findings, Drilldown listet alle Regeln |
-| **5** | qnapbackup-CR (#3) umgesetzt → Adapter + Card + iframe-Voll-Ansicht | Card zeigt last_backup, iframe öffnet vorhandenes Web-UI |
-| **6** | Panopticor-CR (#4) umgesetzt → Adapter + Card + Detail mit Action-Buttons | Card zeigt last_run, Scenario-Trigger funktioniert |
-| **7** | Mobile-Optimierung + Long-Press-Tooltips + Touch-Targets | Lighthouse Mobile ≥ 90, alle Cards lesbar auf 360px |
-| **8** | OCRexpert-GUI-Code deaktivieren (Container stoppen, Code-Branch archivieren) | OCRexpert hat keine `gui/`-Routen mehr, MOAG vollständig |
+| **1.5** | OCRexpert-Pipeline-Trigger aus MOAG (POST /api/v1/process + Upload-Card) | ✅ implementiert, Live-Verifikation offen wegen Body-Schema-Drift (siehe FEATURES.md Klärungsbedarf) |
+| **Aktionen-V1** | `/api/v1/actions` + Trigger + ActionCard-DRY-Komponente | ✅ done (12 Aktionen registriert, 11 echt) |
+| **Drilldown-Erweiterung** | Pro System Sub-Routen + Backend-Proxy-Routes | ✅ done (Oberon 8, OctoBoss 7, OCRexpert 5, NasDom 3, Custos 3) |
 
 ## 10. Pflichten aus globaler CLAUDE.md
 

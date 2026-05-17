@@ -1,201 +1,173 @@
 # FEATURES — MOAG
 
+Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12 echten Aktionen.
+
 ## Aktiv
 
-### Hard-Fork Frontend (Phase 1)
-- Was: `frontend/` — vollständige Vite+React+TS-App, fork aus OCRexpert-GUI-Prototyp
-- Code: `frontend/src/`
-- Tests: 59 Test-Files, 272 Tests grün
+### Cockpit & Navigation
 
-### Aktionen-Achse (Frontend)
-- Was: Zweite Top-Achse `/aktionen` — alle ausführbaren Operationen, gruppiert nach Sub-System. DRY-Komponenten für Phase-2-Drilldown-Wiederverwendung.
-- Code: `frontend/src/features/aktionen/` (ActionCard, AktionenPage, index)
-- Abhängigkeiten: `ConfirmDialog.tsx`, Tooltip (ADR-004), PageBadge
-- Tests: `ActionCard.test.tsx` (12), `AktionenPage.test.tsx` (7), `ConfirmDialog.test.tsx` (7)
-- Mock-Daten: 12 Aktionen in `mocks/payloads.json` (3 implementiert: oberon.smoke, ocrexpert.health.check, octoboss.cluster.status; 9 Stubs)
+#### Overview-Dashboard
+- **Was:** 7 Karten in 3 Gruppen (KI-Backbone · Infrastruktur · Compliance & Test), je Karte mit Hero-Gauge + Mini-Indikatoren + Status-Dot
+- **Klickbar:** Gesamte Card ist `<Link>`, Hover-Brand-Akzent (nicht nur Button)
+- **Code:** `frontend/src/features/overview/{Overview.tsx, SystemCard.tsx}`
+- **Datenquelle:** `GET /api/v1/overview`
 
-### ConfirmDialog-Komponente
-- Was: Generischer Modal-Dialog (ESC + Backdrop = Cancel, danger-Modus, custom Labels)
-- Code: `frontend/src/components/ConfirmDialog.tsx`
-- Tests: `frontend/src/components/ConfirmDialog.test.tsx` (7 Tests)
+#### TopBar (sticky, alle Routen)
+- **Was:** MOAG-Logo · Gesamt-Health-Score + Mini-Balken · 3 Gruppen-Indikatoren (Hover-Popover) · Alert-Counter · Theme-Toggle · Settings
+- **Code:** `frontend/src/components/TopBar.tsx`
+- **Datenquelle:** `GET /api/v1/aggregator/health` (Polling 10s, Placeholder-Fallback)
+- **Mobile:** schrumpft auf `MOAG · {score}%`
 
-### NavBar zweistufig (Achsen-Navigation)
-- Was: Zwei Haupt-Achsen-Buttons (Übersicht / Aktionen) + sekundäre System-Links nur unter Übersicht-Achse sichtbar
-- Code: `frontend/src/components/NavBar.tsx`
+#### NavBar zweistufig (Achsen-Navigation)
+- **Was:** Top-Achsen `[Übersicht] [Aktionen]` + sekundäre System-Links (nur unter Übersicht)
+- **Code:** `frontend/src/components/NavBar.tsx`
 
-### Overview-Cockpit-Seite
-- Was: 8 Karten in 3 Gruppen (KI-Backbone / Infrastruktur / Compliance & Test), Hero-Gauge, Mock-Daten
-- Code: `frontend/src/features/overview/`
-- Tests: `frontend/src/features/overview/Overview.test.tsx` (4 Tests)
+#### Aktionen-Achse `/aktionen`
+- **Was:** Alle ausführbaren Operationen, gruppiert nach Sub-System. 12 Aktionen heute.
+- **Code:** `frontend/src/features/aktionen/{AktionenPage,ActionCard,index}.tsx`
+- **DRY:** ActionCard wird in System-Drilldowns wiederverwendet (Phase 1-Vertrag)
 
-### TopBar mit Health-Score
-- Was: Sticky TopBar, MOAG-Logo, Gesamt-Health-Score + Gruppen-Indikatoren (KI/Infra/Compl+Test) + Alert-Counter, Hover-Popover
-- Code: `frontend/src/components/TopBar.tsx`
-- Tests: `frontend/src/components/TopBar.test.tsx` (3 Tests)
-- Datenquelle: `/api/v1/aggregator/health` (Polling 10s, Placeholder-Daten wenn Backend offline)
+### Frontend-Komponenten (gemeinsam)
 
-### Tooltip-Komponente (ADR-004)
-- Was: Hover-Tooltip mit Titel/Quelle/Aktualisierung/Schwellwert, Long-Press für Mobile
-- Code: `frontend/src/components/Tooltip.tsx`
-- Tests: `frontend/src/components/Tooltip.test.tsx` (3 Tests)
+| Komponente | Code | Pflicht aus |
+|---|---|---|
+| `Tooltip` (Hover + Long-Press) | `components/Tooltip.tsx` | ADR-004 |
+| `Gauge` (hero + mini, Schwellwerte) | `components/Gauge.tsx` | ADR-003 |
+| `PageBadge` (`pg:<route> · commit · ts`) | `components/PageBadge.tsx` | globale CLAUDE.md |
+| `ConfirmDialog` (generisch, danger-Modus) | `components/ConfirmDialog.tsx` | ADR-007 (Action-Pflicht) |
+| `Breadcrumb` | `components/Breadcrumb.tsx` | ADR-003 |
+| `StatusDot`, `LoadingSpinner`, `EmptyState` | `components/` | — |
 
-### Gauge-Komponente (hero + mini)
-- Was: Hero-Gauge (SVG-Ring, 80px) + Mini-Gauge (Balken), Farb-Codierung grün/gelb/rot, Tooltip-Pflicht
-- Code: `frontend/src/components/Gauge.tsx`
-- Tests: `frontend/src/components/Gauge.test.tsx` (5 Tests)
+### Per-System-Drilldowns
 
-### PageBadge (globale Pflicht)
-- Was: `pg:<route> · <commit-hash> · <build-ts>` unten rechts, auf jeder Top-Level-Seite
-- Code: `frontend/src/components/PageBadge.tsx`
-- Tests: `frontend/src/components/PageBadge.test.tsx` (1 Test)
+#### Oberon (`/oberon/*`)
+- **Sub-Routen:** `providers` · `cost` · `audit` · `smoke` · `instances` · `pii-tuning` · `db-broker` · `contract`
+- **Backend:** `routes_oberon.py` (10 Proxy-Routes) + `clients/oberon_cockpit_client.py` + `clients/oberon_platform_client.py`
+- **Aktionen integriert:** ActionCards für `oberon.smoke`, `oberon.llm.test`, `oberon.dsgvo.check`
 
-### Breadcrumb
-- Was: Navigations-Pfad `MOAG › Oberon › LLM`, Klick-Navigation
-- Code: `frontend/src/components/Breadcrumb.tsx`
-- Tests: `frontend/src/components/Breadcrumb.test.tsx` (3 Tests)
+#### OctoBoss (`/octoboss/*`)
+- **Sub-Routen:** `nodes` (Liste) · `nodes/:id` (Detail) · `jobs` · `assets` · `cluster` (Sync/Peers) · `ocr` · `llm-models`
+- **Backend:** `routes_octoboss.py` (9 Proxy-Routes)
+- **Score-Formel:** ehrlich gewichtet (40% connected · 30% Ollama · 20% Hardware-Telemetrie · 10% Mode IDLE/ACTIVE)
+- **Aktionen integriert:** `octoboss.cluster.status`, `octoboss.bench.start`, `octoboss.ollama.pull`
 
-### Feature-Wrapper: Oberon
-- Was: `/oberon/*` mit Sub-Routen llm/cost/audit/smoke
-- Code: `frontend/src/features/oberon/`
+#### OCRexpert (`/ocrexpert/*`)
+- **Sub-Routen:** `jobs` (mit Upload-Card + Pfad-Eingabe + UNC→Linux-Konvertierung) · `history` · `charts` · `capabilities` · `logs` (Tail mit Copy)
+- **Backend:** `routes_ocrexpert.py` (4 Proxy-Routes inkl. POST /process)
+- **Adapter:** ehrliche Score-Formel (40% status=ok · 25% engines_local · 20% octoboss_reachable · 10% libreoffice · 5% shadow)
+- **Aktionen integriert:** `ocrexpert.health.check`, `ocrexpert.shadow.batch`, `ocrexpert.process`
 
-### Feature-Wrapper: OctoBoss
-- Was: `/octoboss/*` mit Sub-Routen dashboard/cluster
-- Code: `frontend/src/features/octoboss/`
+#### NasDominator (`/nasdominator/*`)
+- **Sub-Routen:** `services` · `metrics` · `container`
+- **Backend:** `routes_nasdominator.py` (4 Proxy-Routes) + Cookie-Session-Auth via `/api/auth/login`
+- **Adapter:** ehrliche Score-Formel (40% reachable · 30% Container running · 20% Metrics · 10% kein Warn). Live-Score 85.
+- **Aktion integriert:** `nasdominator.services.refresh`
 
-### Feature-Wrapper: OCRexpert
-- Was: `/ocrexpert/*` mit Sub-Routen jobs/history/charts
-- Code: `frontend/src/features/ocrexpert/`
+#### Custos (`/custos/*`)
+- **Sub-Routen:** `findings` · `rules` · `audit`
+- **Backend:** `routes_custos.py` (5 Proxy-Routes)
+- **Adapter:** 3-Phasen-Probe (health → engine/status → findings), Score 50/30/20
+- **Aktion integriert:** `custos.rules.run`
 
-### Feature-Wrapper: SonOfSETI
-- Was: `/sonofseti` — Node-Liste aus OctoBoss-Proxy
-- Code: `frontend/src/features/sonofseti/`
+#### Stubs (`/nasdominator` Container-Tab existiert, `/qnapbackup/*` · `/panopticor/*`)
+- qnapbackup: Stub-Card, wartet auf CR #3 (`requests/open/2026-05-16-moag-status-endpoint.md`)
+- panopticor: Stub-Card, wartet auf CR #4 (`requests/open/2026-05-16-moag-status-api.md`)
 
-### Mobile-Optimierung (Phase 7)
-- Was: Touch-Targets ≥ 44px, Long-Press-Tooltip, Sub-Tab-Nav scrollbar, Tabellen overflow-x-auto, PageBadge Mobile-kompakt
-- Code: `frontend/src/components/Tooltip.tsx`, `TopBar.tsx`, `NavBar.tsx`, `ConfirmDialog.tsx`, `PageBadge.tsx`, alle Sub-Tab-Layouts, `aktionen/ActionCard.tsx`, `nasdominator/pages/Services.tsx`, `nasdominator/pages/Container.tsx`, `oberon/pages/Audit.tsx`
-- Tests: `Tooltip.test.tsx` — 3 neue Long-Press-Tests (6 Tests gesamt grün)
+### Backend-Architektur
 
-### Stubs: NasDominator, qnapbackup, Custos, Panopticor
-- Was: Platzhalter-Seiten mit Info + Direktlink, je Phase 3–6
-- Code: `frontend/src/features/{nasdominator,qnapbackup,custos,panopticor}/`
+#### Aggregator (`/api/v1/aggregator/health`)
+- **Gruppen:** KI-Backbone (50%) · Infrastruktur (30%) · Compliance & Test (20%)
+- **Schema:** Array-Form für TopBar (`groups[].{name,score,systems[].{name,score,ok}}`) + `alert_count` + `overall_score`
+- **Single-Source-of-Truth:** `aggregator.SYSTEM_INFO` Map für (name, group_label)
+- **Code:** `backend/moag/aggregator.py`, `backend/moag/api.py`
 
-## Migriert (war in alter Version, ist in neuer Version)
+#### Overview-API (`/api/v1/overview`)
+- **Liefert:** 7 `SystemStatus` mit `id`, `name`, `group`, `ok`, `score`, `summary`, `metrics`, `fetched_at`
+- **Parallel:** `asyncio.gather(return_exceptions=True)` — kaputte Adapter brechen nichts
+- **Code:** `backend/moag/api.py`
 
-### LLM-Tab (Oberon Cockpit)
-- War: `ocrexpert/gui_frontend/src/features/llm/`
-- Ist: `frontend/src/features/llm/` → eingebunden als Sub-Route `/oberon/llm`
-- Datum: 2026-05-16
+#### Aktionen-API (`/api/v1/actions` + `/api/v1/actions/{id}/trigger`)
+- **Registry-Pattern:** `@register(Action(...))` Decorator
+- **12 Aktionen:** 11 echt (oberon.smoke/.llm.test/.dsgvo.check, octoboss.cluster.status/.bench.start/.ollama.pull, ocrexpert.health.check/.shadow.batch/.process, nasdominator.services.refresh, custos.rules.run) + 1 echt mit Service-Abhängigkeit (custos.rules.run scheitert wenn Custos-Service aus) + 2 Stubs (octoboss.node.reboot destruktiv-bewusst, panopticor.scenario.trigger CR-pending)
+- **Code:** `backend/moag/actions/` (Registry + 12 Module + Tests)
+- **Schema:** `docs/ACTIONS_SCHEMA.md` (verbindlich)
 
-### Cost-Tab (Oberon Cockpit)
-- War: `ocrexpert/gui_frontend/src/features/cost/`
-- Ist: `frontend/src/features/cost/` → `/oberon/cost`
-- Datum: 2026-05-16
+#### Settings + Cookie-Auth
+- **Settings-Store:** JSON-Persistenz mit Listener-Pattern, ENV-Overrides (`MOAG_*`)
+- **Spezifisch NasDominator:** `nasdominator_user` + `nasdominator_password` ENV → Cookie-Session-Cache (TTL 10min) im Adapter
+- **Code:** `backend/moag/settings_store.py`, `models.py`, `adapters/nasdominator.py`
 
-### Audit-Tab (Oberon Cockpit)
-- War: `ocrexpert/gui_frontend/src/features/audit/`
-- Ist: `frontend/src/features/audit/` → `/oberon/audit`
-- Datum: 2026-05-16
+### Mobile-Tauglichkeit (Phase 7)
+- **Touch-Targets:** ≥ 44×44px auf allen Buttons, NavLinks, Sub-Tabs
+- **Long-Press-Tooltip:** 500ms-Halten öffnet Tooltip; kurzer Tap nicht
+- **Sub-Tab-Nav:** horizontal scrollbar auf Mobile (`overflow-x-auto scrollbar-none`)
+- **Tabellen:** alle in `<div className="overflow-x-auto">`-Wrapper
+- **PageBadge:** Routen-Text auf `< sm` ausgeblendet
+- **Code:** `Tooltip.tsx`, `TopBar.tsx`, `NavBar.tsx`, `ConfirmDialog.tsx`, `PageBadge.tsx`, alle Sub-Tab-Layouts, ActionCard, NasDom-Pages, Audit-Filter
 
-### Cluster-Dashboard
-- War: `ocrexpert/gui_frontend/src/features/cluster-dashboard/`
-- Ist: `frontend/src/features/cluster-dashboard/` → `/octoboss/dashboard`
-- Datum: 2026-05-16
+### Tests + Smoke
 
-### Cluster-Swarm
-- War: `ocrexpert/gui_frontend/src/features/cluster/`
-- Ist: `frontend/src/features/cluster/` → `/octoboss/cluster`
-- Datum: 2026-05-16
+- **Backend:** 266 Tests (pytest)
+- **Frontend:** 355 Tests, 64 Test-Files (vitest)
+- **Smoke-Skript:** `scripts/smoke-vdr.ps1` — 5 Read-only-Checks (api-health, overview-schema, aggregator-konsistenz, frontend-html, frontend-assets). Fängt Schema-Drift strukturell. 30s Timeout (Cold-LLM-tolerant).
+- **Panopticor-Run:** `local-process`-Adapter via Bridge `POST /runs` (Setup dokumentiert in `memory/reference_panopticor_signal_mechanik.md`)
 
-### Job-Queue, Job-Detail, History, Charts
-- War: `ocrexpert/gui_frontend/src/features/{job-queue,job-detail,history,charts}/`
-- Ist: unter `frontend/src/features/` → als Sub-Routen von `/ocrexpert/*`
-- Datum: 2026-05-16
+### Container + Deployment
 
-### TopBar (OCRexpert-Hub-Anzeige)
-- War: `ocrexpert/gui_frontend/src/components/TopBar.tsx` — Hub-Badge + Cluster-Health
-- Ist: `frontend/src/components/TopBar.tsx` — MOAG Health-Score + Gruppen-Indikatoren (komplett neu geschrieben)
-- Datum: 2026-05-16
+- **Image:** `moag:0.1.0` (Multi-Stage Dockerfile, ~76 MB)
+- **Live:** `http://192.168.200.71:17900/` auf VDR mit `--restart unless-stopped`
+- **GitHub:** `underdog220/moag` (public)
+
+## Migriert (war im OCRexpert-GUI-Prototyp, ist in MOAG)
+
+| War (OCRexpert-Prototyp) | Ist (MOAG) | Datum |
+|---|---|---|
+| `gui/api.py` + Routes | `backend/moag/api.py` + `routes_*` | 2026-05-16 |
+| `gui_frontend/src/components/TopBar.tsx` | `frontend/src/components/TopBar.tsx` (komplett neu für Health-Score) | 2026-05-16 |
+| `features/cluster-dashboard/` | `features/octoboss/pages/Nodes.tsx`, `LlmModels.tsx`, `Ocr.tsx`, `Cluster.tsx` | 2026-05-17 |
+| `features/cluster/` (Schwarm-Status) | `features/octoboss/pages/Cluster.tsx` | 2026-05-17 |
+| `features/{job-queue, job-detail, history, charts}/` | `features/ocrexpert/pages/{Jobs, ...}/` | 2026-05-16 |
+| `features/llm/` + `cost/` + `audit/` | `features/oberon/pages/{Providers, Cost, Audit}.tsx` | 2026-05-17 |
+| `routes_cockpit.py` (Oberon-Proxy) | `routes_oberon.py` (10 Routes — erweitert) | 2026-05-17 |
 
 ## Verloren / Migrations-TODO
 
-_(noch leer — wird in Phase 1 aus OCRexpert-GUI-Inventur gefüllt)_
+_(noch leer — Migration aus OCRexpert war vollständig)_
 
 ## Bewusst deprecated
 
-_(noch leer)_
+### SonOfSETI als Top-Karte (entfernt 2026-05-17)
+- **War:** eigene Top-Karte + `/sonofseti/*`-Route
+- **Nicht migriert weil:** SonOfSETI-Nodes werden via OctoBoss-Hub-Heartbeat sichtbar (Drilldown unter `/octoboss/nodes`). Eigene Karte war redundant.
+- **Adapter-Datei bleibt:** `backend/moag/adapters/sonofseti.py` ungenutzt — für künftige direkte Node-Anbindung
+- **Legacy-Route:** `/sonofseti` und `/sonofseti/*` → Redirect auf `/octoboss`
 
 ## Klärungsbedarf
 
-### A/B-Compare (Phase-2-Stub aus OCRexpert)
-- Was: Engine-A vs. Engine-B Vergleich pro OCR-Job (heute `available=false`).
-- Stand: Im Prototyp als Stub vorhanden. Roman muss entscheiden, ob MOAG es weiterführt oder fallenlässt.
+### ocrexpert.process Body-Schema-Drift
+- **Stand:** Aktion ruft `POST /api/v1/process` mit JSON `{pfad: ...}`. OCRexpert-OpenAPI sagt aber `multipart/form-data` mit File-Upload.
+- **Optionen:** (a) Multipart-Upload-Logik bauen (MOAG-Server liest Datei + sendet) oder (b) Aktion auf `/api/v1/shadow/process` mit `{source_path, shadow_path}` umbiegen. Roman entscheidet welcher Pfad.
+
+### ocrexpert.shadow.batch Body-Schema-Drift (vermutlich)
+- **Stand:** war im alten Briefing `{pfad: ...}`. OpenAPI sagt `{source_path, shadow_path}`. Nicht live verifiziert (kein Test seit Subagent-Lauf), aber wahrscheinlich gleiches Problem wie `ocrexpert.process`.
+
+### SonOfSETI-Adapter-Datei
+- **Stand:** `backend/moag/adapters/sonofseti.py` + Tests existieren, werden nicht mehr aufgerufen (Top-Karte entfernt).
+- **Optionen:** (a) löschen (klare Hygiene) oder (b) drinlassen + Settings-Versorgung für `node_addresses` ergänzen für direkten Node-Drilldown unter `/octoboss/nodes/:id`. Roman entscheidet.
+
+### Token-Storage-Hardening
+- **Stand:** Tokens (Oberon, NasDom-Password) werden über `docker run -e` gesetzt → sichtbar in `docker inspect`.
+- **Optionen:** (a) env-file mit chmod 600 auf VDR (einfacher) oder (b) Settings-Volume mit gemounteter Datei wie OCRexpert-GUI es macht (sauberer, persistent zwischen Image-Updates).
 
 ### Multi-Hub-Discovery vs. Single-Hub
-- Was: Prototyp pollt mehrere OctoBoss-Hubs parallel (VDR + NAS-Shadow).
-- Stand: Sinnvoll in MOAG, aber V1 könnte mit Single-Hub starten und Multi-Hub Phase 2.
+- **Stand:** OctoBoss-Adapter nutzt nur den Default-Hub (NAS-Shadow auf VDR:18765). Prototyp hatte Multi-Hub-Polling.
+- **Optionen:** für V1 reicht Single-Hub, Multi-Hub bei Bedarf Phase 9+.
 
----
+### A/B-Compare (Phase-2-Stub aus OCRexpert)
+- **Stand:** ab_compare-Endpoint liefert `available=false`. Frontend-Komponente existiert im Prototyp.
+- **Klären:** Feature in MOAG weiterführen oder fallenlassen.
 
-### Aktionen-API (Phase 1, V1)
-- Was: GET /api/v1/actions (Registry-Liste) + POST /api/v1/actions/{id}/trigger. 3 echte Aktionen (oberon.smoke, ocrexpert.health.check, octoboss.cluster.status) + 9 Stubs. Registry-Pattern mit @register-Dekorator. Pipeline-Logging via plog. ActionTriggerResponse-Schema per docs/ACTIONS_SCHEMA.md.
-- Code: `backend/moag/actions/`, `backend/moag/schemas.py`
-- Tests: `tests/test_actions_oberon_smoke.py`, `tests/test_actions_ocrexpert_health.py`, `tests/test_actions_octoboss_cluster_status.py`, `tests/test_actions_stubs.py`, `tests/test_api.py` (Aktionen-Section)
+## Bekannte Bugs (offen)
 
-## Geplante Features (V1, aus Architektur-Konsens 2026-05-16)
-
-Diese Liste rutscht nach Implementierung in `Aktiv`. Heute sind sie Planungs-Backlog.
-
-### Top-Leiste (Phase 2)
-- Gesamt-Health-Score (gewichteter Mittelwert über alle 8 Systeme)
-- 3 Gruppen-Sub-Indikatoren (KI / Infra / Compl+Test) mit Hover-Aufklapp-Detail
-- Alert-Counter mit Drilldown-Liste
-- Sticky auf allen Routen
-
-### Cockpit-Startseite (Phase 1+2)
-- 8 Karten mit Hero-Gauge (60–80px) + 2–3 Mini-Indikatoren
-- Karten nach Gruppen sortiert
-- Klick auf Karte → Drilldown Tiefe 2
-- Mobile: vertikales Stacking, Gruppen-Header als Separator
-
-### Pflicht-Tooltip-System (Phase 2)
-- Jede Zahl, Status-Ampel, Button bekommt Tooltip
-- Format: Erklärung + Datenquelle + Aktualisierungszeit + Schwellwert-Legende
-- Mobile: Long-Press
-- Code-Review-Kriterium
-
-### PageBadge (Phase 2)
-- Footer-Element unten rechts: `pg:<route> · <commit-hash> · <build-timestamp>`
-- Auf jeder Top-Level-Seite, Pflicht aus globaler CLAUDE.md
-
-### Drilldown Tiefe 2 (Phase 1–6)
-- Sub-Bereiche eines Sub-Systems (z.B. Oberon → LLM / DSGVO / Audit / Instances / DB / Contract / Smoke / PII)
-
-### Drilldown Tiefe 3 (Phase 1–6)
-- Detail-Entity (z.B. Anthropic-Provider mit Health-History + Cost-Verlauf + Last-Calls-Stream)
-
-### Drilldown Tiefe 4 (Phase 2+)
-- Live-Stream / Historie / Roh-JSON-Inspector
-
-### Adapter-Schicht (Phase 1–6)
-- Je Sub-System ein Backend-Adapter (`oberon`, `octoboss`, `sonofseti`, `ocrexpert`, `nasdominator`, `qnapbackup`, `custos`, `panopticor`)
-- Einheitliche Status-Antwort (`/api/v1/status` Konvention, ADR-008)
-
-### qnapbackup-iframe-Voll-Ansicht (Phase 5)
-- MOAG-Card mit eigenem Gauge + Mini-Status
-- Button "Web-UI öffnen" → iframe oder neuer Tab auf existierendes qnapbackup-UI
-
-### Panopticor-Action-Buttons (Phase 6)
-- Scenario-Liste + Trigger-Button pro Szenario
-- Run-Historie mit Pass/Fail-Status
-- Confirm-Dialog vor jedem Trigger
-
-### Mobile-Tauglichkeit (Phase 7) — implementiert, noch nicht gemessen
-- Lighthouse-Score: noch nicht gemessen (Bonus, optional)
-- Alle Cards lesbar auf 360px Viewport — Overview stackt 1-Spalte, Aktionen 1-Spalte
-- Touch-Targets ≥ 44×44px — überall umgesetzt
-
-### Settings-Verwaltung (Phase 1)
-- System-URLs editieren
-- Auth-Tokens je System (Bearer / X-DevLoop / X-SonOfSETI)
-- Poll-Intervalle pro System
-- Default-Gruppen-Reihenfolge
+- **OctoBoss-Page-Crash** (Task #27): Roman meldete Crash auf einer OctoBoss-Sub-Seite. Backend-Routes alle HTTP 200. Wartet auf F12-Browser-Console-Diagnose.
+- **NasDom-Service-Status-Strings:** für `/api/services/monitored` matcht der Adapter ggf. nicht alle echten Status-Strings (Refinement-Detail).
