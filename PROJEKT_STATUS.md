@@ -1,13 +1,13 @@
 # PROJEKT_STATUS — MOAG (Mother of All GUIs)
 
 ## Aktueller Stand
-Hygiene-Block (A+B): Token-Storage auf env-file-Pattern umgestellt (`scripts/deploy-vdr.ps1` + `/etc/moag.env chmod 600`), sonofseti-Adapter + Tests + Frontend-Feature gelöscht. 259/259 Backend + 355/355 Frontend-Tests grün.
+Phase X komplett (Hygiene + Phase 8): Token-Storage auf env-file-Pattern (`scripts/deploy-vdr.ps1` + `/etc/moag.env chmod 600`), sonofseti-Adapter gelöscht, OCRexpert-GUI-Container auf VDR:17820 deaktiviert + im OCRexpert-Repo deprecated markiert (Cross-Repo-Commit `a57ef70`, Volume `/var/lib/ocrexpert-gui` für Rollback erhalten). MOAG ist seit 2026-05-17 die einzige aktive GUI auf VDR:17900. 259/259 Backend + 355/355 Frontend-Tests grün.
 
 ## Version
-v0.1.0 (Phase 1 komplett + Container live auf VDR)
+v0.1.0 (Phase 1–8 komplett, Container live auf VDR)
 
 ## Nächste geplante Stufe
-Phase 8: OCRexpert-GUI-Code deaktivieren (Container stoppen, Code-Branch archivieren). Danach: Lighthouse-Audit Mobile-Score messen.
+Phase Y — Upload-Hub als dritte Top-Achse (`/upload`): Smart-Multi-Drop oben + spezialisierte Karten pro System unten (OCRexpert, Oberon LLM, Oberon Vision, Direct-Engine, Audio, DSGVO-Redact, Bauplan, PII-Scan, PDF-Split). Persistenz via Oberon-DB-Broker (PostgreSQL). Modular mit Subagents.
 
 ## Offene Punkte
 - OCRexpert-Service auf VDR:17810 offline — Service-Status klären
@@ -19,4 +19,4 @@ Phase 8: OCRexpert-GUI-Code deaktivieren (Container stoppen, Code-Branch archivi
 - Custos: Findings-Widget-Schema festlegen (Phase 4)
 
 ## Letzte Änderung
-2026-05-17 — Hygiene-Block A+B: A) Token-Storage: `scripts/deploy-vdr.ps1` (neu) + `docs/DEPLOYMENT_VDR.md` (neu) + `.env.example`-Header + `.gitignore`-Ergänzung (`secrets.local.env`, `*.secrets.env`). Token-Storage-Eintrag aus Offene Punkte entfernt. B) sonofseti aufgeräumt: `adapters/sonofseti.py`, `tests/test_adapter_sonofseti.py`, `frontend/src/features/sonofseti/` gelöscht. FEATURES.md Deprecated-Eintrag aktualisiert. 259 Backend- + 355 Frontend-Tests grün.
+2026-05-17 — Phase X (Hygiene + Phase 8) durch 2 parallele Subagents: A) MOAG-Commit `4169a04` — Token-Storage env-file-Pattern + sonofseti-Cleanup. B) OCRexpert-Commit `a57ef70` (Cross-Repo) — Container ocrexpert-gui:17820 gestoppt+entfernt, Volume `/var/lib/ocrexpert-gui` für Rollback erhalten, `ocrexpert/gui/DEPRECATED.md` + Dockerfile.gui-Header + Doku aktualisiert. MOAG-Container auf VDR:17900 läuft weiter mit den alten `-e`-Werten (Re-Deploy mit env-file kommt sobald `secrets.local.env` lokal angelegt + `scripts/deploy-vdr.ps1` ausgeführt).
