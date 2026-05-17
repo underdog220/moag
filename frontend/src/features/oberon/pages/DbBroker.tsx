@@ -18,7 +18,18 @@ export function DbBrokerPage() {
 
   const updatedAt = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString("de-DE") : "–";
   const isStub = (data as any)?.stub === true;
-  const databases: any[] = (data as any)?.databases ?? [];
+  // Oberon liefert camelCase (appName, database, provisionedAt, username),
+  // MOAG-Konvention ist snake_case. Frontend toleriert beides.
+  const rawDatabases: any[] = (data as any)?.databases ?? [];
+  const databases = rawDatabases.map((db: any) => ({
+    app_name: db.app_name ?? db.appName ?? "—",
+    db_name: db.db_name ?? db.database ?? "—",
+    status: db.status ?? (db.provisionedAt ? "ok" : "unknown"),
+    host: db.host ?? null,
+    username: db.username ?? null,
+    provisionedAt: db.provisionedAt ?? null,
+    error: db.error ?? null,
+  }));
 
   return (
     <div className="p-4" data-testid="oberon-db-broker-page">

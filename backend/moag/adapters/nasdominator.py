@@ -68,7 +68,7 @@ async def _login_and_get_cookie(
         resp = await client.post(
             f"{base_url}/api/auth/login",
             json={"username": username, "password": password},
-            timeout=5.0,
+            timeout=10.0,
         )
         if resp.status_code == 200:
             # Cookie aus Set-Cookie-Header extrahieren (httpx pflegt .cookies)
@@ -149,7 +149,7 @@ async def get_status(
     base = base_url.rstrip("/")
 
     try:
-        async with httpx.AsyncClient(timeout=6.0, follow_redirects=False) as client:
+        async with httpx.AsyncClient(timeout=20.0, follow_redirects=False) as client:
             # ── Schritt 1: Erreichbarkeits-Check (public endpoint) ──────────────
             reachable = False
             auth_setup_complete = False
@@ -466,7 +466,7 @@ async def get_services(
     base = base_url.rstrip("/")
 
     try:
-        async with httpx.AsyncClient(timeout=6.0) as client:
+        async with httpx.AsyncClient(timeout=20.0) as client:
             auth_headers = await _get_auth_headers(client, base, username, password)
             if not auth_headers and token:
                 auth_headers = {"Authorization": f"Bearer {token}"}
@@ -529,7 +529,7 @@ async def get_metrics(
     base = base_url.rstrip("/")
 
     try:
-        async with httpx.AsyncClient(timeout=6.0) as client:
+        async with httpx.AsyncClient(timeout=20.0) as client:
             auth_headers = await _get_auth_headers(client, base, username, password)
             if not auth_headers and token:
                 auth_headers = {"Authorization": f"Bearer {token}"}
@@ -590,7 +590,7 @@ async def get_containers(
     base = base_url.rstrip("/")
 
     try:
-        async with httpx.AsyncClient(timeout=6.0) as client:
+        async with httpx.AsyncClient(timeout=20.0) as client:
             auth_headers = await _get_auth_headers(client, base, username, password)
             if not auth_headers and token:
                 auth_headers = {"Authorization": f"Bearer {token}"}
