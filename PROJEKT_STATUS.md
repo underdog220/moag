@@ -21,4 +21,4 @@ Phase 2: Top-Health-Leiste echte Daten + Pflicht-Tooltip-Komponente verfeinern +
 - sonofseti-Adapter: node_addresses aus Settings versorgen
 
 ## Letzte Änderung
-2026-05-17 — Aktionen-API V1: 12 Aktionen in Registry (3 echt + 9 Stubs), GET /api/v1/actions + POST /trigger. 154/154 Tests grün.
+2026-05-17 — Frontend-Aktionen-Achse: NavBar zweistufig, AktionenPage (/aktionen), ActionCard (DRY), ConfirmDialog. 59 Test-Files, 272 Tests grün. Commit 8057589.

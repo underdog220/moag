@@ -5,7 +5,23 @@
 ### Hard-Fork Frontend (Phase 1)
 - Was: `frontend/` — vollständige Vite+React+TS-App, fork aus OCRexpert-GUI-Prototyp
 - Code: `frontend/src/`
-- Tests: 56 Test-Files, 245 Tests grün
+- Tests: 59 Test-Files, 272 Tests grün
+
+### Aktionen-Achse (Frontend)
+- Was: Zweite Top-Achse `/aktionen` — alle ausführbaren Operationen, gruppiert nach Sub-System. DRY-Komponenten für Phase-2-Drilldown-Wiederverwendung.
+- Code: `frontend/src/features/aktionen/` (ActionCard, AktionenPage, index)
+- Abhängigkeiten: `ConfirmDialog.tsx`, Tooltip (ADR-004), PageBadge
+- Tests: `ActionCard.test.tsx` (12), `AktionenPage.test.tsx` (7), `ConfirmDialog.test.tsx` (7)
+- Mock-Daten: 12 Aktionen in `mocks/payloads.json` (3 implementiert: oberon.smoke, ocrexpert.health.check, octoboss.cluster.status; 9 Stubs)
+
+### ConfirmDialog-Komponente
+- Was: Generischer Modal-Dialog (ESC + Backdrop = Cancel, danger-Modus, custom Labels)
+- Code: `frontend/src/components/ConfirmDialog.tsx`
+- Tests: `frontend/src/components/ConfirmDialog.test.tsx` (7 Tests)
+
+### NavBar zweistufig (Achsen-Navigation)
+- Was: Zwei Haupt-Achsen-Buttons (Übersicht / Aktionen) + sekundäre System-Links nur unter Übersicht-Achse sichtbar
+- Code: `frontend/src/components/NavBar.tsx`
 
 ### Overview-Cockpit-Seite
 - Was: 8 Karten in 3 Gruppen (KI-Backbone / Infrastruktur / Compliance & Test), Hero-Gauge, Mock-Daten
