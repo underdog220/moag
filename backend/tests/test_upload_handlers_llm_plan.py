@@ -20,18 +20,39 @@ _FAKE_PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 20
 
 
 def _plan_response_full() -> dict:
+    """Oberon-Schema (live verifiziert 2026-05-17):
+    planType, planTypBeschreibung, erkannteRaeume[], hinweise[], rohdatenKi, id
+    """
     return {
-        "wohnflaeche": 87.5,
-        "nutzflaeche": 112.0,
-        "bgf_m2": 150.0,
-        "rooms": 4,
-        "summary": "Dreiraeumige Wohnung mit Balkon.",
+        "id": "plan-test-001",
+        "planType": "WOHNGEBAEUDE",
+        "planTypBeschreibung": "Wohngebaeude",
+        "erkannteRaeume": [
+            {"name": "Wohnzimmer", "flaeche": 30.0},
+            {"name": "Schlafzimmer", "flaeche": 18.0},
+            {"name": "Kueche", "flaeche": 12.5},
+            {"name": "Bad", "flaeche": 7.0},
+        ],
+        "rohdatenKi": "{\"planType\":\"WOHNGEBAEUDE\",\"raeume\":[{\"name\":\"Wohnzimmer\",\"flaeche\":30.0}]}",
+        "hinweise": [
+            "Raeume mit Flaechenangaben erkannt.",
+            "[KI-ENTWURF] Raumerkennung durch KI — Sachverstaendiger muss pruefen.",
+        ],
     }
 
 
 def _plan_response_minimal() -> dict:
+    """Response wenn keine strukturierten Daten erkannt werden."""
     return {
-        "summary": "Kein strukturierter Grundriss erkannt.",
+        "id": "plan-test-002",
+        "planType": "UNBEKANNT",
+        "planTypBeschreibung": "Nicht identifiziert",
+        "erkannteRaeume": [],
+        "rohdatenKi": "{\"planType\":\"UNBEKANNT\",\"raeume\":[]}",
+        "hinweise": [
+            "Keine Raeume mit Flaechenangaben erkannt — manuelle Eingabe erforderlich.",
+            "[KI-ENTWURF] Raumerkennung durch KI — Sachverstaendiger muss pruefen.",
+        ],
     }
 
 
@@ -65,9 +86,11 @@ async def test_llm_plan_completed_pdf(monkeypatch):
     assert result.status == "completed"
     assert result.operation == "llm.plan"
     assert result.result_summary is not None
-    assert "87.5" in result.result_summary  # Wohnflaeche
-    assert "112.0" in result.result_summary  # Nutzflaeche
-    assert result.result_payload.get("wohnflaeche") == 87.5
+    # Summary enthaelt Raumanzahl aus erkannteRaeume
+    assert "4" in result.result_summary or "Raeume" in result.result_summary
+    # Payload enthaelt das vollstaendige Oberon-Response-Dict
+    assert result.result_payload.get("planType") == "WOHNGEBAEUDE"
+    assert len(result.result_payload.get("erkannteRaeume", [])) == 4
 
 
 @pytest.mark.asyncio

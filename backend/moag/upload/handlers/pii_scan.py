@@ -111,7 +111,7 @@ async def handle_pii_scan(
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
-    body = {"text": text}
+    body = {"clientId": "moag-upload", "text": text}
 
     try:
         with httpx.Client(headers=headers, timeout=30.0) as client:

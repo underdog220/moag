@@ -24,10 +24,48 @@ import httpx
 from moag.upload.handlers.registry import register_handler
 from moag.upload.schemas import UploadResult
 
+import re
+
 logger = logging.getLogger("moag.upload.handlers.llm_vision")
 
 # Gecachte Vision-Instance-ID (Modul-Variable, in-process)
 _cached_vision_instance_id: str | None = None
+
+# Oberon /instances/{id}/vision nutzt den DevLoop-Endpoint und liefert Multi-Mode-Marker.
+# Diese werden hier herausgefiltert, sodass nur der saubere Antworttext bleibt.
+_DEVLOOP_MARKER_PATTERN = re.compile(
+    r"\[CHATGPT_ANSWER\]|\[CURSOR_PROMPT\].*?(\[|$)|\[CODEX_TASK\].*?(\[|$)",
+    re.DOTALL,
+)
+
+_MARKER_NAMES = ["[CHATGPT_ANSWER]", "[CURSOR_PROMPT]", "[CODEX_TASK]"]
+
+
+def _strip_devloop_markers(text: str) -> str:
+    """Entfernt DevLoop-Marker-Tags und gibt den sauberen Antworttext zurueck.
+
+    Oberon /instances/{id}/vision antwortet mit:
+      [CHATGPT_ANSWER]<text>[CURSOR_PROMPT]<...>
+    Wir behalten nur den Teil nach [CHATGPT_ANSWER] bis zum naechsten Marker.
+    """
+    if not text:
+        return text
+
+    # Pruefe ob Marker vorhanden
+    if "[CHATGPT_ANSWER]" in text:
+        # Extrahiere Bereich zwischen [CHATGPT_ANSWER] und dem naechsten Marker (oder Ende)
+        start = text.index("[CHATGPT_ANSWER]") + len("[CHATGPT_ANSWER]")
+        rest = text[start:]
+        # Schneide beim ersten anderen Marker ab
+        for marker in ["[CURSOR_PROMPT]", "[CODEX_TASK]"]:
+            if marker in rest:
+                rest = rest[:rest.index(marker)]
+        return rest.strip()
+
+    # Kein [CHATGPT_ANSWER]-Wrapper — entferne trotzdem bekannte Marker-Tags
+    for marker in _MARKER_NAMES:
+        text = text.replace(marker, "")
+    return text.strip()
 
 _SUMMARY_CHARS = 200
 
@@ -71,13 +109,13 @@ def _get_or_create_vision_instance(client: httpx.Client) -> str | None:
         return _cached_vision_instance_id
 
     # Neue Instance anlegen
+    # Oberon erwartet: projectId + label (type/domain sind kein gueliges Feld)
     base = _base_url()
     try:
         resp = client.post(
             f"{base}/api/v2/instances",
             json={
-                "type": "TOPIC_FOCUS",
-                "domain": "VISION",
+                "projectId": "moag",
                 "label": "MOAG Upload-Vision",
             },
             headers=_auth_headers(),
@@ -120,8 +158,9 @@ async def handle_llm_vision(
     if not prompt or not str(prompt).strip():
         return _failed(upload_id, "Pflicht-Param 'prompt' fehlt oder leer.")
 
-    # Bild als Base64
+    # Bild als Data-URL (Oberon erwartet imageUrl als data:mime;base64,... oder HTTP-URL)
     image_b64 = base64.b64encode(file_bytes).decode("ascii")
+    image_data_url = f"data:{mime};base64,{image_b64}"
 
     base = _base_url()
     headers = _auth_headers()
@@ -138,10 +177,11 @@ async def handle_llm_vision(
             )
 
         # Vision-Endpoint aufrufen
+        # Oberon-Feld: imageUrl (Data-URL oder HTTP-URL), nicht image_base64
         try:
             resp = client.post(
                 f"{base}/api/v2/instances/{instance_id}/vision",
-                json={"prompt": str(prompt), "image_base64": image_b64},
+                json={"prompt": str(prompt), "imageUrl": image_data_url},
                 headers=headers,
             )
         except (httpx.ConnectError, httpx.TimeoutException, OSError) as exc:
@@ -162,13 +202,16 @@ async def handle_llm_vision(
         )
 
     data = resp.json()
-    # Oberon Vision-Response: {"response": "...", ...} oder DevLoop-Marker-Format
-    llm_response: str = (
+    # Oberon Vision-Response: {"response": "...", "instanceId": "...", ...}
+    # Der /instances/{id}/vision-Endpoint liefert DevLoop-Marker im response-Feld.
+    # Diese werden herausgefiltert: [CHATGPT_ANSWER], [CURSOR_PROMPT], [CODEX_TASK]
+    raw_response: str = (
         data.get("response")
         or data.get("answer")
         or data.get("text")
         or ""
     )
+    llm_response = _strip_devloop_markers(raw_response)
     summary = llm_response[:_SUMMARY_CHARS] if llm_response else "(keine Antwort)"
 
     return UploadResult(
