@@ -100,6 +100,8 @@ class Settings(BaseModel):
     sonofseti_token: Optional[str] = None
     # NasDominator
     nasdominator_base_url: str = "http://192.168.200.169:9090"
+    nasdominator_user: Optional[str] = None
+    nasdominator_password: Optional[str] = None
     # Custos
     custos_base_url: str = "http://192.168.200.71:17890"
     # Panopticor (Desktop-Endpoint)
@@ -129,6 +131,8 @@ class SettingsUpdate(BaseModel):
     ocrexpert_base_url: Optional[str] = None
     sonofseti_token: Optional[str] = None
     nasdominator_base_url: Optional[str] = None
+    nasdominator_user: Optional[str] = None
+    nasdominator_password: Optional[str] = None
     custos_base_url: Optional[str] = None
     panopticor_base_url: Optional[str] = None
 

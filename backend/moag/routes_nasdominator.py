@@ -23,12 +23,12 @@ def build_nasdominator_router(settings_store) -> APIRouter:
     router = APIRouter(prefix="/api/v1/nasdominator", tags=["NasDominator"])
 
     def _get_params():
-        """Holt base_url + token aus den Settings."""
+        """Holt base_url, user + password aus den Settings."""
         s = settings_store.get()
         base_url = s.nasdominator_base_url or "http://192.168.200.169:9090"
-        # NasDominator nutzt Session-Cookie-Auth — token in Settings ist optional/future
-        token: str | None = getattr(s, "nasdominator_token", None)
-        return base_url, token
+        username: str | None = getattr(s, "nasdominator_user", None) or None
+        password: str | None = getattr(s, "nasdominator_password", None) or None
+        return base_url, username, password
 
     @router.get("/health")
     async def get_nasdominator_health():
@@ -39,8 +39,10 @@ def build_nasdominator_router(settings_store) -> APIRouter:
         Bei Service-Down: HTTP 502 mit ehrlicher Fehlermeldung.
         Quelle: /api/auth/status (public) + /api/dashboard (Auth).
         """
-        base_url, token = _get_params()
-        status = await _nasdominator.get_status(base_url=base_url, token=token)
+        base_url, username, password = _get_params()
+        status = await _nasdominator.get_status(
+            base_url=base_url, username=username, password=password
+        )
         if not status.ok and status.error and "nicht erreichbar" in (status.error or ""):
             raise HTTPException(
                 status_code=502,
@@ -57,9 +59,11 @@ def build_nasdominator_router(settings_store) -> APIRouter:
         Bei 401: JSON mit auth_required=true, leere services-Liste.
         Bei Service-Down: HTTP 502.
         """
-        base_url, token = _get_params()
+        base_url, username, password = _get_params()
         try:
-            result = await _nasdominator.get_services(base_url=base_url, token=token)
+            result = await _nasdominator.get_services(
+                base_url=base_url, username=username, password=password
+            )
             return result
         except Exception as exc:
             logger.exception("NasDominator /services Fehler: %s", exc)
@@ -74,9 +78,11 @@ def build_nasdominator_router(settings_store) -> APIRouter:
         Bei 401: JSON mit auth_required=true, leere metrics.
         Bei Service-Down: HTTP 502.
         """
-        base_url, token = _get_params()
+        base_url, username, password = _get_params()
         try:
-            result = await _nasdominator.get_metrics(base_url=base_url, token=token)
+            result = await _nasdominator.get_metrics(
+                base_url=base_url, username=username, password=password
+            )
             return result
         except Exception as exc:
             logger.exception("NasDominator /metrics Fehler: %s", exc)
@@ -91,9 +97,11 @@ def build_nasdominator_router(settings_store) -> APIRouter:
         Bei 401: JSON mit auth_required=true, leere containers-Liste.
         Bei Service-Down: HTTP 502.
         """
-        base_url, token = _get_params()
+        base_url, username, password = _get_params()
         try:
-            result = await _nasdominator.get_containers(base_url=base_url, token=token)
+            result = await _nasdominator.get_containers(
+                base_url=base_url, username=username, password=password
+            )
             return result
         except Exception as exc:
             logger.exception("NasDominator /containers Fehler: %s", exc)

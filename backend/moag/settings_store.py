@@ -84,6 +84,8 @@ def _apply_env_overrides(d: dict[str, Any]) -> dict[str, Any]:
         "MOAG_OCREXPERT_BASE_URL": "ocrexpert_base_url",
         "MOAG_SONOFSETI_TOKEN":  "sonofseti_token",
         "MOAG_NASDOMINATOR_BASE_URL": "nasdominator_base_url",
+        "MOAG_NASDOMINATOR_USER":     "nasdominator_user",
+        "MOAG_NASDOMINATOR_PASSWORD": "nasdominator_password",
         "MOAG_CUSTOS_BASE_URL":  "custos_base_url",
         "MOAG_PANOPTICOR_BASE_URL": "panopticor_base_url",
     }
@@ -154,6 +156,9 @@ class SettingsStore:
     def get_response(self) -> SettingsResponse:
         with self._lock:
             base = self._settings.model_dump()
+            # Passwort-Maskierung: in der API-Response nur Platzhalter ausgeben
+            if base.get("nasdominator_password"):
+                base["nasdominator_password"] = "***"
             return SettingsResponse(
                 **base,
                 active_env={

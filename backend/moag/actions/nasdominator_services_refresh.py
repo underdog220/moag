@@ -49,9 +49,14 @@ async def handle_nasdominator_services_refresh(body: dict) -> ActionTriggerRespo
 
     base_url = body.get("base_url") or _DEFAULT_BASE_URL
     token: str | None = body.get("token") or None
+    username: str | None = body.get("username") or None
+    password: str | None = body.get("password") or None
 
     try:
-        result = await _nasdominator.trigger_services_sync(base_url=base_url, token=token)
+        result = await _nasdominator.trigger_services_sync(
+            base_url=base_url, token=token,
+            username=username, password=password,
+        )
     except Exception as exc:
         duration_ms = int((time.monotonic() - t0) * 1000)
         return ActionTriggerResponse(
