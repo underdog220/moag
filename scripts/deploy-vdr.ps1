@@ -54,6 +54,14 @@ param(
     [int]$HostPort            = 17900,
     [string]$VdrHost          = "vdr",
 
+    # Volume-Konfiguration (Upload-Hub Persistenz)
+    [string]$VolumeHostPath   = "/home/underdog/moag-data",
+    [string]$VolumeMountPath  = "/data/moag",
+    # Container-User-ID — muss zum Owner des Volume-Verzeichnisses passen
+    # (sonst Permission-Denied beim SQLite-Init). Default: vdr-User 'underdog' = 1002
+    [int]$ContainerUid        = 1002,
+    [int]$ContainerGid        = 1002,
+
     # Wenn gesetzt: kein Re-Deploy, nur Smoke-Check
     [switch]$SmokeOnly
 )
@@ -125,6 +133,8 @@ MOAG_NASDOMINATOR_USER=$NasDomUser
 MOAG_NASDOMINATOR_PASSWORD=$NasDomPassword
 MOAG_OCTOBOSS_HUBS=$OctobossHubs
 MOAG_CUSTOS_BASE_URL=$CustosBaseUrl
+MOAG_DB_CACHE_PATH=$VolumeMountPath/db.json
+MOAG_UPLOAD_DIR=$VolumeMountPath/uploads
 "@
 
     # Lokal als temporaere Datei ablegen (nie im Repo, nur fuer Transfer)
@@ -143,12 +153,25 @@ MOAG_CUSTOS_BASE_URL=$CustosBaseUrl
     Remove-Item $localTmp -Force
     Write-Host "[INFO] Lokale temp-Datei geloescht"
 
-    # ---- 4. Container stoppen + entfernen + neu starten ----------------------
+    # ---- 4a. Volume-Verzeichnis auf VDR vorbereiten ------------------------
+    # Stellt sicher dass {VolumeHostPath} und uploads/ existieren und vom
+    # Container-User (uid/gid {ContainerUid}/{ContainerGid}) schreibbar sind.
+    # Ohne diesen Schritt scheitert SQLite-Init mit "unable to open database file".
+    Write-Host "[DEPLOY] Bereite Volume $VolumeHostPath vor (uid=$ContainerUid gid=$ContainerGid) ..."
+    $volumeSetup = "mkdir -p $VolumeHostPath/uploads && chmod -R u+rwX,g+rwX,o+rX $VolumeHostPath && echo 'OK: Volume bereit'"
+    ssh $VdrHost $volumeSetup
+
+    # ---- 4b. Container stoppen + entfernen + neu starten -------------------
     Write-Host "[DEPLOY] Stoppe und entferne alten Container '$ContainerName' ..."
     ssh $VdrHost "docker stop $ContainerName 2>/dev/null || true; docker rm $ContainerName 2>/dev/null || true; echo 'OK: Container gestoppt/entfernt'"
 
-    Write-Host "[DEPLOY] Starte $ImageTag als '$ContainerName' mit --env-file /etc/moag.env ..."
-    $dockerCmd = "docker run -d --name $ContainerName --restart unless-stopped -p ${HostPort}:17900 --env-file /etc/moag.env $ImageTag"
+    Write-Host "[DEPLOY] Starte $ImageTag als '$ContainerName' mit --env-file + Volume + --user ..."
+    $dockerCmd = "docker run -d --name $ContainerName --restart unless-stopped " +
+                 "-p ${HostPort}:17900 " +
+                 "--user ${ContainerUid}:${ContainerGid} " +
+                 "-v ${VolumeHostPath}:${VolumeMountPath} " +
+                 "--env-file /etc/moag.env " +
+                 "$ImageTag"
     ssh $VdrHost $dockerCmd
     Write-Host "[DEPLOY] Container gestartet"
 }
