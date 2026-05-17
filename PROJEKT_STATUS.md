@@ -21,4 +21,4 @@ Phase 2: Top-Health-Leiste echte Daten + Pflicht-Tooltip-Komponente verfeinern +
 - sonofseti-Adapter: node_addresses aus Settings versorgen
 
 ## Letzte Änderung
-2026-05-16 — Oberon-Token in MOAG-Container gesetzt (per docker run -e), Oberon-Adapter liefert echte Cockpit-Daten (PASS 6/6 Checks), Aggregator-Overall 12 → 25.
+2026-05-17 — Panopticor-Smoke-Test eingerichtet (`scripts/smoke-vdr.ps1`, 5 Read-only-Checks) und sauber durch die Pano-Bridge gelaufen (Goal passed, score 1.0). Schema-Vertrag-Bug aus dem "blauer-Screen"-Vorfall ist strukturell durch den Smoke abgedeckt.
