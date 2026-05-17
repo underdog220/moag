@@ -838,3 +838,27 @@ export interface OcrexpertOpenApiSummary {
   endpoints: OcrexpertOpenApiEndpoint[];
   source_url: string;
 }
+
+/** POST /api/v1/ocrexpert/process — Synchroner OCR-Lauf. Response-Felder. */
+export interface OcrexpertProcessResponse {
+  /** Linux-Pfad der verarbeiteten Datei (aus dem Request). */
+  pfad: string;
+  /** Anzahl erkannter Zeichen im gesamten Dokument. */
+  n_chars: number;
+  /** Proxy-Quell-URL (fuer Tooltip). */
+  source_url: string;
+  /** Erkannter Dokumenttyp (falls vom Service geliefert). */
+  doctype?: string;
+  /** Vollstaendiger OCR-Text (falls vom Service geliefert). */
+  text?: string;
+  /** Wort-Level-Ergebnisse (falls vom Service geliefert). */
+  words?: unknown[];
+  /** PII-Funde (falls vom Service geliefert). */
+  pii?: unknown;
+  /** Dauer des OCR-Laufs laut Service (ms). */
+  duration_ms?: number;
+  /** Rohe Response wenn kein JSON-Parse moeglich war. */
+  raw_response?: string;
+  /** Alle weiteren service-spezifischen Felder. */
+  [key: string]: unknown;
+}

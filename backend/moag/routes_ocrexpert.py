@@ -5,11 +5,13 @@ Prefix: /api/v1/ocrexpert
 Ziel-Service: OCRexpert auf VDR:17810 (konfigurierbar via Settings)
 
 Endpoints:
-  GET /capabilities    → wrappt GET {OCREXPERT_BASE_URL}/api/v1/health
-                          (Engines + LibreOffice + Shadow-Status)
-  GET /logs            → GET {OCREXPERT_BASE_URL}/logs (Plain-Text Pipeline-Logs)
-  GET /openapi-summary → Proxy auf GET {OCREXPERT_BASE_URL}/openapi.json
-                          mit Reduktion auf Endpoint-Liste (Self-Service-Doku)
+  GET  /capabilities    → wrappt GET {OCREXPERT_BASE_URL}/api/v1/health
+                           (Engines + LibreOffice + Shadow-Status)
+  GET  /logs            → GET {OCREXPERT_BASE_URL}/logs (Plain-Text Pipeline-Logs)
+  GET  /openapi-summary → Proxy auf GET {OCREXPERT_BASE_URL}/openapi.json
+                           mit Reduktion auf Endpoint-Liste (Self-Service-Doku)
+  POST /process         → Direkter Proxy auf POST {OCREXPERT_BASE_URL}/api/v1/process
+                           Body: {"pfad": "<Linux-Pfad>"}, Timeout 60s
 """
 from __future__ import annotations
 
@@ -19,12 +21,19 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import PlainTextResponse
+from pydantic import BaseModel
 
 from .settings_store import SettingsStore
 
 logger = logging.getLogger("moag.routes_ocrexpert")
 
 _DEFAULT_BASE = "http://192.168.200.71:17810"
+_DEFAULT_PFAD = "/mnt/qnap_public/Dokumente/test.pdf"
+
+
+class _OcrProcessRequest(BaseModel):
+    """Request-Body fuer POST /api/v1/ocrexpert/process."""
+    pfad: str = _DEFAULT_PFAD
 
 
 def build_ocrexpert_router(settings_store: SettingsStore) -> APIRouter:
@@ -162,6 +171,63 @@ def build_ocrexpert_router(settings_store: SettingsStore) -> APIRouter:
             "version":   info.get("version", "?"),
             "endpoints": endpoints,
             "source_url": f"{base}/openapi.json",
+        }
+
+    # ── POST /process ─────────────────────────────────────────────────────────
+
+    @router.post("/process")
+    async def post_process(req: _OcrProcessRequest) -> dict[str, Any]:
+        """Direkter Proxy auf OCRexpert POST /api/v1/process.
+
+        Nimmt einen Linux-Pfad entgegen (im OCRexpert-Container sichtbar
+        via CIFS-Mount) und liefert die vollstaendige OCR-Antwort als JSON.
+
+        Body: {"pfad": "/mnt/qnap_public/Dokumente/..."}
+        Response-Felder (je nach OCRexpert-Version):
+          text, words, doctype, pii, duration_ms, pfad
+
+        Timeout: 60s (OCR-Lauf auf grossen Dokumenten kann Zeit brauchen).
+        """
+        base = _base_url()
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post(
+                    f"{base}/api/v1/process",
+                    json={"pfad": req.pfad},
+                )
+        except httpx.TimeoutException as exc:
+            logger.warning("OCRexpert /process: Timeout: %s", exc)
+            raise HTTPException(
+                status_code=504,
+                detail="OCRexpert nicht erreichbar (Timeout nach 60s).",
+            )
+        except (httpx.ConnectError, httpx.HTTPError) as exc:
+            logger.warning("OCRexpert /process: Verbindungsfehler: %s", exc)
+            raise HTTPException(
+                status_code=502,
+                detail=f"OCRexpert nicht erreichbar: {exc}",
+            )
+
+        if not resp.is_success:
+            raise HTTPException(
+                status_code=502,
+                detail=f"OCRexpert /api/v1/process antwortete HTTP {resp.status_code}: {resp.text[:200]}",
+            )
+
+        try:
+            data: dict[str, Any] = resp.json()
+        except Exception:
+            data = {"raw_response": resp.text[:500]}
+
+        # Zeichenanzahl berechnen und hinzufuegen (fuer Frontend-Anzeige)
+        text_content = data.get("text") or data.get("recognized_text") or data.get("content") or ""
+        n_chars = len(text_content) if isinstance(text_content, str) else 0
+
+        return {
+            "pfad":     req.pfad,
+            "n_chars":  n_chars,
+            "source_url": f"{base}/api/v1/process",
+            **data,
         }
 
     return router

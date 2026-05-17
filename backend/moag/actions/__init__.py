@@ -19,6 +19,7 @@ from moag.actions import octoboss_ollama_pull    # noqa: F401  -- echte Aktion, 
 from moag.actions import ocrexpert_shadow_batch              # noqa: F401
 from moag.actions import nasdominator_services_refresh       # noqa: F401
 from moag.actions import custos_rules_run                    # noqa: F401
+from moag.actions import ocrexpert_process                   # noqa: F401
 
 from moag.actions.registry import ACTION_REGISTRY  # noqa: F401 -- Re-Export fuer Tests
 

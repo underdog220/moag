@@ -2,9 +2,10 @@
 Tests fuer backend/moag/routes_ocrexpert.py
 
 Endpoints:
-  GET /api/v1/ocrexpert/capabilities
-  GET /api/v1/ocrexpert/logs
-  GET /api/v1/ocrexpert/openapi-summary
+  GET  /api/v1/ocrexpert/capabilities
+  GET  /api/v1/ocrexpert/logs
+  GET  /api/v1/ocrexpert/openapi-summary
+  POST /api/v1/ocrexpert/process
 """
 from __future__ import annotations
 
@@ -19,6 +20,13 @@ from moag.api import create_app
 
 # ── Fixtures ───────────────────────────────────────────────────────────────────
 
+
+_PROCESS_RESPONSE = {
+    "text": "Dies ist ein Testdokument.",
+    "doctype": "brief",
+    "pii": None,
+    "duration_ms": 1500,
+}
 
 _HEALTH_RESPONSE = {
     "status": "ok",
@@ -44,6 +52,14 @@ _OPENAPI_RESPONSE = {
 }
 
 
+_PROCESS_RESPONSE = {
+    "text": "Dies ist ein Testdokument.",
+    "doctype": "brief",
+    "pii": None,
+    "duration_ms": 1500,
+}
+
+
 def _make_mock_transport(
     health_status: int = 200,
     health_body: dict | None = None,
@@ -51,12 +67,19 @@ def _make_mock_transport(
     logs_body: str = "2026-05-17 INFO Zeile 1\n2026-05-17 INFO Zeile 2",
     openapi_status: int = 200,
     openapi_body: dict | None = None,
+    process_status: int = 200,
+    process_body: dict | None = None,
 ) -> httpx.MockTransport:
     hb = health_body if health_body is not None else _HEALTH_RESPONSE
     ob = openapi_body if openapi_body is not None else _OPENAPI_RESPONSE
+    pb = process_body if process_body is not None else _PROCESS_RESPONSE
 
     def handler(req: httpx.Request) -> httpx.Response:
         url = str(req.url)
+        if "/api/v1/process" in url:
+            if process_status == 200:
+                return httpx.Response(200, json=pb)
+            return httpx.Response(process_status, text="Fehler")
         if "/api/v1/health" in url:
             if health_status == 200:
                 return httpx.Response(200, json=hb)
@@ -222,3 +245,93 @@ def test_openapi_summary_upstream_error(settings_store, monkeypatch):
     c = TestClient(app, raise_server_exceptions=False)
     resp = c.get("/api/v1/ocrexpert/openapi-summary")
     assert resp.status_code == 502
+
+
+# ── POST /api/v1/ocrexpert/process ───────────────────────────────────────────
+
+
+def test_process_happy_path(client: TestClient):
+    """Korrekter Process-Response → 200 mit text, n_chars, doctype."""
+    resp = client.post(
+        "/api/v1/ocrexpert/process",
+        json={"pfad": "/mnt/qnap_public/Dokumente/test.pdf"},
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    assert data["pfad"] == "/mnt/qnap_public/Dokumente/test.pdf"
+    assert data["doctype"] == "brief"
+    assert data["n_chars"] == len("Dies ist ein Testdokument.")
+    assert "source_url" in data
+
+
+def test_process_default_pfad(client: TestClient):
+    """Ohne pfad-Angabe wird Default-Pfad genutzt."""
+    resp = client.post(
+        "/api/v1/ocrexpert/process",
+        json={"pfad": "/mnt/qnap_public/Dokumente/test.pdf"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "/mnt/qnap_public/Dokumente/test.pdf" in data["pfad"]
+
+
+def test_process_upstream_error(settings_store, monkeypatch):
+    """OCRexpert antwortet 500 → MOAG liefert 502."""
+    transport = _make_mock_transport(process_status=500)
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx, "AsyncClient",
+        lambda **kw: real_client(transport=transport, **{k: v for k, v in kw.items() if k != "transport"}),
+    )
+    monkeypatch.setenv("MOAG_OCREXPERT_BASE_URL", "http://mock-ocrexpert")
+    app = create_app(settings_store=settings_store, enable_pipeline=False)
+    c = TestClient(app, raise_server_exceptions=False)
+    resp = c.post(
+        "/api/v1/ocrexpert/process",
+        json={"pfad": "/mnt/qnap_public/Dokumente/test.pdf"},
+    )
+    assert resp.status_code == 502
+
+
+def test_process_connect_error(settings_store, monkeypatch):
+    """OCRexpert nicht erreichbar → MOAG liefert 502."""
+    def failing_handler(req: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("refused")
+
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx, "AsyncClient",
+        lambda **kw: real_client(
+            transport=httpx.MockTransport(failing_handler),
+            **{k: v for k, v in kw.items() if k != "transport"},
+        ),
+    )
+    monkeypatch.setenv("MOAG_OCREXPERT_BASE_URL", "http://mock-ocrexpert")
+    app = create_app(settings_store=settings_store, enable_pipeline=False)
+    c = TestClient(app, raise_server_exceptions=False)
+    resp = c.post(
+        "/api/v1/ocrexpert/process",
+        json={"pfad": "/mnt/qnap_public/Dokumente/test.pdf"},
+    )
+    assert resp.status_code == 502
+
+
+def test_process_n_chars_computed(settings_store, monkeypatch):
+    """n_chars wird aus dem text-Feld berechnet."""
+    text = "Hallo Welt — dies ist ein sehr langer Text fuer Zeichenzaehl-Test."
+    transport = _make_mock_transport(process_body={"text": text, "doctype": "test"})
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        httpx, "AsyncClient",
+        lambda **kw: real_client(transport=transport, **{k: v for k, v in kw.items() if k != "transport"}),
+    )
+    monkeypatch.setenv("MOAG_OCREXPERT_BASE_URL", "http://mock-ocrexpert")
+    app = create_app(settings_store=settings_store, enable_pipeline=False)
+    c = TestClient(app)
+    resp = c.post(
+        "/api/v1/ocrexpert/process",
+        json={"pfad": "/mnt/qnap_public/Dokumente/test.pdf"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["n_chars"] == len(text)

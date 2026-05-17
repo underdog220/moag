@@ -536,6 +536,16 @@ export const api = {
     /** GET /api/v1/ocrexpert/openapi-summary — Reduzierte Endpoint-Liste. */
     getOpenApiSummary: (): Promise<import("./types").OcrexpertOpenApiSummary> =>
       request<import("./types").OcrexpertOpenApiSummary>("/v1/ocrexpert/openapi-summary"),
+
+    /** POST /api/v1/ocrexpert/process — Synchroner OCR-Lauf.
+     *  Body: {pfad: "/mnt/qnap_public/Dokumente/..."} (Linux-Pfad im OCRexpert-Container).
+     *  Timeout: 60s. Liefert Text + Doctype + PII direkt zurueck.
+     */
+    process: (pfad: string): Promise<import("./types").OcrexpertProcessResponse> =>
+      request<import("./types").OcrexpertProcessResponse>("/v1/ocrexpert/process", {
+        method: "POST",
+        body: { pfad },
+      }),
   },
 };
 
