@@ -28,21 +28,18 @@ async def test_unreachable_returns_ok_false(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_reachable_healthy_no_jobs(monkeypatch):
-    """OCRexpert erreichbar, keine Jobs -> ok=True, score > 0."""
+async def test_reachable_full_stack(monkeypatch):
+    """OCRexpert mit voller Telemetrie (status=ok + alle Capabilities) -> score=100."""
     def handler(req: httpx.Request) -> httpx.Response:
-        url = str(req.url)
-        if "/api/health" in url:
+        if "/api/v1/health" in str(req.url):
             return httpx.Response(200, json={
                 "status": "ok",
                 "version": "0.7.1",
-                "pipeline_ready": True,
-            })
-        if "/api/jobs" in url:
-            return httpx.Response(200, json={
-                "jobs": [],
-                "total": 0,
-                "filtered": 0,
+                "engines_local": ["tesseract", "surya", "paddle"],
+                "engines_octoboss": ["tesseract"],
+                "octoboss_reachable": True,
+                "libreoffice_available": True,
+                "shadow_writable": True,
             })
         return httpx.Response(404)
 
@@ -50,10 +47,39 @@ async def test_reachable_healthy_no_jobs(monkeypatch):
     real_client = httpx.AsyncClient
     monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: real_client(transport=transport, **kw))
 
-    status = await ocrexpert.get_status(base_url="http://127.0.0.1:17820")
+    status = await ocrexpert.get_status(base_url="http://127.0.0.1:17810")
     assert status.ok is True
-    assert status.score > 0
-    assert status.system_id == "ocrexpert"
+    assert status.score == 100
+    assert status.metrics["engines_local_count"] == 3
+    assert status.metrics["octoboss_reachable"] is True
+    assert "OctoBoss erreichbar" in status.summary
+
+
+@pytest.mark.asyncio
+async def test_reachable_degraded_no_octoboss(monkeypatch):
+    """OCRexpert erreichbar aber OctoBoss + LibreOffice weg -> score=70 (40+25+5)."""
+    def handler(req: httpx.Request) -> httpx.Response:
+        if "/api/v1/health" in str(req.url):
+            return httpx.Response(200, json={
+                "status": "ok",
+                "version": "0.7.1",
+                "engines_local": ["tesseract"],
+                "engines_octoboss": [],
+                "octoboss_reachable": False,
+                "libreoffice_available": False,
+                "shadow_writable": True,
+            })
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: real_client(transport=transport, **kw))
+
+    status = await ocrexpert.get_status(base_url="http://127.0.0.1:17810")
+    # 40 (ok) + 25 (engines_local>0) + 0 (kein octoboss) + 0 (kein libreoffice) + 5 (shadow)
+    assert status.score == 70
+    assert status.ok is True
+    assert "offline" in status.summary  # OctoBoss offline
 
 
 @pytest.mark.asyncio
