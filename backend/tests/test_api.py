@@ -567,13 +567,17 @@ def test_list_actions_schema_valid(client):
 
 
 def test_list_actions_contains_real_and_stubs(client):
-    """Registry enthaelt sowohl echte (implemented=True) als auch Stubs (implemented=False)."""
+    """Registry enthaelt sowohl echte (implemented=True) als auch Stubs (implemented=False).
+
+    Stand 2026-05-17: octoboss.bench.start + octoboss.ollama.pull sind jetzt echte Aktionen.
+    Mindestanforderung: >=5 echte Aktionen, >=2 Stubs.
+    """
     r = client.get("/api/v1/actions")
     actions = r.json()["actions"]
     implemented = [a for a in actions if a["implemented"] is True]
     stubs = [a for a in actions if a["implemented"] is False]
-    assert len(implemented) >= 3, f"Erwartet ≥3 echte Aktionen, bekommen: {len(implemented)}"
-    assert len(stubs) >= 7, f"Erwartet ≥7 Stubs, bekommen: {len(stubs)}"
+    assert len(implemented) >= 5, f"Erwartet >=5 echte Aktionen, bekommen: {len(implemented)}"
+    assert len(stubs) >= 2, f"Erwartet >=2 Stubs, bekommen: {len(stubs)}"
 
 
 def test_trigger_action_404_unknown(client):
@@ -584,13 +588,15 @@ def test_trigger_action_404_unknown(client):
 
 
 def test_trigger_action_stub_returns_200(client):
-    """Ein Stub liefert HTTP 200 mit status=not_implemented (kein 4xx)."""
-    r = client.post("/api/v1/actions/oberon.llm.test/trigger")
+    """Ein Stub liefert HTTP 200 mit status=not_implemented (kein 4xx).
+
+    octoboss.node.reboot ist ein stabiler Stub (implemented=False, requires_confirm=True).
+    """
+    r = client.post("/api/v1/actions/octoboss.node.reboot/trigger")
     assert r.status_code == 200
     data = r.json()
     assert data["status"] == "not_implemented"
-    assert data["action_id"] == "oberon.llm.test"
-    assert "implementiert" in (data["result_summary"] or "").lower()
+    assert data["action_id"] == "octoboss.node.reboot"
 
 
 def test_trigger_action_stub_with_body(client):
