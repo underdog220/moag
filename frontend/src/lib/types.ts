@@ -357,6 +357,45 @@ export interface ElectionTriggerResponse {
   detail?: string | null;
 }
 
+// ─── MOAG Aktionen-API (Endpoints unter /api/v1/actions) ─────────────────────
+// Mirror der docs/ACTIONS_SCHEMA.md Pydantic-Schemas.
+// Verbindlich — keine eigenen Felder erfinden, nur Schema-konforme Typen.
+
+export interface Action {
+  action_id: string;
+  system_id:
+    | "oberon"
+    | "octoboss"
+    | "ocrexpert"
+    | "nasdominator"
+    | "qnapbackup"
+    | "custos"
+    | "panopticor";
+  name: string;
+  description: string;
+  category: "diagnose" | "config" | "operation";
+  sub_area: string | null;
+  requires_confirm: boolean;
+  is_destructive: boolean;
+  estimated_duration_s: number | null;
+  implemented: boolean;
+}
+
+export interface ActionsResponse {
+  actions: Action[];
+  fetched_at: string;
+}
+
+export interface ActionTriggerResponse {
+  action_id: string;
+  triggered_at: string;
+  status: "started" | "completed" | "failed" | "not_implemented";
+  result_summary: string | null;
+  payload: Record<string, unknown>;
+  duration_ms: number | null;
+  error: string | null;
+}
+
 // ─── Oberon Cockpit-API (Endpoints unter /api/cockpit/*) ─────────────────────
 // Mirror der ocrexpert/oberon/cockpit_schemas.py Pydantic-Schemas.
 // Felder snake_case (JSON ist snake_case). Alle Top-Level-Models haben

@@ -8,6 +8,7 @@ import { useUiStore } from "./lib/store";
 
 // Top-Level-Features
 import Overview from "./features/overview";
+import AktionenFeature from "./features/aktionen";
 import OberonFeature from "./features/oberon";
 import OctoBossFeature from "./features/octoboss";
 import OCRexpertFeature from "./features/ocrexpert";
@@ -40,6 +41,9 @@ export function App() {
       <Route element={<Layout />}>
         {/* Startseite: Cockpit-Übersicht mit 8 Karten */}
         <Route path="/" element={<Overview />} />
+
+        {/* Aktionen: zweite Top-Achse — alle ausführbaren Operationen */}
+        <Route path="/aktionen" element={<AktionenFeature />} />
 
         {/* KI-Backbone (SonOfSETI ist ueber /octoboss/* erreichbar) */}
         <Route path="/oberon/*" element={<OberonFeature />} />

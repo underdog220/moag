@@ -999,5 +999,155 @@
         ]
       }
     ]
+  },
+
+  "GET /api/v1/actions": {
+    "fetched_at": "2026-05-17T08:00:00Z",
+    "actions": [
+      {
+        "action_id": "oberon.smoke",
+        "system_id": "oberon",
+        "name": "DSGVO-Smoke ausführen",
+        "description": "Triggert den Oberon-Cockpit-Smoke (6 Sub-Checks: DSGVO, PII, NER, OctoBoss, Postgres, Local-LLM).",
+        "category": "diagnose",
+        "sub_area": "smoke",
+        "requires_confirm": false,
+        "is_destructive": false,
+        "estimated_duration_s": 5,
+        "implemented": true
+      },
+      {
+        "action_id": "oberon.llm.test",
+        "system_id": "oberon",
+        "name": "LLM-Test ausführen",
+        "description": "Sendet einen kurzen Test-Prompt an das Standard-Modell und misst Latenz + Token-Verbrauch.",
+        "category": "diagnose",
+        "sub_area": "llm",
+        "requires_confirm": false,
+        "is_destructive": false,
+        "estimated_duration_s": 10,
+        "implemented": false
+      },
+      {
+        "action_id": "oberon.dsgvo.check",
+        "system_id": "oberon",
+        "name": "DSGVO-Check",
+        "description": "Prüft den aktuellen DSGVO-Status (PII-Engine aktiv, Audit-Log laufend, Anonymisierung konfiguriert).",
+        "category": "diagnose",
+        "sub_area": "dsgvo",
+        "requires_confirm": false,
+        "is_destructive": false,
+        "estimated_duration_s": 3,
+        "implemented": false
+      },
+      {
+        "action_id": "octoboss.cluster.status",
+        "system_id": "octoboss",
+        "name": "Cluster-Status abrufen",
+        "description": "Holt den aktuellen Cluster-Status direkt vom OctoBoss-Hub (Admin-Endpoint).",
+        "category": "diagnose",
+        "sub_area": "cluster",
+        "requires_confirm": false,
+        "is_destructive": false,
+        "estimated_duration_s": 2,
+        "implemented": true
+      },
+      {
+        "action_id": "octoboss.bench.start",
+        "system_id": "octoboss",
+        "name": "Benchmark starten",
+        "description": "Startet einen OCR-Benchmark-Run über alle verbundenen Nodes und misst Throughput + Latenz.",
+        "category": "operation",
+        "sub_area": "bench",
+        "requires_confirm": true,
+        "is_destructive": false,
+        "estimated_duration_s": 30,
+        "implemented": false
+      },
+      {
+        "action_id": "octoboss.node.reboot",
+        "system_id": "octoboss",
+        "name": "Node neu starten",
+        "description": "Startet eine SonOfSETI-Node neu. Alle laufenden Jobs auf dieser Node werden unterbrochen.",
+        "category": "operation",
+        "sub_area": "node",
+        "requires_confirm": true,
+        "is_destructive": true,
+        "estimated_duration_s": 60,
+        "implemented": false
+      },
+      {
+        "action_id": "octoboss.ollama.pull",
+        "system_id": "octoboss",
+        "name": "Ollama-Modell laden",
+        "description": "Zieht ein Ollama-Modell auf alle verbundenen Nodes (Pull-Broadcast).",
+        "category": "operation",
+        "sub_area": "ollama",
+        "requires_confirm": true,
+        "is_destructive": false,
+        "estimated_duration_s": null,
+        "implemented": false
+      },
+      {
+        "action_id": "ocrexpert.health.check",
+        "system_id": "ocrexpert",
+        "name": "Health-Check",
+        "description": "Ruft den OCRexpert-Health-Endpoint auf und aktualisiert den Status-Cache.",
+        "category": "diagnose",
+        "sub_area": null,
+        "requires_confirm": false,
+        "is_destructive": false,
+        "estimated_duration_s": 2,
+        "implemented": true
+      },
+      {
+        "action_id": "ocrexpert.shadow.batch",
+        "system_id": "ocrexpert",
+        "name": "Shadow-Batch starten",
+        "description": "Startet einen Shadow-OCR-Batch-Lauf mit Engine-B parallel zu Engine-A (für A/B-Vergleich).",
+        "category": "operation",
+        "sub_area": "shadow",
+        "requires_confirm": true,
+        "is_destructive": false,
+        "estimated_duration_s": null,
+        "implemented": false
+      },
+      {
+        "action_id": "nasdominator.services.refresh",
+        "system_id": "nasdominator",
+        "name": "Services-Status aktualisieren",
+        "description": "Fordert NasDominator auf, alle Critical-Services sofort neu zu prüfen (Oberon, OctoBoss, Postgres).",
+        "category": "diagnose",
+        "sub_area": "services",
+        "requires_confirm": false,
+        "is_destructive": false,
+        "estimated_duration_s": 5,
+        "implemented": false
+      },
+      {
+        "action_id": "custos.rules.run",
+        "system_id": "custos",
+        "name": "Rule-Engine ausführen",
+        "description": "Führt alle konfigurierten Compliance-Regeln sofort aus und aktualisiert die Findings-Liste.",
+        "category": "operation",
+        "sub_area": "rules",
+        "requires_confirm": true,
+        "is_destructive": false,
+        "estimated_duration_s": 15,
+        "implemented": false
+      },
+      {
+        "action_id": "panopticor.scenario.trigger",
+        "system_id": "panopticor",
+        "name": "Szenario triggern",
+        "description": "Startet einen Panopticor-Test-Szenario-Run in der Sandbox-Umgebung.",
+        "category": "operation",
+        "sub_area": "scenario",
+        "requires_confirm": true,
+        "is_destructive": false,
+        "estimated_duration_s": null,
+        "implemented": false
+      }
+    ]
   }
 }

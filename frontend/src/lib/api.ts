@@ -31,6 +31,8 @@ import type {
   AuditResponse,
   SmokeResponse,
   OverviewResponse,
+  ActionsResponse,
+  ActionTriggerResponse,
 } from "./types";
 
 const API_BASE = "/api";
@@ -320,6 +322,23 @@ export const api = {
   /** GET /api/v1/overview — Status aller 8 Sub-Systeme (Cockpit-Startseite). */
   getOverview: (): Promise<OverviewResponse> =>
     request<OverviewResponse>("/v1/overview"),
+
+  // ─── Aktionen-API ────────────────────────────────────────────────────────────
+
+  /** GET /api/v1/actions — Komplette Aktions-Registry (alle Sub-Systeme). */
+  getActions: (): Promise<ActionsResponse> =>
+    request<ActionsResponse>("/v1/actions"),
+
+  /** POST /api/v1/actions/{action_id}/trigger — Aktion ausfuehren.
+   *  Body optional: adapter-spezifische Parameter (z.B. {node_id: "..."}). */
+  triggerAction: (
+    action_id: string,
+    body?: Record<string, unknown>,
+  ): Promise<ActionTriggerResponse> =>
+    request<ActionTriggerResponse>(
+      `/v1/actions/${encodeURIComponent(action_id)}/trigger`,
+      { method: "POST", body: body ?? {} },
+    ),
 };
 
 export type Api = typeof api;
