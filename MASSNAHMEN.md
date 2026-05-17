@@ -72,6 +72,16 @@ Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
   - Tests (5 neue Dateien, 56 neue Tests): `uploadOperations.test.ts`, `ParamsForm.test.tsx`, `OperationCard.test.tsx`, `MultiDropZone.test.tsx`, `UploadHubPage.test.tsx`.
   - **Ergebnis:** 73 Test-Files / 399 Tests grün, `npm run build` grün.
 
+## 2026-05-17 (Upload-Listing Bug-Fix)
+
+- [2026-05-17] [v0.2.0] **Bug-Fix: GET /api/v1/uploads HTTP 500 bei nicht-leerer DB (Bug 1).**
+  - Root-Cause: psycopg3 (PostgreSQL) liefert Zeilen als `tuple`, nicht als dict. `repository.py` griff mit `row["upload_id"]` (String-Key) zu → `TypeError: tuple indices must be integers or slices, not str`.
+  - Zweite Ursache: `SELECT COUNT(*)` liefert bei psycopg dict_row `{'count': 1}`, Code griff mit `count_row[0]` (int-Key) zu → `KeyError: 0`.
+  - Fix 1 (`backend/moag/upload/db.py`): Pool-Init um `kwargs={"row_factory": dict_row}` erweitert; psycopg_simple-Pfad nutzt `psycopg.AsyncConnection.connect(..., row_factory=dict_row)`.
+  - Fix 2 (`backend/moag/upload/repository.py`): `SELECT COUNT(*) AS n FROM uploads` (einheitlicher Spaltenname); beide DB-Pfade nutzen `count_row["n"]`.
+  - Tests: 1 neuer Regression-Test `test_list_uploads_mit_eintraegen_dict_zugriff` in `test_upload_db.py` (prüft list_uploads mit vorhandenen Einträgen — war die Lücke die den Live-Bug nicht abfing). 24/24 Tests grün.
+  - Live-Verify: `GET http://192.168.200.71:17900/api/v1/uploads` liefert JSON-Array mit dem vorhandenen Eintrag (HTTP 200). Container hot-patched via `docker cp` + Restart.
+
 ## 2026-05-17 (OCR-Operations-Handler)
 
 - [2026-05-17] [v0.1.0] **4 echte Upload-Handler für OCR-Operations:**

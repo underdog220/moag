@@ -268,6 +268,36 @@ async def test_list_uploads_mit_filter(sample_upload):
 
 
 @pytest.mark.asyncio
+async def test_list_uploads_mit_eintraegen_dict_zugriff(sample_upload):
+    """list_uploads liefert Upload-Objekte mit korrektem dict-Zugriff wenn Einträge vorhanden.
+
+    Regression-Test für Bug: row["upload_id"] → TypeError: tuple indices must be integers.
+    Reproduziert den Live-Crash auf /api/v1/uploads wenn >= 1 Upload existiert.
+    """
+    import moag.upload.db as _db
+    from moag.upload.repository import create_upload, list_uploads
+
+    await _db.ensure_pool()
+    await _db.ensure_schema()
+
+    # Upload anlegen — jetzt ist die DB nicht leer
+    await create_upload(sample_upload, b"Testinhalt fuer list-crash-repro")
+
+    # Genau dieser Aufruf crashte live mit TypeError: tuple indices must be integers
+    uploads, total = await list_uploads(status=None, operation=None, limit=20, offset=0)
+
+    assert total == 1, f"Erwartet 1 Upload, bekommen: {total}"
+    assert len(uploads) == 1
+    u = uploads[0]
+    assert u.upload_id == sample_upload.upload_id
+    assert u.operation == "ocr.standard"
+    assert u.filename == "test.pdf"
+    assert u.size_bytes == 1024
+    assert u.status == "queued"
+    assert u.params == {"engine": "tesseract"}
+
+
+@pytest.mark.asyncio
 async def test_delete_upload(sample_upload):
     """delete_upload entfernt Upload aus DB + Filesystem-Cleanup."""
     import moag.upload.db as _db

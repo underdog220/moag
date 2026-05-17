@@ -178,11 +178,13 @@ async def ensure_pool() -> None:
     if conn_url:
         try:
             from psycopg_pool import AsyncConnectionPool  # type: ignore[import]
+            from psycopg.rows import dict_row  # type: ignore[import]
             _pool = AsyncConnectionPool(
                 conninfo=conn_url,
                 min_size=1,
                 max_size=5,
                 open=False,
+                kwargs={"row_factory": dict_row},
             )
             await _pool.open(wait=True, timeout=8.0)
             logger.info("PostgreSQL-Pool initialisiert")
@@ -280,9 +282,12 @@ async def get_conn() -> Any:
 
     if isinstance(_pool, dict) and _pool.get("_type") == "psycopg_simple":
         import psycopg  # type: ignore[import]
-        return await psycopg.AsyncConnection.connect(_pool["_conn_url"])
+        from psycopg.rows import dict_row
+        return await psycopg.AsyncConnection.connect(
+            _pool["_conn_url"], row_factory=dict_row
+        )
 
-    # psycopg_pool
+    # psycopg_pool: row_factory ist bereits via Pool-kwargs={"row_factory": dict_row} gesetzt
     return _pool.connection()
 
 

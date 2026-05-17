@@ -253,7 +253,8 @@ async def list_uploads(
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
 
-    count_sql = f"SELECT COUNT(*) FROM uploads {where}"
+    # AS n: einheitlicher Spaltenname für beide DB-Backends (dict_row/sqlite3.Row)
+    count_sql = f"SELECT COUNT(*) AS n FROM uploads {where}"
     list_sql = (
         f"SELECT * FROM uploads {where} "
         f"ORDER BY uploaded_at DESC "
@@ -265,12 +266,12 @@ async def list_uploads(
     async with await get_conn() as conn:
         if _db_mod._using_sqlite:
             count_row = await conn.fetchone(count_sql, tuple(count_params))
-            total = count_row[0] if count_row else 0
+            total = count_row["n"] if count_row else 0
             rows = await conn.fetchall(list_sql, tuple(list_params))
         else:
             cur = await conn.execute(count_sql, count_params)
             count_row = await cur.fetchone()
-            total = count_row[0] if count_row else 0
+            total = count_row["n"] if count_row else 0
             cur = await conn.execute(list_sql, tuple(list_params))
             rows = await cur.fetchall()
 
