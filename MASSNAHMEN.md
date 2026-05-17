@@ -18,6 +18,14 @@ Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
 - [2026-05-16] [v0.1.0] GitHub-Repo `underdog220/moag` erstellt (public), 6 Commits gepusht (HEAD 1591319). Remote `origin/main` aktiv.
 - [2026-05-16] [v0.1.0] Oberon-Token in MOAG-Container gesetzt (token aus OCRexpert-GUI-Volume `/var/lib/ocrexpert-gui/.ocrexpert/gui_settings.json` übernommen). Container re-deployed mit `-e MOAG_OBERON_BASE_URL` + `-e MOAG_OBERON_TOKEN` + `-e MOAG_OCREXPERT_BASE_URL`. Oberon-Cockpit-Adapter liefert nun PASS 6/6 (Smoke-Sub-Checks), Aggregator-Overall springt 12 → 25 (KI-Backbone von 25 auf 50). OCRexpert-Adapter weiterhin offline (Service auf VDR:17810 antwortet nicht — separat zu klären).
 
+## 2026-05-17 (Bug-Fixes Aktionen + NasDominator-Adapter)
+
+- [2026-05-17] [v0.1.0] 4 Live-Bugs in Aktionen/Adapter behoben (Commit 06fe356):
+  - Bug 1 (oberon.llm.test): Timeout 15s → 35s (Oberon Cold-LLM dauert bis 28s).
+  - Bug 2 (oberon.dsgvo.check): Endpoint `/api/v2/dsgvo/status` war korrekt, Code war bereits funktionsfähig.
+  - Bug 3 (octoboss.bench.start HTTP 422): Body-Schema korrigiert auf OctoBoss-Nested-Format `{"workload": {"workload_type": ..., "params": {...}}, ...}`.
+  - Bug 4 (NasDominator 0/14 Services up): `/api/services/monitored` enthält nur Konfiguration ohne `status`-Feld. Adapter auf `/api/services/containers` umgestellt (`state: running/exited`). Score: 0 → 85, Summary: "8/16 Container running". 266/266 Tests grün. Live-Deploy per `docker cp` + Restart auf VDR.
+
 ## 2026-05-17 (Phase 7 — Mobile-Optimierung)
 
 - [2026-05-17] [v0.1.0] Phase 7 Mobile-Optimierung: Touch-Targets ≥ 44px (min-h-[44px] + px-3 py-2/py-3) für TopBar-Buttons (Alert, Theme, Settings, GroupIndicator), NavBar-Links (Achsen + System-Links), alle Sub-Tab-Navs (OberonLayout, OctoBossLayout, OCRexpert OcrSubNav, NasDominatorLayout, CustosLayout), ConfirmDialog-Buttons, ActionCard-Start-Button, Aktualisieren-Button. Sub-Tab-Navs auf overflow-x-auto + scrollbar-none umgestellt (Mobile horizontal scroll). Tabellen-Wrapper nasdominator/Services + Container: overflow-hidden → overflow-x-auto. PageBadge: Routen-Text auf Mobile (< sm) ausgeblendet. Audit-Filter-Inputs: min-h-[44px]. Tooltip Long-Press: onTouchCancel + onTouchMove korrekt verdrahtet, kurzer Tap (<500ms) öffnet keinen Tooltip. Tooltip.test.tsx: 3 neue Long-Press-Tests (vi.useFakeTimers, 499ms kein Tooltip, 500ms Tooltip erscheint, onTouchMove bricht ab). Build grün, 352/355 Tests grün (3 Fehler vorher schon vorhanden in Jobs.test.tsx, durch Phase 7 nicht verursacht — sogar 2 Tests durch korrekten Import geheilt). Commit acdc967.

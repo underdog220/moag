@@ -12,7 +12,7 @@
 [CmdletBinding()]
 param(
     [string]$BaseUrl = "http://192.168.200.71:17900",
-    [int]$TimeoutSec = 10
+    [int]$TimeoutSec = 30
 )
 
 $ErrorActionPreference = "Stop"

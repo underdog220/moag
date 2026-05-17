@@ -70,6 +70,11 @@
 - Was: `/sonofseti` — Node-Liste aus OctoBoss-Proxy
 - Code: `frontend/src/features/sonofseti/`
 
+### Mobile-Optimierung (Phase 7)
+- Was: Touch-Targets ≥ 44px, Long-Press-Tooltip, Sub-Tab-Nav scrollbar, Tabellen overflow-x-auto, PageBadge Mobile-kompakt
+- Code: `frontend/src/components/Tooltip.tsx`, `TopBar.tsx`, `NavBar.tsx`, `ConfirmDialog.tsx`, `PageBadge.tsx`, alle Sub-Tab-Layouts, `aktionen/ActionCard.tsx`, `nasdominator/pages/Services.tsx`, `nasdominator/pages/Container.tsx`, `oberon/pages/Audit.tsx`
+- Tests: `Tooltip.test.tsx` — 3 neue Long-Press-Tests (6 Tests gesamt grün)
+
 ### Stubs: NasDominator, qnapbackup, Custos, Panopticor
 - Was: Platzhalter-Seiten mit Info + Direktlink, je Phase 3–6
 - Code: `frontend/src/features/{nasdominator,qnapbackup,custos,panopticor}/`
@@ -184,10 +189,10 @@ Diese Liste rutscht nach Implementierung in `Aktiv`. Heute sind sie Planungs-Bac
 - Run-Historie mit Pass/Fail-Status
 - Confirm-Dialog vor jedem Trigger
 
-### Mobile-Tauglichkeit (Phase 7)
-- Lighthouse-Mobile-Score ≥ 90
-- Alle Cards lesbar auf 360px Viewport
-- Touch-Targets ≥ 44×44px
+### Mobile-Tauglichkeit (Phase 7) — implementiert, noch nicht gemessen
+- Lighthouse-Score: noch nicht gemessen (Bonus, optional)
+- Alle Cards lesbar auf 360px Viewport — Overview stackt 1-Spalte, Aktionen 1-Spalte
+- Touch-Targets ≥ 44×44px — überall umgesetzt
 
 ### Settings-Verwaltung (Phase 1)
 - System-URLs editieren

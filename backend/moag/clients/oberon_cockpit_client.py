@@ -18,8 +18,10 @@ ETag-Cache: in-memory Dict pro CockpitClient-Instanz.
   - Bei HTTP 304: liefert letzten gecachten Body zurueck
   - Bei HTTP 200: aktualisiert den Cache
 
-Live-Probe 2026-05-16: OBERON_TOKEN liefert HTTP 401 auf /cockpit/*
-(Cockpit braucht Admin-Token). OBERON_ADMIN_TOKEN-ENV als separates Feld.
+Live-Verifiziert 2026-05-17: OBERON_TOKEN funktioniert auf /cockpit/*-
+Endpoints — der frühere Hinweis auf einen separaten Admin-Token war veraltet
+(Oberon hat den Token-Check für /cockpit erweitert). Bearer + X-DevLoop-Token
+werden beide akzeptiert.
 Mocks bauen auf Fixtures aus test_oberon_cockpit_schemas.py.
 """
 from __future__ import annotations
