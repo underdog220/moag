@@ -17,3 +17,19 @@ pydantic>=2.6
 pytest>=8.0
 pytest-asyncio>=0.23
 pytest-httpx>=0.30
+
+# Optional: Text-Extraktion fuer Upload-Handler
+# Soft-Fail wenn nicht installiert — Handler liefert dann UploadResult(failed)
+pypdf>=4.0
+python-docx>=1.1
+
+# Upload-Hub
+python-ulid>=3.0         # ULID-Generierung (zeitlich sortierbar)
+psycopg[binary]>=3.1     # PostgreSQL async (psycopg3)
+psycopg-pool>=3.1        # Connection-Pool fuer psycopg3
+# MIME-Erkennung — plattformspezifisch:
+#   Windows: python-magic-bin (enthaelt libmagic DLL)
+#   Linux:   python-magic (nutzt system libmagic)
+# Beide optional — Endungs-Fallback greift wenn keine Lib installiert.
+python-magic-bin>=0.4.14 ; sys_platform == "win32"
+python-magic>=0.4.27     ; sys_platform != "win32"
