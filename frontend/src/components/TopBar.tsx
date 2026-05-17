@@ -56,8 +56,8 @@ function GroupIndicator({ group }: { group: GroupHealth }) {
     <div className="relative" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
       <button
         type="button"
-        className={`flex items-center gap-1 rounded border border-white/5 bg-bg-panel
-                    px-2 py-1 text-xs hover:bg-bg-subtle`}
+        className={`flex items-center gap-1 rounded border border-white/10 bg-bg-panel
+                    px-2 py-1 text-xs hover:bg-bg-subtle hover:border-white/20`}
         title={`${group.name}: ${group.score}%`}
       >
         <span className="text-fg-subtle">{group.name}</span>
@@ -72,7 +72,7 @@ function GroupIndicator({ group }: { group: GroupHealth }) {
           <p className="mb-1.5 text-xxs font-semibold uppercase text-fg-subtle">{group.name}</p>
           <ul className="space-y-1">
             {group.systems.map((s) => (
-              <li key={s.name} className="flex items-center justify-between gap-4 text-xs">
+              <li key={s.name} className="flex items-center justify-between gap-4 text-sm">
                 <span className={s.ok ? "text-fg" : "text-fg-muted"}>{s.name}</span>
                 <span
                   className={`tabular-nums ${
@@ -164,7 +164,7 @@ export function TopBar(_props: TopBarProps) {
   return (
     <header
       className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between
-                 border-b border-white/5 bg-bg-elevated/90 px-4 backdrop-blur-md"
+                 border-b border-white/10 bg-bg-elevated/90 px-4 backdrop-blur-md"
       data-testid="topbar"
     >
       {/* Links: Logo */}
@@ -193,7 +193,7 @@ export function TopBar(_props: TopBarProps) {
       <div className="hidden items-center gap-3 sm:flex">
         {/* Gesamt-Health-Score */}
         <div
-          className="flex items-center gap-2 rounded border border-white/5 bg-bg-panel
+          className="flex items-center gap-2 rounded border border-white/10 bg-bg-panel
                      px-3 py-1 text-xs"
           data-testid="overall-score"
           title="Gewichteter Gesamt-Health-Score über alle 8 Sub-Systeme"
@@ -237,8 +237,8 @@ export function TopBar(_props: TopBarProps) {
           onClick={toggleTheme}
           aria-label={theme === "dark" ? "Light-Mode aktivieren" : "Dark-Mode aktivieren"}
           title={theme === "dark" ? "Light-Mode" : "Dark-Mode"}
-          className="rounded border border-white/5 bg-bg-panel px-2 py-1 text-xs text-fg
-                     hover:bg-bg-subtle"
+          className="rounded border border-white/10 bg-bg-panel px-2 py-1 text-xs text-fg
+                     hover:bg-bg-subtle hover:border-white/20"
         >
           {theme === "dark" ? "Hell" : "Dunkel"}
         </button>
@@ -247,8 +247,8 @@ export function TopBar(_props: TopBarProps) {
           to="/settings"
           aria-label="Einstellungen"
           title="Einstellungen"
-          className="rounded border border-white/5 bg-bg-panel px-2 py-1 text-xs text-fg
-                     hover:bg-bg-subtle"
+          className="rounded border border-white/10 bg-bg-panel px-2 py-1 text-xs text-fg
+                     hover:bg-bg-subtle hover:border-white/20"
         >
           Settings
         </Link>

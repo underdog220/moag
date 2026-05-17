@@ -31,7 +31,7 @@ export function Overview() {
     <div className="min-h-full p-4 pb-12" data-testid="overview">
       <header className="mb-6">
         <h1 className="text-xl font-semibold text-fg">MOAG — Systemübersicht</h1>
-        <p className="mt-1 text-sm text-fg-muted">
+        <p className="mt-1 text-base text-fg-muted">
           Alle 8 Sub-Systeme auf einen Blick. Klick auf eine Karte für Drilldown.
         </p>
       </header>
@@ -57,11 +57,11 @@ export function Overview() {
         return (
           <section key={key} className="mb-8" data-testid={`group-${key}`}>
             <div className="mb-3 flex items-center gap-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-fg-subtle">
+              <h2 className="text-base font-semibold uppercase tracking-wide text-fg-subtle">
                 {label}
               </h2>
               <span
-                className={`text-xs font-semibold tabular-nums ${
+                className={`text-sm font-semibold tabular-nums ${
                   groupScore >= 70
                     ? "text-status-ok"
                     : groupScore >= 40

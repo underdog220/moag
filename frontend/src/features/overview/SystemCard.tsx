@@ -25,7 +25,7 @@ function MetricList({ metrics }: { metrics: SystemStatus["metrics"] }) {
   return (
     <ul className="mt-2 space-y-1">
       {entries.map(([key, val]) => (
-        <li key={key} className="flex items-center justify-between text-xs">
+        <li key={key} className="flex items-center justify-between text-sm">
           <span className="text-fg-subtle capitalize">{key.replace(/_/g, " ")}</span>
           <span className="tabular-nums text-fg-muted">{String(val)}</span>
         </li>
@@ -52,7 +52,7 @@ export function SystemCard({ system }: SystemCardProps) {
       className={`group flex flex-col rounded-lg border bg-bg-panel p-4 transition-all
                   hover:border-brand/40 hover:bg-bg-subtle hover:shadow-lg
                   focus:outline-none focus:ring-2 focus:ring-brand/60 ${
-                    system.ok ? "border-white/5" : "border-status-error/20"
+                    system.ok ? "border-white/10" : "border-status-error/20"
                   }`}
     >
       {/* Header: Name + Status-Dot */}
@@ -83,7 +83,7 @@ export function SystemCard({ system }: SystemCardProps) {
       </div>
 
       {/* Summary */}
-      <p className="mt-2 text-xs text-fg-muted line-clamp-2">
+      <p className="mt-2 text-sm text-fg-muted line-clamp-2">
         {isStub ? system.error ?? system.summary : system.summary}
       </p>
 
@@ -93,7 +93,7 @@ export function SystemCard({ system }: SystemCardProps) {
       {/* Footer-Hinweis: "Klicken fuer Detail" — optisch wie Button, aber kein eigener Link */}
       <div className="mt-auto pt-3">
         <span
-          className="block rounded bg-bg-elevated px-3 py-1.5 text-center text-xs
+          className="block rounded bg-bg-elevated px-3 py-1.5 text-center text-sm
                      text-fg-muted group-hover:bg-brand/10 group-hover:text-brand"
           data-testid={`card-detail-${system.id}`}
           aria-hidden="true"

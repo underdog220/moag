@@ -14,8 +14,8 @@ export default {
         },
         fg: {
           DEFAULT: "#e2e8f0",
-          muted: "#94a3b8",
-          subtle: "#64748b",
+          muted: "#cbd5e1",   // angehoben: slate-300 statt slate-400 (war #94a3b8)
+          subtle: "#94a3b8",  // angehoben: slate-400 statt slate-500 (war #64748b)
         },
         brand: {
           DEFAULT: "#3b82f6",

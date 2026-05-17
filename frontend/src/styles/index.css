@@ -16,6 +16,7 @@ body,
 
 body {
   font-family: theme("fontFamily.sans");
+  font-size: 16px; /* explizit — Tailwind-Default, aber Browser-Override-sicher */
   background-color: theme("colors.bg.DEFAULT");
   color: theme("colors.fg.DEFAULT");
 }
