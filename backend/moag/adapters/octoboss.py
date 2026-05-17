@@ -58,38 +58,79 @@ async def get_status(
                     error=f"OctoBoss {base} nicht erreichbar",
                 )
 
-            # Cluster-Status
+            # Cluster-Status mit ehrlicher Score-Formel.
+            # Connected allein reicht nicht — wir bewerten zusaetzlich, ob Ollama laeuft,
+            # ob Hardware-Telemetrie ueberhaupt ankommt und ob die Mode IDLE/ACTIVE ist.
             nodes_total = 0
             nodes_connected = 0
+            nodes_ollama_running = 0
+            nodes_hardware_present = 0
+            nodes_mode_ok = 0
             try:
                 resp_nodes = await client.get(f"{base}/seti/nodes", headers=headers)
                 if resp_nodes.is_success:
                     data = resp_nodes.json()
                     nodes_list = data if isinstance(data, list) else data.get("nodes", [])
                     nodes_total = len(nodes_list)
-                    nodes_connected = sum(1 for n in nodes_list if n.get("connected") or n.get("online"))
+                    for n in nodes_list:
+                        if n.get("connected") or n.get("online"):
+                            nodes_connected += 1
+                        ollama = n.get("ollama") or {}
+                        if ollama.get("running"):
+                            nodes_ollama_running += 1
+                        hw = n.get("hardware") or {}
+                        # Hardware-Telemetrie "kommt an" wenn mindestens 1 Feld populiert ist
+                        if hw.get("gpu_name") or hw.get("gpu_load_percent") is not None \
+                                or hw.get("cpu_load_percent") is not None \
+                                or hw.get("ram_free_gb") is not None:
+                            nodes_hardware_present += 1
+                        mode = (n.get("mode") or "").upper()
+                        if mode in ("IDLE", "ACTIVE"):
+                            nodes_mode_ok += 1
             except Exception as e:
                 logger.debug("OctoBoss /seti/nodes fehlgeschlagen: %s", e)
 
             dauer_ms = int((time.monotonic() - t0) * 1000)
-            plog.step("octoboss.adapter", "nodes", input={"url": base}, output={"nodes_total": nodes_total, "connected": nodes_connected}, dauer_ms=dauer_ms, ok=True)
+            plog.step(
+                "octoboss.adapter", "nodes",
+                input={"url": base},
+                output={
+                    "nodes_total": nodes_total, "connected": nodes_connected,
+                    "ollama": nodes_ollama_running, "hardware": nodes_hardware_present,
+                    "mode_ok": nodes_mode_ok,
+                },
+                dauer_ms=dauer_ms, ok=True,
+            )
 
+            # Gewichteter Score: 40% connected + 30% ollama + 20% hardware + 10% mode-ok
             if nodes_total == 0:
-                score = 60
-            elif nodes_connected == nodes_total:
-                score = 100
+                score = 30
+                summary = "OctoBoss erreichbar, aber keine Nodes registriert."
             else:
-                score = int(60 + 40 * (nodes_connected / max(1, nodes_total)))
+                q_connected = nodes_connected / nodes_total
+                q_ollama    = nodes_ollama_running / nodes_total
+                q_hardware  = nodes_hardware_present / nodes_total
+                q_mode      = nodes_mode_ok / nodes_total
+                score = int(round(100 * (0.40 * q_connected + 0.30 * q_ollama
+                                          + 0.20 * q_hardware + 0.10 * q_mode)))
+                summary = (
+                    f"OctoBoss: {nodes_connected}/{nodes_total} connected · "
+                    f"{nodes_ollama_running}/{nodes_total} Ollama · "
+                    f"{nodes_hardware_present}/{nodes_total} HW-Telemetrie · "
+                    f"{nodes_mode_ok}/{nodes_total} Mode IDLE/ACTIVE"
+                )
 
-            summary = f"OctoBoss erreichbar: {nodes_connected}/{nodes_total} Nodes verbunden."
             return SystemStatus(
                 system_id="octoboss",
-                ok=True,
+                ok=score >= 40,
                 score=score,
                 summary=summary,
                 metrics={
                     "nodes_total": nodes_total,
                     "nodes_connected": nodes_connected,
+                    "nodes_ollama_running": nodes_ollama_running,
+                    "nodes_hardware_present": nodes_hardware_present,
+                    "nodes_mode_ok": nodes_mode_ok,
                     "latency_ms": dauer_ms,
                 },
                 fetched_at=fetched_at,

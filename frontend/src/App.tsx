@@ -10,7 +10,6 @@ import { useUiStore } from "./lib/store";
 import Overview from "./features/overview";
 import OberonFeature from "./features/oberon";
 import OctoBossFeature from "./features/octoboss";
-import SonOfSetiFeature from "./features/sonofseti";
 import OCRexpertFeature from "./features/ocrexpert";
 import NasDominatorFeature from "./features/nasdominator";
 import QnapBackupFeature from "./features/qnapbackup";
@@ -42,11 +41,13 @@ export function App() {
         {/* Startseite: Cockpit-Übersicht mit 8 Karten */}
         <Route path="/" element={<Overview />} />
 
-        {/* KI-Backbone */}
+        {/* KI-Backbone (SonOfSETI ist ueber /octoboss/* erreichbar) */}
         <Route path="/oberon/*" element={<OberonFeature />} />
         <Route path="/octoboss/*" element={<OctoBossFeature />} />
-        <Route path="/sonofseti/*" element={<SonOfSetiFeature />} />
         <Route path="/ocrexpert/*" element={<OCRexpertFeature />} />
+        {/* Legacy: alte /sonofseti-URLs auf octoboss-Drilldown umleiten */}
+        <Route path="/sonofseti" element={<Navigate to="/octoboss" replace />} />
+        <Route path="/sonofseti/*" element={<Navigate to="/octoboss" replace />} />
 
         {/* Infrastruktur */}
         <Route path="/nasdominator/*" element={<NasDominatorFeature />} />

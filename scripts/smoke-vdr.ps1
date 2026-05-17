@@ -38,11 +38,15 @@ try {
     Add-Check -Name "api-health" -Ok $false -Detail "Exception: $($_.Exception.Message)"
 }
 
-# 2. /api/v1/overview - Schema-Vertrag
+# 2. /api/v1/overview - Schema-Vertrag (7 Top-Karten, SonOfSETI ist
+#    seit 2026-05-17 als Drilldown unter OctoBoss eingebettet)
 try {
     $o = Invoke-RestMethod -Uri "$BaseUrl/api/v1/overview" -TimeoutSec $TimeoutSec
     $systems = $o.systems
-    $countOk = $systems.Count -eq 8
+    $countOk = $systems.Count -eq 7
+    $expectedIds = @("oberon","octoboss","ocrexpert","nasdominator","qnapbackup","custos","panopticor")
+    $actualIds = @($systems | ForEach-Object { $_.system_id })
+    $idsOk = -not (Compare-Object $expectedIds $actualIds)
     $required = @("id","name","group","ok","score","summary","metrics","fetched_at")
     $missing = @()
     foreach ($s in $systems) {
@@ -50,8 +54,8 @@ try {
             if ($null -eq $s.$field) { $missing += "$($s.system_id).$field" }
         }
     }
-    $ok = $countOk -and ($missing.Count -eq 0)
-    $detail = "systems=$($systems.Count)"
+    $ok = $countOk -and $idsOk -and ($missing.Count -eq 0)
+    $detail = "systems=$($systems.Count) ids_ok=$idsOk"
     if ($missing.Count -gt 0) { $detail += " fehlende_felder=$($missing -join ',')" }
     Add-Check -Name "overview-schema" -Ok $ok -Detail $detail
 } catch {

@@ -21,4 +21,4 @@ Phase 2: Top-Health-Leiste echte Daten + Pflicht-Tooltip-Komponente verfeinern +
 - sonofseti-Adapter: node_addresses aus Settings versorgen
 
 ## Letzte Änderung
-2026-05-17 — Panopticor-Smoke-Test eingerichtet (`scripts/smoke-vdr.ps1`, 5 Read-only-Checks) und sauber durch die Pano-Bridge gelaufen (Goal passed, score 1.0). Schema-Vertrag-Bug aus dem "blauer-Screen"-Vorfall ist strukturell durch den Smoke abgedeckt.
+2026-05-17 — SonOfSETI-Karte raus (jetzt 7 Top-Karten, Nodes via OctoBoss-Drilldown), SystemCard komplett klickbar, OctoBoss-Score-Formel ehrlich gemacht (Hardware/Ollama/Mode-gewichtet) — Live-Score springt von trügerischen 92 auf realistische 42. 124/124 Tests grün, Smoke 5/5.

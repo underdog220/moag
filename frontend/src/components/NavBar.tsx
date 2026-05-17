@@ -9,11 +9,11 @@ interface NavItem {
   group?: string;
 }
 
+// SonOfSETI 2026-05-17 entfernt — Nodes werden ueber OctoBoss-Drilldown sichtbar.
 const NAV_ITEMS: NavItem[] = [
   { to: "/",            label: "Übersicht" },
   { to: "/oberon",      label: "Oberon",       group: "KI" },
   { to: "/octoboss",    label: "OctoBoss",     group: "KI" },
-  { to: "/sonofseti",   label: "SonOfSETI",    group: "KI" },
   { to: "/ocrexpert",   label: "OCRexpert",    group: "KI" },
   { to: "/nasdominator",label: "NasDominator", group: "Infra" },
   { to: "/qnapbackup",  label: "qnapbackup",   group: "Infra" },

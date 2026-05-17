@@ -468,18 +468,22 @@ def test_spa_fallback_serves_index_for_react_routes(tmp_path: Path, monkeypatch)
 
 
 def test_overview_endpoint(client):
-    """/api/v1/overview liefert alle 8 System-Status-Objekte."""
+    """/api/v1/overview liefert alle 7 System-Status-Objekte.
+
+    SonOfSETI wurde 2026-05-17 als Top-Karte entfernt (Nodes werden ueber
+    OctoBoss-Drilldown sichtbar). Der Adapter `adapters/sonofseti.py` bleibt.
+    """
     r = client.get("/api/v1/overview")
     assert r.status_code == 200
     data = r.json()
     assert "systems" in data
     assert "fetched_at" in data
     systems = data["systems"]
-    # Alle 8 System-IDs muessen da sein
     ids = {s["system_id"] for s in systems}
-    expected = {"oberon", "octoboss", "sonofseti", "ocrexpert",
+    expected = {"oberon", "octoboss", "ocrexpert",
                 "nasdominator", "qnapbackup", "custos", "panopticor"}
     assert ids == expected
+    assert "sonofseti" not in ids
 
 
 def test_aggregator_health_endpoint(client):

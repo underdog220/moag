@@ -252,7 +252,6 @@ def create_app(
         from moag.adapters import (
             oberon as _oberon,
             octoboss as _octoboss,
-            sonofseti as _sonofseti,
             ocrexpert as _ocrexpert,
             nasdominator as _nasdominator,
             qnapbackup as _qnapbackup,
@@ -273,7 +272,6 @@ def create_app(
         coros = [
             _oberon.get_status(base_url=s.oberon_base_url, token=s.oberon_token),
             _octoboss.get_status(hub_url=octoboss_url, token=s.api_token),
-            _sonofseti.get_status(node_addresses=None, token=s.sonofseti_token),
             _ocrexpert.get_status(base_url=s.ocrexpert_base_url),
             _nasdominator.get_status(base_url=s.nasdominator_base_url),
             _qnapbackup.get_status(),
@@ -288,7 +286,7 @@ def create_app(
         for i, res in enumerate(results):
             if isinstance(res, Exception):
                 # Adapter-Crash -> Fehler-Status eintragen
-                system_ids = ["oberon", "octoboss", "sonofseti", "ocrexpert",
+                system_ids = ["oberon", "octoboss", "ocrexpert",
                                "nasdominator", "qnapbackup", "custos", "panopticor"]
                 sid = system_ids[i] if i < len(system_ids) else f"unknown-{i}"
                 from moag.schemas import SystemStatus
@@ -327,7 +325,6 @@ def create_app(
         from moag.adapters import (
             oberon as _oberon,
             octoboss as _octoboss,
-            sonofseti as _sonofseti,
             ocrexpert as _ocrexpert,
             nasdominator as _nasdominator,
             qnapbackup as _qnapbackup,
@@ -345,7 +342,6 @@ def create_app(
         coros = [
             _oberon.get_status(base_url=s.oberon_base_url, token=s.oberon_token),
             _octoboss.get_status(hub_url=octoboss_url, token=s.api_token),
-            _sonofseti.get_status(node_addresses=None, token=s.sonofseti_token),
             _ocrexpert.get_status(base_url=s.ocrexpert_base_url),
             _nasdominator.get_status(base_url=s.nasdominator_base_url),
             _qnapbackup.get_status(),
@@ -354,7 +350,7 @@ def create_app(
         ]
         results = await asyncio.gather(*coros, return_exceptions=True)
 
-        system_ids = ["oberon", "octoboss", "sonofseti", "ocrexpert",
+        system_ids = ["oberon", "octoboss", "ocrexpert",
                       "nasdominator", "qnapbackup", "custos", "panopticor"]
         statuses: list[SystemStatus] = []
         for i, res in enumerate(results):
