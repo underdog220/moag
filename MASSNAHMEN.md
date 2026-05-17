@@ -71,3 +71,15 @@ Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
   - `frontend/src/mocks/payloads.json` (Append): `GET /api/v1/uploads` (7 Beispiele verschiedener Operations+Status), `GET /api/v1/uploads/{id}/result`, `POST /api/v1/upload`.
   - Tests (5 neue Dateien, 56 neue Tests): `uploadOperations.test.ts`, `ParamsForm.test.tsx`, `OperationCard.test.tsx`, `MultiDropZone.test.tsx`, `UploadHubPage.test.tsx`.
   - **Ergebnis:** 73 Test-Files / 399 Tests grün, `npm run build` grün.
+
+## 2026-05-17 (OCR-Operations-Handler)
+
+- [2026-05-17] [v0.1.0] **4 echte Upload-Handler für OCR-Operations:**
+  - `backend/moag/upload/handlers/ocr_standard.py` (NEU): POST multipart an OCRexpert `/api/v1/process`, mappt ProcessV1Response (text, text_len, pages, quality, pdfa_url) auf UploadResult.
+  - `backend/moag/upload/handlers/ocr_shadow.py` (NEU): Persistiert Datei in `MOAG_SHADOW_TMP_DIR/<upload_id>.pdf` (zur Laufzeit aus ENV), POST JSON an OCRexpert `/api/v1/shadow/process`. 403 path_not_allowed mit Hinweis auf OCREXPERT_SHADOW_ALLOWED_ROOTS.
+  - `backend/moag/upload/handlers/ocr_direct.py` (NEU): Engine-Whitelist {tesseract,surya,paddle,easyocr}, POST multipart an OctoBoss `/api/v1/dispatch/ocr-{engine}/process`. Fallback auf OCRexpert direkt bei 404 oder ConnectError.
+  - `backend/moag/upload/handlers/pdf_split.py` (NEU): POST multipart an OCRexpert `/ocr/split`, mappt SplitResponse (seiten_anzahl, anzahl_teildokumente, teildokumente-Normalisierung, grenzen, llm_benutzt).
+  - `backend/moag/upload/handlers/__init__.py`: `ocr_standard` in `_OPTIONAL_HANDLERS` ergänzt (überschreibt Stub).
+  - Schemas live aus OCRexpert-OpenAPI (http://192.168.200.71:17810) abgefragt — exakte Feldnamen verwendet.
+  - 4 Test-Files (40 Tests): test_upload_handlers_ocr_standard/shadow/direct/pdf_split.py — 40/40 grün.
+  - Registry zeigt: `['ocr.standard', 'ocr.shadow', 'ocr.direct', 'pdf.split']`.

@@ -1,7 +1,7 @@
 # PROJEKT_STATUS — MOAG (Mother of All GUIs)
 
 ## Aktueller Stand
-Phase Y Frontend-Skelett: Upload-Hub als dritte Top-Achse `/upload` implementiert (Frontend-only, kein Backend noch). NavBar zeigt `[Übersicht] [Aktionen] [Upload]`. 10 OperationCards nach `docs/UPLOAD_SCHEMA.md`, MultiDropZone (MIME-Erkennung + kompatible Ops), UploadHistory (Polling 30s), Mock-Daten. 73 Test-Files / 399 Tests grün, Build grün.
+Phase Y Frontend-Skelett + OCR-Handler: Upload-Hub als dritte Top-Achse `/upload` implementiert. 4 echte OCR-Upload-Handler fertig: `ocr.standard`, `ocr.shadow`, `ocr.direct`, `pdf.split`. 40 Handler-Tests grün. Registry zeigt alle 4 Operations. Frontend-Skelett mit Mock-Daten läuft parallel.
 
 ## Version
 v0.1.0 (Phase 1–8 komplett + Upload-Hub Frontend-Skelett, Container live auf VDR)
