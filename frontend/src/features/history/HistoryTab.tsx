@@ -95,7 +95,7 @@ export function HistoryTab() {
     queryKey: qk.jobs.list(),
     queryFn: () =>
       api.listJobs({
-        limit: 1000,
+        limit: 500,
         offset: 0,
       }),
   });

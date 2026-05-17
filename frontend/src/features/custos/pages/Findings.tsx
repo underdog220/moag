@@ -161,9 +161,14 @@ export function FindingsPage() {
       {/* Inhalt */}
       {isLoading && <LoadingSpinner label="Lade Findings..." />}
       {error && (
-        <div className="text-sm text-status-error">
-          Fehler: {(error as Error).message}
-        </div>
+        <EmptyState
+          title="Custos nicht erreichbar"
+          description={
+            ((error as Error).message ?? "").includes("502")
+              ? "Custos-Service antwortet nicht (Bad Gateway). Vermutlich ist der Custos-Container nicht gestartet — siehe Custos-Repo für den Service-Start."
+              : `Fehler beim Laden der Findings: ${(error as Error).message}`
+          }
+        />
       )}
       {!isLoading && !error && findings.length === 0 && (
         <EmptyState

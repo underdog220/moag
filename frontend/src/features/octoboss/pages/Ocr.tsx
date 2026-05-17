@@ -15,14 +15,38 @@ interface OcrEngine {
   node_id?: string;
 }
 
+interface OcrProvider {
+  provider_id?: string;
+  display_name?: string;
+  provider_type?: string;
+  is_online?: boolean;
+  is_local?: boolean;
+  is_installed?: boolean;
+  install_hint?: string | null;
+  supported_languages?: string[];
+  [key: string]: unknown;
+}
+
 interface OcrStatus {
   status?: string;
   version?: string;
   engines?: OcrEngine[];
-  providers?: string[];
+  // Backend liefert Provider-Objekte (nicht Strings). Frontend toleriert beides.
+  providers?: Array<OcrProvider | string>;
   active_jobs?: number;
   total_processed?: number;
   [key: string]: unknown;
+}
+
+// Helper: liefert Anzeige-Name aus Provider-Objekt oder Plain-String
+function providerLabel(p: OcrProvider | string): string {
+  if (typeof p === "string") return p;
+  return p.display_name ?? p.provider_id ?? p.provider_type ?? "(unbenannt)";
+}
+
+function providerKey(p: OcrProvider | string, idx: number): string {
+  if (typeof p === "string") return `${p}-${idx}`;
+  return p.provider_id ?? `provider-${idx}`;
 }
 
 function StatusBadge({ status }: { status: string | null | undefined }) {
@@ -55,7 +79,7 @@ export function OcrPage() {
     return [];
   })();
 
-  const providers: string[] = (() => {
+  const providers: Array<OcrProvider | string> = (() => {
     if (!ocrStatus) return [];
     if (Array.isArray(ocrStatus.providers)) return ocrStatus.providers;
     return [];
@@ -130,17 +154,29 @@ export function OcrPage() {
                 </h3>
               </Tooltip>
               <div className="flex flex-wrap gap-2">
-                {providers.map((p) => (
-                  <Tooltip
-                    key={p}
-                    title={`OCR-Provider: ${p}`}
-                    source="/api/v1/octoboss/ocr/status"
-                  >
-                    <span className="inline-block rounded border border-white/10 bg-bg-elevated px-2 py-0.5 text-xs text-fg-muted">
-                      {p}
-                    </span>
-                  </Tooltip>
-                ))}
+                {providers.map((p, idx) => {
+                  const label = providerLabel(p);
+                  const tooltipTitle =
+                    typeof p === "string"
+                      ? `OCR-Provider: ${label}`
+                      : `${label} (${p.provider_type ?? "?"}) · online: ${p.is_online ? "ja" : "nein"} · lokal: ${p.is_local ? "ja" : "nein"}`;
+                  const isOnline = typeof p === "string" ? true : Boolean(p.is_online);
+                  return (
+                    <Tooltip
+                      key={providerKey(p, idx)}
+                      title={tooltipTitle}
+                      source="/api/v1/octoboss/ocr/status"
+                    >
+                      <span className={`inline-block rounded border px-2 py-0.5 text-xs ${
+                        isOnline
+                          ? "border-status-ok/30 bg-status-ok/10 text-status-ok"
+                          : "border-white/10 bg-bg-elevated text-fg-muted"
+                      }`}>
+                        {label}
+                      </span>
+                    </Tooltip>
+                  );
+                })}
               </div>
             </div>
           )}
