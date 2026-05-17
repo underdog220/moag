@@ -223,3 +223,54 @@ class OberonPlatformClient:
     def get_dsgvo_status(self) -> Any:
         """GET /api/v2/dsgvo/status — DSGVO-Engine-Status."""
         return self._get("/api/v2/dsgvo/status")
+
+    def provision_database(self, app_name: str = "moag") -> Any:
+        """POST /api/v2/database/provision — DB-Provisioning fuer eine App.
+
+        Antwort-Format:
+          {"jdbcUrl": "jdbc:postgresql://...", "username": "...", "password": "..."}
+
+        Oberon liefert bei erneutem Aufruf dieselben Credentials (idempotent).
+        """
+        url = self.base_url + "/api/v2/database/provision"
+        headers = self._auth_headers()
+        headers["Content-Type"] = "application/json"
+        t0 = time.monotonic()
+        try:
+            resp = self._client.post(url, json={"appName": app_name}, headers=headers)
+        except httpx.TimeoutException as exc:
+            dauer_ms = int((time.monotonic() - t0) * 1000)
+            plog.step(
+                "platform.client", "provision_database",
+                input={"appName": app_name}, output={"error": "timeout"},
+                dauer_ms=dauer_ms, ok=False,
+            )
+            raise PlatformUnavailable(f"Platform-Timeout ({self.timeout_s}s): provision") from exc
+        except (httpx.ConnectError, httpx.HTTPError, OSError) as exc:
+            dauer_ms = int((time.monotonic() - t0) * 1000)
+            plog.step(
+                "platform.client", "provision_database",
+                input={"appName": app_name}, output={"error": str(exc)},
+                dauer_ms=dauer_ms, ok=False,
+            )
+            raise PlatformUnavailable(f"Platform-Verbindungsfehler: {exc}") from exc
+
+        dauer_ms = int((time.monotonic() - t0) * 1000)
+        if resp.status_code >= 500:
+            raise PlatformUnavailable(
+                f"Platform HTTP {resp.status_code}: provision — {resp.text[:200]}"
+            )
+        if resp.status_code >= 400:
+            raise PlatformError(
+                f"Platform HTTP {resp.status_code}: provision",
+                status_code=resp.status_code,
+                body=resp.text,
+            )
+        body = resp.json()
+        plog.step(
+            "platform.client", "provision_database",
+            input={"appName": app_name},
+            output={"status": resp.status_code},
+            dauer_ms=dauer_ms, ok=True,
+        )
+        return body

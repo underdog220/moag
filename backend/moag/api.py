@@ -525,6 +525,12 @@ def create_app(
     from moag.routes_nasdominator import build_nasdominator_router
     app.include_router(build_nasdominator_router(settings_store))
 
+    # ── Upload-Hub ────────────────────────────────────────────────────────────
+    # Handler-Registry befüllen (Import-Seiteneffekt)
+    import moag.upload.handlers as _upload_handlers_pkg  # noqa: F401
+    from moag.upload import routes as upload_routes
+    app.include_router(upload_routes.router)
+
     # ── Jobs ─────────────────────────────────────────────────────────────────
 
     @app.post("/api/jobs/upload", response_model=JobUploadResult)
