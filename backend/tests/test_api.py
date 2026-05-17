@@ -483,18 +483,37 @@ def test_overview_endpoint(client):
 
 
 def test_aggregator_health_endpoint(client):
-    """/api/v1/aggregator/health liefert Gruppen-Scores und Overall-Score."""
+    """/api/v1/aggregator/health liefert das Frontend-Schema fuer TopBar.tsx.
+
+    Vertrag (siehe frontend/src/components/TopBar.tsx Z. 12-22):
+      overall_score: int
+      alert_count:   int
+      groups:        Array von {name, score, systems[].{name, score, ok}}
+      computed_at:   ISO-Timestamp
+    """
     r = client.get("/api/v1/aggregator/health")
     assert r.status_code == 200
     data = r.json()
-    assert "groups" in data
-    assert "overall_score" in data
+    # Top-Level-Felder
+    assert "overall_score" in data and isinstance(data["overall_score"], int)
+    assert "alert_count" in data and isinstance(data["alert_count"], int)
     assert "computed_at" in data
-    groups = data["groups"]
-    assert "ki_backbone" in groups
-    assert "infra" in groups
-    assert "compliance_test" in groups
     assert 0 <= data["overall_score"] <= 100
+    # groups als Array (nicht Dict — kritisch fuer Frontend .map())
+    groups = data["groups"]
+    assert isinstance(groups, list), "groups muss Array sein (Frontend .map())"
+    assert len(groups) == 3
+    group_names = [g["name"] for g in groups]
+    assert "KI-Backbone" in group_names
+    assert "Infrastruktur" in group_names
+    assert "Compliance & Test" in group_names
+    # Jede Group: name + score + systems mit name/score/ok
+    for g in groups:
+        assert "name" in g and "score" in g and "systems" in g
+        assert isinstance(g["systems"], list)
+        for s in g["systems"]:
+            assert "name" in s and "score" in s and "ok" in s
+            assert isinstance(s["ok"], bool)
 
 
 def test_settings_doctype_gewichte_round_trip(client):

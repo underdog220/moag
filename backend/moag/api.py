@@ -369,7 +369,42 @@ def create_app(
             else:
                 statuses.append(res)
 
-        return compute_health(statuses)
+        # compute_health liefert das interne Schema (groups als Dict ki_backbone/infra/..,
+        # systems als string-Liste). Das Frontend (TopBar.tsx) erwartet aber:
+        #   groups: Array von {name, score, systems: [{name, score, ok}]}
+        #   plus alert_count
+        # Wir mappen hier um — Single-Source-of-Truth fuer (name, group_label) ist
+        # aggregator.SYSTEM_INFO.
+        from moag.aggregator import SYSTEM_INFO
+
+        raw = compute_health(statuses)
+        by_id = {s.system_id: s for s in statuses}
+
+        groups_array = []
+        for _group_key, group_data in raw["groups"].items():
+            group_systems = []
+            for sid in group_data["systems"]:
+                info = SYSTEM_INFO.get(sid, (sid, "Unbekannt"))
+                st = by_id.get(sid)
+                group_systems.append({
+                    "name": info[0],
+                    "score": st.score if st else 0,
+                    "ok": bool(st.ok) if st else False,
+                })
+            groups_array.append({
+                "name": group_data["label"],
+                "score": group_data["score"],
+                "systems": group_systems,
+            })
+
+        alert_count = sum(1 for s in statuses if not s.ok)
+
+        return {
+            "overall_score": raw["overall_score"],
+            "alert_count": alert_count,
+            "groups": groups_array,
+            "computed_at": raw["computed_at"],
+        }
 
     # ── Pipeline-Log-Export ────────────────────────────────────────────────
 

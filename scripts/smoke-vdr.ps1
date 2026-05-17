@@ -58,15 +58,35 @@ try {
     Add-Check -Name "overview-schema" -Ok $false -Detail "Exception: $($_.Exception.Message)"
 }
 
-# 3. /api/v1/aggregator/health - Score-Konsistenz
+# 3. /api/v1/aggregator/health - Frontend-Schema + Score-Konsistenz
 try {
     $a = Invoke-RestMethod -Uri "$BaseUrl/api/v1/aggregator/health" -TimeoutSec $TimeoutSec
-    $expected = [math]::Round(0.5 * $a.groups.ki_backbone.score + 0.3 * $a.groups.infra.score + 0.2 * $a.groups.compliance_test.score)
+    # Frontend-Vertrag (TopBar.tsx): groups als Array mit {name, score, systems[].{name,score,ok}}
+    $groupsIsArray = $a.groups -is [array]
+    $hasAlertCount = $null -ne $a.alert_count
+    $hasOverall = $null -ne $a.overall_score
+    $groupSchemaOk = $true
+    if ($groupsIsArray) {
+        foreach ($g in $a.groups) {
+            if ($null -eq $g.name -or $null -eq $g.score -or -not ($g.systems -is [array])) { $groupSchemaOk = $false; break }
+            foreach ($s in $g.systems) {
+                if ($null -eq $s.name -or $null -eq $s.score -or $null -eq $s.ok) { $groupSchemaOk = $false; break }
+            }
+        }
+    } else {
+        $groupSchemaOk = $false
+    }
+    # Score-Konsistenz: Gewichte 50/30/20 (Reihenfolge KI/Infra/Compl im Aggregator)
+    $expected = 0
+    if ($groupsIsArray -and $a.groups.Count -ge 3) {
+        $expected = [math]::Round(0.5 * $a.groups[0].score + 0.3 * $a.groups[1].score + 0.2 * $a.groups[2].score)
+    }
     $diff = [math]::Abs($a.overall_score - $expected)
-    $ok = $diff -le 1
-    Add-Check -Name "aggregator-konsistent" -Ok $ok -Detail "overall=$($a.overall_score) erwartet=$expected (KI=$($a.groups.ki_backbone.score) Infra=$($a.groups.infra.score) Compl=$($a.groups.compliance_test.score))"
+    $consistent = $diff -le 1
+    $ok = $hasOverall -and $hasAlertCount -and $groupsIsArray -and $groupSchemaOk -and $consistent
+    Add-Check -Name "aggregator-schema-und-konsistenz" -Ok $ok -Detail "overall=$($a.overall_score) erwartet=$expected groups_array=$groupsIsArray alert_count=$hasAlertCount schema_ok=$groupSchemaOk konsistent=$consistent"
 } catch {
-    Add-Check -Name "aggregator-konsistent" -Ok $false -Detail "Exception: $($_.Exception.Message)"
+    Add-Check -Name "aggregator-schema-und-konsistenz" -Ok $false -Detail "Exception: $($_.Exception.Message)"
 }
 
 # 4. / - Frontend-Index liefert HTML mit root-div
