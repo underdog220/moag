@@ -17,7 +17,8 @@ from moag.schemas import SystemStatus
 # Gruppen-Definitionen.
 # SonOfSETI ist 2026-05-17 als Top-Karte entfernt — die Nodes werden
 # bereits ueber den OctoBoss-Adapter sichtbar (Drilldown OctoBoss -> Nodes).
-# Die Adapter-Datei adapters/sonofseti.py bleibt fuer kuenftige Verwendung.
+# Die Adapter-Datei adapters/sonofseti.py wurde 2026-05-17 geloescht;
+# bei Bedarf aus Git-History wiederherstellbar.
 _GROUPS: dict[str, list[str]] = {
     "ki_backbone":       ["oberon", "octoboss", "ocrexpert"],
     "infra":             ["nasdominator", "qnapbackup"],

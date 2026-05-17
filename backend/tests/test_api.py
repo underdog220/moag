@@ -471,7 +471,8 @@ def test_overview_endpoint(client):
     """/api/v1/overview liefert alle 7 System-Status-Objekte.
 
     SonOfSETI wurde 2026-05-17 als Top-Karte entfernt (Nodes werden ueber
-    OctoBoss-Drilldown sichtbar). Der Adapter `adapters/sonofseti.py` bleibt.
+    OctoBoss-Drilldown sichtbar). Der Adapter wurde 2026-05-17 geloescht
+    (aus Git-History wiederherstellbar).
     """
     r = client.get("/api/v1/overview")
     assert r.status_code == 200

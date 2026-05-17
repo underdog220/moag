@@ -137,10 +137,11 @@ _(noch leer — Migration aus OCRexpert war vollständig)_
 ## Bewusst deprecated
 
 ### SonOfSETI als Top-Karte (entfernt 2026-05-17)
-- **War:** eigene Top-Karte + `/sonofseti/*`-Route
+- **War:** eigene Top-Karte + `/sonofseti/*`-Route + `backend/moag/adapters/sonofseti.py` + `frontend/src/features/sonofseti/`
 - **Nicht migriert weil:** SonOfSETI-Nodes werden via OctoBoss-Hub-Heartbeat sichtbar (Drilldown unter `/octoboss/nodes`). Eigene Karte war redundant.
-- **Adapter-Datei bleibt:** `backend/moag/adapters/sonofseti.py` ungenutzt — für künftige direkte Node-Anbindung
-- **Legacy-Route:** `/sonofseti` und `/sonofseti/*` → Redirect auf `/octoboss`
+- **Adapter-Datei gelöscht 2026-05-17** — bei Bedarf aus Git-History wiederherstellbar. Code basierte auf Annahmen die sich seitdem verschoben haben.
+- **Frontend-Feature-Ordner gelöscht 2026-05-17** — `frontend/src/features/sonofseti/`
+- **Legacy-Route bleibt:** `/sonofseti` und `/sonofseti/*` → Redirect auf `/octoboss` (für externe Links)
 
 ## Klärungsbedarf
 

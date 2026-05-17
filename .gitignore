@@ -37,3 +37,5 @@ backend/moag/static/
 .env
 .env.*
 !.env.example
+secrets.local.env
+*.secrets.env
