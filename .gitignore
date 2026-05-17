@@ -39,3 +39,4 @@ backend/moag/static/
 !.env.example
 secrets.local.env
 *.secrets.env
+*_tmp.json
