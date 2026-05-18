@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -e
+
+CHANGED_CRS=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '^requests/(open|done|rejected)/.*\.md$' || true)
+
+if [ -z "$CHANGED_CRS" ]; then
+    exit 0
+fi
+
+VALIDATOR="C:/code/sebald-suite/docs/cr-schema/scripts/validate-crs.py"
+
+if [ ! -f "$VALIDATOR" ]; then
+    echo "WARN: Validator nicht gefunden ($VALIDATOR) - Hook skipped"
+    exit 0
+fi
+
+echo "CR-Schema-Validierung gegen $(echo "$CHANGED_CRS" | wc -l) Datei(en)..."
+python "$VALIDATOR" $CHANGED_CRS
+exit $?
