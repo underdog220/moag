@@ -105,6 +105,14 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 - **PageBadge:** Routen-Text auf `< sm` ausgeblendet
 - **Code:** `Tooltip.tsx`, `TopBar.tsx`, `NavBar.tsx`, `ConfirmDialog.tsx`, `PageBadge.tsx`, alle Sub-Tab-Layouts, ActionCard, NasDom-Pages, Audit-Filter
 
+### Change-Request-Workflow (CR-Schema v1.1)
+
+- **Was:** `requests/`-Verzeichnis mit Unterordnern `open/`, `done/`, `rejected/`. Format-Quelle: `C:\code\sebald-suite\docs\cr-schema\` (Single-Source-of-Truth cluster-weit).
+- **Template:** `requests/TEMPLATE.md` (Kopie des zentralen Templates, wird bei Schema-Updates manuell synchronisiert)
+- **README:** `requests/README.md` (Lifecycle, Pfad-Konventionen, Verweis auf sebald-suite)
+- **Pre-Commit-Hook:** `.githooks/pre-commit` — validiert CRs in `requests/{open,done,rejected}/*.md` gegen das JSON-Schema via `validate-crs.py`. Aktivieren: `git config core.hooksPath .githooks`.
+- **Aktiviert:** 2026-05-18, Welle 3 (cluster-weit)
+
 ### Tests + Smoke
 
 - **Backend:** 266 Tests (pytest)

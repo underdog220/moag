@@ -4,6 +4,7 @@ Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
 
 ## 2026-05-18
 
+- [2026-05-18] [v0.2.0] **Doku-Update (Welle 5):** PROJEKT_STATUS.md um CR-Schema-v1.1-Stand erganzt (requests/-Scaffold live, Pre-Commit-Hook aktiv, Verweis auf sebald-suite/docs/cr-schema/). FEATURES.md um CR-Schema-Eintrag (Aktiv) erweitert.
 - [2026-05-18] [v0.2.0] Pre-Commit-Hook fuer CR-Schema-Validierung angelegt: `.githooks/pre-commit` (grep auf requests/{open,done,rejected}/*.md, delegiert an sebald-suite-Validator). `requests/README.md` um Aktivierungs-Hinweis (`git config core.hooksPath .githooks`) ergaenzt. Welle-3-Subagent-Abschluss.
 - [2026-05-18] [v0.2.0] CR-Doku-Scaffold angelegt: `requests/{open,done,rejected}/.gitkeep`, `requests/README.md` (Verweis auf sebald-suite cr-schema), `requests/TEMPLATE.md` (Kopie zentrales Template). Cluster-weite Welle-2-Standardisierung.
 - [2026-05-18] [v0.2.0] `docs/capabilities/moag.yaml` aktualisiert: 14x draft→live, SonOfSETI-Adapter auf deprecated, 3 neue Capabilities ergaenzt (actions.registry, upload-hub, mobile, container.deploy). Container-Stand vdr:17900 eingetragen.
