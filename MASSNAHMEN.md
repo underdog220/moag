@@ -4,6 +4,8 @@ Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
 
 ## 2026-05-18
 
+- [2026-05-18] [v0.2.1] **Manifest-Health-Karte:** Backend `moag/manifest_health.py` (Schema-Validierung + Live-Consistency-Checks via Hub-API Option A), `moag/routes_manifest_health.py` (GET `/api/v1/manifest/health?target=both|bootstrapper|core`), Frontend `pages/ManifestHealth.tsx` (Traffic-Light + expandierbare Check-Zeilen + Tooltip ADR-004). Route `/octoboss/manifest-health` in OctoBoss-Feature + Sub-Tab "Manifest-Health" eingehängt. `api.octoboss.getManifestHealth()` in `lib/api.ts`. Capability `cap.moag.manifest.health` in `docs/capabilities/moag.yaml`. 16 Backend-Tests (test_manifest_health.py) + 11 Frontend-Tests (ManifestHealth.test.tsx) grün. Gesamt: 390 Backend + 410 Frontend grün.
+
 - [2026-05-18] [v0.2.0] **Doku-Update (Welle 5):** PROJEKT_STATUS.md um CR-Schema-v1.1-Stand erganzt (requests/-Scaffold live, Pre-Commit-Hook aktiv, Verweis auf sebald-suite/docs/cr-schema/). FEATURES.md um CR-Schema-Eintrag (Aktiv) erweitert.
 - [2026-05-18] [v0.2.0] Pre-Commit-Hook fuer CR-Schema-Validierung angelegt: `.githooks/pre-commit` (grep auf requests/{open,done,rejected}/*.md, delegiert an sebald-suite-Validator). `requests/README.md` um Aktivierungs-Hinweis (`git config core.hooksPath .githooks`) ergaenzt. Welle-3-Subagent-Abschluss.
 - [2026-05-18] [v0.2.0] CR-Doku-Scaffold angelegt: `requests/{open,done,rejected}/.gitkeep`, `requests/README.md` (Verweis auf sebald-suite cr-schema), `requests/TEMPLATE.md` (Kopie zentrales Template). Cluster-weite Welle-2-Standardisierung.

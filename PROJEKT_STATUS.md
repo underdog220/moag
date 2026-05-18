@@ -1,10 +1,10 @@
 # PROJEKT_STATUS — MOAG (Mother of All GUIs)
 
 ## Aktueller Stand
-**Phase Y komplett + alle 3 Bug-Klassen weggeräumt:** Upload-Hub live auf VDR:17900 mit DB-Persistenz, alle 10 Handler echt verkabelt, Listing-Endpoint funktioniert, pii.scan/llm.text/llm.vision/llm.plan gegen Live-Oberon verifiziert. Deploy-Skript bereitet Volume + Permissions + `--user` automatisch vor. 374 Backend + 399 Frontend Tests grün.
+**Phase Y komplett + Manifest-Health-Karte:** Upload-Hub live auf VDR:17900 mit DB-Persistenz, alle 10 Handler echt verkabelt. Neu: Manifest-Health-Karte unter `/octoboss/manifest-health` — prüft Bootstrapper- und Core-Manifest via Live-Hub-API (Option A): Schema-Validierung, Cross-Ref, node_overrides-Typ-Check, EXE-Existenz, SHA-Match, Live-Konsistenz. 390 Backend + 410 Frontend Tests grün.
 
 ## Version
-v0.2.0 (Phase 1–8 + Upload-Hub Y komplett, Container live auf VDR)
+v0.2.1 (Phase 1–8 + Upload-Hub Y + Manifest-Health)
 
 ## Nächste geplante Stufe
 Browser-Test auf `/upload` (Hard-Reload), realistische Mehr-Datei-Uploads über die spezialisierten Cluster-Karten. Folge-Themen aus Backlog-Memory (Alert-Center, Adapter-Status-Inspector, Multi-Hub-Polling).
@@ -20,6 +20,8 @@ Browser-Test auf `/upload` (Hard-Reload), realistische Mehr-Datei-Uploads über 
 - Panopticor: Status+Actions-API-CR einreichen (CR #4, Phase 6)
 
 ## Letzte Änderung
+2026-05-18 — **Manifest-Health-Karte:** Backend `manifest_health.py` + `routes_manifest_health.py` (GET `/api/v1/manifest/health`), Frontend `ManifestHealth.tsx` unter `/octoboss/manifest-health`, 16 Backend-Tests + 11 Frontend-Tests grün. Capability `cap.moag.manifest.health` in `docs/capabilities/moag.yaml` eingetragen.
+
 2026-05-18 — **Cluster-CR-Schema v1.1 cluster-weit aktiviert:** `requests/`-Scaffold angelegt (open / done / rejected / README / TEMPLATE), Pre-Commit-Hook aktiv (`.githooks/pre-commit` delegiert an `sebald-suite/docs/cr-schema/scripts/validate-crs.py`). CR-Schema-Quelle: `C:\code\sebald-suite\docs\cr-schema\`. Hook aktivieren via `git config core.hooksPath .githooks`.
 
 2026-05-17 — **3-Bug-Klassen-Cleanup** mit 2 Subagents + Hauptsession parallel: Listing-HTTP-500 (`27d0774`, psycopg dict_row), 4 Handler-Drift gegen Live-Oberon (`88de394`, pii/vision/plan Schema-Anpassungen), deploy-vdr.ps1 um Volume-Mount + `--user 1002:1002` + automatisches mkdir/chmod erweitert. Live pii.scan-Test: 4 PII-Findings in 69ms (status=completed). 374 Backend + 399 Frontend Tests grün.

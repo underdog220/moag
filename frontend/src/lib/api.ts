@@ -465,6 +465,13 @@ export const api = {
     /** GET /api/v1/octoboss/llm/models — OpenAI-kompatible Model-Liste. */
     getLlmModels: (): Promise<unknown> =>
       request<unknown>("/v1/octoboss/llm/models"),
+
+    /** GET /api/v1/manifest/health — Manifest-Health-Check (Bootstrapper + Core).
+     *  Query-Parameter: target="both"|"bootstrapper"|"core" */
+    getManifestHealth: (target: "both" | "bootstrapper" | "core" = "both"): Promise<unknown> => {
+      const params = target !== "both" ? `?target=${encodeURIComponent(target)}` : "";
+      return request<unknown>(`/v1/manifest/health${params}`);
+    },
   },
 
   // ─── Custos (/api/v1/custos/*) ─────────────────────────────────────────────

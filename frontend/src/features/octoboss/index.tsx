@@ -11,15 +11,17 @@ import { AssetsPage } from "./pages/Assets";
 import { ClusterPage } from "./pages/Cluster";
 import { OcrPage } from "./pages/Ocr";
 import { LlmModelsPage } from "./pages/LlmModels";
+import { ManifestHealthPage } from "./pages/ManifestHealth";
 
 // Sub-Tab-Definitionen
 const TABS = [
-  { to: "nodes",      label: "Nodes" },
-  { to: "jobs",       label: "Jobs" },
-  { to: "assets",     label: "Assets" },
-  { to: "cluster",    label: "Cluster" },
-  { to: "ocr",        label: "OCR" },
-  { to: "llm-models", label: "LLM-Models" },
+  { to: "nodes",           label: "Nodes" },
+  { to: "jobs",            label: "Jobs" },
+  { to: "assets",          label: "Assets" },
+  { to: "cluster",         label: "Cluster" },
+  { to: "ocr",             label: "OCR" },
+  { to: "llm-models",      label: "LLM-Models" },
+  { to: "manifest-health", label: "Manifest-Health" },
 ] as const;
 
 // Layout mit Sub-Tab-Leiste und Outlet
@@ -72,6 +74,7 @@ export function OctoBossFeature() {
         <Route path="cluster" element={<ClusterPage />} />
         <Route path="ocr" element={<OcrPage />} />
         <Route path="llm-models" element={<LlmModelsPage />} />
+        <Route path="manifest-health" element={<ManifestHealthPage />} />
         <Route path="*" element={<Navigate to="nodes" replace />} />
       </Route>
     </Routes>
