@@ -23,3 +23,19 @@ python C:\code\sebald-suite\docs\cr-schema\scripts\validate-crs.py `
 | `open/` | Offene CRs (status: open oder in-progress) |
 | `done/` | Umgesetzte CRs (status: done, Commit-Hash eingetragen) |
 | `rejected/` | Verworfene CRs (status: rejected, Begruendung eingetragen) |
+
+## Pre-Commit-Hook aktivieren
+
+Das Repo enthaelt einen Pre-Commit-Hook unter `.githooks/pre-commit`, der alle
+gestaged CR-Dateien automatisch gegen das zentrale JSON-Schema validiert.
+
+**Einmalig nach Clone aktivieren:**
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Nach Aktivierung prueft jeder `git commit` automatisch alle geaenderten
+`requests/{open,done,rejected}/*.md`-Dateien. Wenn der Validator
+(`C:/code/sebald-suite/docs/cr-schema/scripts/validate-crs.py`) nicht
+gefunden wird, gibt der Hook eine Warnung aus und laesst den Commit durch.
