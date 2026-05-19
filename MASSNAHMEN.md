@@ -4,6 +4,14 @@ Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
 
 ## 2026-05-19
 
+- [2026-05-19] [v0.2.2] **Deploy-Pipeline gehaerdened (Build+Transfer+dynamische Version):**
+  - `backend/pyproject.toml` Version 0.1.0 -> 0.2.2 (Single-Source-of-Truth wiederhergestellt).
+  - `scripts/deploy-vdr.ps1` vollstaendig erweitert: neue Hilfsfunktion `Get-PyprojectVersion` liest Version aus pyproject.toml; neuer Build-Schritt (`docker build`) mit hartem Abbruch bei Fehler; neuer Transfer-Schritt (Stream-Pipe `docker save | ssh vdr docker load`) mit Idempotenz-Check + Tarball-Fallback; neue Flags `-SkipBuild`, `-SkipTransfer`, `-BuildOnly`; bestehende Flags `SmokeOnly` und Deploy-Pfad unveraendert erhalten.
+  - `docker/Dockerfile` Kommentar Z.7-13 auf versions-agnostische Formulierung aktualisiert (verweist auf deploy-Skript als Single-Call-Pfad).
+  - `docs/DEPLOYMENT_VDR.md` komplett ueberarbeitet: neuer Standard-Flow, Flag-Erklaerungen, Wann-welchen-Flag-Tabelle, Warnung zum alten Hot-Patch-Workflow (deprecated), Version 0.2.2 im manuellen docker run.
+  - `tests/test-get-pyproject-version.ps1` neu: 6 isolierte Tests fuer `Get-PyprojectVersion`-Logik (echte Datei, Mock, Sonderfaelle, Fehlerbehandlung) -- 6/6 PASS.
+  - TODO: pytest-Infra fuer PS1-Tests fehlt im Projekt -- tests/test-get-pyproject-version.ps1 ist standalone ausfuehrbar aber nicht in automatische CI-Pipeline eingebunden.
+
 - [2026-05-19] [v0.2.2] **OctoBoss-Bench-Dashboard:** Backend `routes_octoboss.py` um `_proxy_post`-Helper + 5 neue Benchmark-Routen erweitert (GET benchmarks/matrix, history, runs, runs/{id} + POST benchmarks/run). Frontend: neues `pages/Benchmarks.tsx` (Run-Panel mit ConfirmDialog + aktiver-Run-Indikator, Matrix-Tabelle sparse-fähig, History-Liste sortierbar, 503-Degraded-Banner). `api.ts` im `octoboss`-Namespace um 5 neue Methoden ergänzt (getBenchmarkMatrix, getBenchmarkHistory, getBenchmarkRuns, getBenchmarkRun, runBenchmark). Sub-Tab "Benchmarks" in OctoBossLayout + Route registriert. ADR-004 eingehalten (Tooltips auf allen Zellen, Status-Dots, Trend-Icons, Zahlen-Spalten). PageBadge `octoboss.benchmarks`. 7 neue Backend-Tests (test_routes_octoboss_bench.py, inkl. 503-Fall) + 12 neue Frontend-Tests (Benchmarks.test.tsx).
 - [2026-05-19] [v0.2.2] **Phase H: Visual-Redact + Classification-Guide** (Branch `feat/moag-oberon-visual-redact`, parallel mit Bench-Dashboard entwickelt):
   - **Backend — Visual-Redact-Handler:** `backend/moag/upload/handlers/dsgvo_visual_redact.py` mit `@register_handler("dsgvo.visual-redact")`. Async-Pattern (202 → Polling 3s/90s → Download). 404-beim-Poll → HTTP-410-Semantik (`job_lost: true`). DSGVO-Gate-503-Behandlung. `__init__.py` um neuen Handler-Eintrag ergänzt.
