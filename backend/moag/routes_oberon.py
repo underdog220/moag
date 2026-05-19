@@ -24,7 +24,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from moag.clients.oberon_cockpit_client import (
     CockpitClient,
@@ -309,6 +309,42 @@ def get_contract_capabilities() -> Any:
     except PlatformUnavailable as exc:
         raise _platform_unavailable(exc)
     except PlatformError as exc:
+        raise _platform_error(exc)
+
+
+@router.get("/contract/classification-guide")
+def get_contract_classification_guide(request: Request) -> Any:
+    """GET /api/v2/contract/classification-guide — DSGVO-Klassifizierungs-Leitfaden.
+
+    Liefert publicationAllowlist, denyList und decisionTree.
+    ETag-Passthrough: empfangenes If-None-Match wird an Oberon weitergereicht.
+    Bei 304-Antwort von Oberon (Cache-Hit im Platform-Client) wird der gecachte
+    Body unveraendert zurueckgeliefert.
+    Empfohlene Cache-Strategie Client-seitig: 24h.
+    Datenquelle: Oberon /api/v2/contract/classification-guide
+    """
+    client = _build_platform_client()
+    if client is None:
+        return _no_token_response("contract/classification-guide")
+
+    # Wenn der Frontend-Client ein If-None-Match sendet, den ETag im Platform-Client
+    # vorab befuellen, damit dieser 304-Optimierungen an Oberon weiterleitet.
+    incoming_etag = request.headers.get("if-none-match") or request.headers.get("If-None-Match")
+    if incoming_etag:
+        client._etag.store("/api/v2/contract/classification-guide", incoming_etag, None)
+
+    try:
+        with client:
+            return client.get_classification_guide()
+    except PlatformUnavailable as exc:
+        raise _platform_unavailable(exc)
+    except PlatformError as exc:
+        # 503 = DSGVO deaktiviert
+        if exc.status_code == 503:
+            raise HTTPException(
+                status_code=503,
+                detail={"status": "dsgvo_disabled", "detail": str(exc)},
+            )
         raise _platform_error(exc)
 
 

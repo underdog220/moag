@@ -23,6 +23,7 @@ Beide Ebenen schicken denselben `POST /api/v1/upload`.
 | `llm.plan` | Oberon Plan-Analyse | DIN 277 + WoFlV Bauplan | PDF, PNG, JPG | – |
 | `audio.transcribe` | Oberon DSGVO-Transcribe | Whisper-Transkript | WAV, MP3, M4A, OGG, FLAC, AAC | – |
 | `dsgvo.redact` | Oberon Visual Redaction | PDF/Bild anonymisieren | PDF, PNG, JPG | – |
+| `dsgvo.visual-redact` | Oberon Visual Redaction (Async) | PDF visuell anonymisieren (nur PDF, async) | PDF | – |
 | `pii.scan` | Oberon PII-Detect | PII-Findings in Text/PDF | PDF, TXT, MD | – |
 | `pdf.split` | OCRexpert | PDF in Einzelseiten splitten | PDF | – |
 
@@ -187,6 +188,25 @@ export function compatibleOperations(mime: string): UploadOperation[] {
 ```
 
 Backend muss dieses Vokabular spiegeln (`backend/moag/upload/operations.py` mit identischem `OPERATIONS`-Konstant).
+
+## Operation dsgvo.visual-redact — Besonderheiten
+
+**Nur PDF** (application/pdf) wird akzeptiert — keine Bilder.
+
+**Oberon-Endpunkte (intern):**
+- Submit: `POST /api/v2/dsgvo/document/redact?clientId=moag&domain=DOCUMENT`
+- Poll: `GET /api/v2/dsgvo/document/redact/{jobId}` — Status: PENDING|RUNNING|DONE|FAILED
+- Download: `GET /api/v2/dsgvo/document/redact/{jobId}/download` → PDF
+
+**Quirks:**
+- Job-Registry bei Oberon ist In-Memory. Nach Container-Restart liefert Poll 404.
+  MOAG behandelt das als `job_lost: true` im `result_payload`, `status=failed`,
+  `error="Job verloren — Oberon-Restart?"`.
+- DSGVO-Gate: `POST` kann 503 liefern wenn DSGVO deaktiviert ist.
+- Kein ETA, kein progressPercent.
+- Poll-Timeout: 90s, Poll-Intervall: 3s.
+
+**Artifact:** `/data/moag/uploads/<upload_id>.visual-redacted.pdf`
 
 ## ULID-Generierung
 

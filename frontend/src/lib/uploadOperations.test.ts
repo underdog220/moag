@@ -11,8 +11,16 @@ import {
 } from "./uploadOperations";
 
 describe("UPLOAD_OPERATIONS", () => {
-  it("enthält genau 10 Operationen", () => {
-    expect(UPLOAD_OPERATIONS).toHaveLength(10);
+  it("enthält genau 11 Operationen (inkl. dsgvo.visual-redact)", () => {
+    expect(UPLOAD_OPERATIONS).toHaveLength(11);
+  });
+
+  it("enthält dsgvo.visual-redact als PDF-only-Operation", () => {
+    const op = UPLOAD_OPERATIONS.find((o) => o.id === "dsgvo.visual-redact");
+    expect(op).toBeDefined();
+    expect(op!.accepted_mimes).toEqual(["application/pdf"]);
+    expect(op!.category).toBe("dsgvo");
+    expect(op!.system).toBe("oberon");
   });
 
   it("jede Operation hat eine eindeutige id", () => {
@@ -36,7 +44,7 @@ describe("UPLOAD_OPERATIONS", () => {
 });
 
 describe("compatibleOperations", () => {
-  it("PDF: gibt OCR, LLM-Text, Bauplan, DSGVO-Redact, PII-Scan, PDF-Split, OCR-Shadow zurück", () => {
+  it("PDF: gibt OCR, LLM-Text, Bauplan, DSGVO-Redact, Visual-Redact, PII-Scan, PDF-Split, OCR-Shadow zurück", () => {
     const ops = compatibleOperations("application/pdf");
     const ids = ops.map((o) => o.id);
     expect(ids).toContain("ocr.standard");
@@ -45,6 +53,7 @@ describe("compatibleOperations", () => {
     expect(ids).toContain("llm.text");
     expect(ids).toContain("llm.plan");
     expect(ids).toContain("dsgvo.redact");
+    expect(ids).toContain("dsgvo.visual-redact");
     expect(ids).toContain("pii.scan");
     expect(ids).toContain("pdf.split");
   });

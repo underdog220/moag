@@ -28,6 +28,7 @@ _OPTIONAL_HANDLERS = [
     "moag.upload.handlers.ocr_direct",
     "moag.upload.handlers.audio_transcribe",
     "moag.upload.handlers.dsgvo_redact",
+    "moag.upload.handlers.dsgvo_visual_redact",
     "moag.upload.handlers.pdf_split",
 ]
 

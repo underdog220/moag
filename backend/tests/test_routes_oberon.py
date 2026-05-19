@@ -265,3 +265,111 @@ def test_cockpit_unavailable_502(app_with_token):
             resp = client.get("/api/v1/oberon/providers")
 
     assert resp.status_code == 502
+
+
+# ── Classification-Guide ──────────────────────────────────────────────────────
+
+
+def test_classification_guide_stub(app_no_token):
+    """Ohne Token: /contract/classification-guide liefert Stub-Antwort."""
+    with TestClient(app_no_token) as client:
+        resp = client.get("/api/v1/oberon/contract/classification-guide")
+    assert resp.status_code == 200
+    assert resp.json().get("stub") is True
+
+
+def test_classification_guide_200(app_with_token):
+    """Mit Token: /contract/classification-guide liefert Leitfaden-Daten."""
+    mock_guide = {
+        "contractVersion": "2026-12",
+        "legalBasis": "DSGVO Art. 5(1)(c)",
+        "publicationAllowlist": [
+            {
+                "subtype": "mietspiegel",
+                "description": "Oeffentlicher Mietspiegel",
+                "evidenceExamples": ["Mietspiegel Nuernberg 2024"],
+                "exampleId": "MS_Nuernberg_2024",
+                "legalNote": "Oeffentliches Dokument",
+            }
+        ],
+        "denyList": [
+            {"doctypePattern": "mietvertrag", "reason": "Personenbezogen", "alternative": "Redacted-Version"}
+        ],
+        "decisionTree": {
+            "publishedByPublicAuthority": "→ In Allowlist pruefen",
+            "containsIndividualPersonData": "→ DENY",
+        },
+    }
+
+    import moag.routes_oberon as _ro
+
+    mock_client = MagicMock()
+    mock_client.__enter__ = MagicMock(return_value=mock_client)
+    mock_client.__exit__ = MagicMock(return_value=False)
+    mock_client.get_classification_guide = MagicMock(return_value=mock_guide)
+    mock_client._etag = MagicMock()
+    mock_client._etag.store = MagicMock()
+
+    with patch.object(_ro, "_build_platform_client", return_value=mock_client):
+        with TestClient(app_with_token) as client:
+            resp = client.get("/api/v1/oberon/contract/classification-guide")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "publicationAllowlist" in data
+    assert data["publicationAllowlist"][0]["subtype"] == "mietspiegel"
+    assert "denyList" in data
+    assert "decisionTree" in data
+
+
+def test_classification_guide_etag_passthrough(app_with_token):
+    """If-None-Match-Header wird an Oberon weitergereicht (ETag-Caching)."""
+    mock_guide = {"contractVersion": "2026-12", "publicationAllowlist": [], "denyList": [], "decisionTree": {}}
+
+    import moag.routes_oberon as _ro
+
+    mock_client = MagicMock()
+    mock_client.__enter__ = MagicMock(return_value=mock_client)
+    mock_client.__exit__ = MagicMock(return_value=False)
+    mock_client.get_classification_guide = MagicMock(return_value=mock_guide)
+    mock_client._etag = MagicMock()
+    mock_client._etag.store = MagicMock()
+
+    with patch.object(_ro, "_build_platform_client", return_value=mock_client):
+        with TestClient(app_with_token) as client:
+            resp = client.get(
+                "/api/v1/oberon/contract/classification-guide",
+                headers={"If-None-Match": '"etag-abc-123"'},
+            )
+
+    assert resp.status_code == 200
+    # ETag-Wert wurde an den Platform-Client-Cache uebergeben
+    mock_client._etag.store.assert_called_once_with(
+        "/api/v2/contract/classification-guide",
+        '"etag-abc-123"',
+        None,
+    )
+
+
+def test_classification_guide_503_dsgvo_disabled(app_with_token):
+    """503 von Oberon (DSGVO deaktiviert) → HTTP 503 an Frontend."""
+    from moag.clients.oberon_platform_client import PlatformError
+
+    import moag.routes_oberon as _ro
+
+    mock_client = MagicMock()
+    mock_client.__enter__ = MagicMock(return_value=mock_client)
+    mock_client.__exit__ = MagicMock(return_value=False)
+    mock_client._etag = MagicMock()
+    mock_client._etag.store = MagicMock()
+    mock_client.get_classification_guide = MagicMock(
+        side_effect=PlatformError("DSGVO deaktiviert", status_code=503, body="DSGVO deaktiviert")
+    )
+
+    with patch.object(_ro, "_build_platform_client", return_value=mock_client):
+        with TestClient(app_with_token) as client:
+            resp = client.get("/api/v1/oberon/contract/classification-guide")
+
+    assert resp.status_code == 503
+    data = resp.json()
+    assert data["detail"]["status"] == "dsgvo_disabled"

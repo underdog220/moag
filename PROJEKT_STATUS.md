@@ -1,10 +1,10 @@
 # PROJEKT_STATUS — MOAG (Mother of All GUIs)
 
 ## Aktueller Stand
-**Phase Y + Manifest-Health + Bench-Dashboard:** Upload-Hub live, alle 10 Handler echt verkabelt. Manifest-Health unter `/octoboss/manifest-health`. Neu (2026-05-19): OctoBoss-Bench-Dashboard unter `/octoboss/benchmarks` — Matrix (subjects x nodes, sparse), History-Liste (sortierbar), Run-Panel (ConfirmDialog + aktiver-Run-Indikator, dynamisches Polling 3s/30s). 397 Backend + 422 Frontend Tests grün.
+**Phase Y + Manifest-Health + Bench-Dashboard + Phase H:** Upload-Hub live mit 11 echt verkabelten Handlern (10 Bestand + `dsgvo.visual-redact` async). Manifest-Health unter `/octoboss/manifest-health`. OctoBoss-Bench-Dashboard unter `/octoboss/benchmarks` (Matrix sparse, History-Liste, Run-Panel mit dynamischem Polling 3s/30s). Contract-Tab um Classification-Guide (Allowlist + Deny-List + Decision-Tree, 24h-ETag-Cache) erweitert. 408 Backend + 426 Frontend Tests grün.
 
 ## Version
-v0.2.2 (Phase 1–8 + Upload-Hub Y + Manifest-Health + Bench-Dashboard)
+v0.2.2 (Phase 1–8 + Upload-Hub Y + Manifest-Health + Bench-Dashboard + Phase H)
 
 ## Nächste geplante Stufe
 Browser-Test auf `/octoboss/benchmarks` auf VDR (Hard-Reload, Live-OctoBoss-Bench-API). Folge-Themen aus Backlog-Memory (Alert-Center, Adapter-Status-Inspector, Multi-Hub-Polling).
@@ -20,7 +20,7 @@ Browser-Test auf `/octoboss/benchmarks` auf VDR (Hard-Reload, Live-OctoBoss-Benc
 - Panopticor: Status+Actions-API-CR einreichen (CR #4, Phase 6)
 
 ## Letzte Änderung
-2026-05-19 — **OctoBoss-Bench-Dashboard:** `routes_octoboss.py` + `_proxy_post` + 5 Benchmark-Routen. `pages/Benchmarks.tsx` (Matrix + History + Run-Panel). `api.ts` + 5 neue Methoden im octoboss-Namespace. Sub-Tab "Benchmarks" + Route in OctoBossLayout. 7 Backend + 12 Frontend neue Tests. Gesamt: 397 Backend + 422 Frontend grün.
+2026-05-19 — **Bench-Dashboard + Phase H parallel gemerged:** OctoBoss-Bench-Dashboard (`routes_octoboss.py` + `_proxy_post` + 5 Benchmark-Routen, `pages/Benchmarks.tsx` mit Matrix/History/Run-Panel, Sub-Tab "Benchmarks") und Phase H Visual-Redact + Classification-Guide (`dsgvo_visual_redact.py` Async-Handler, `routes_oberon.py` Classification-Guide-Route mit ETag-Passthrough, `Contract.tsx` um Allowlist/Deny-List/Decision-Tree erweitert, 24h-localStorage-ETag-Cache). 18 neue Backend + 16 neue Frontend Tests. Gesamt: 408 Backend + 426 Frontend grün.
 
 2026-05-18 — **Manifest-Health-Karte:** Backend `manifest_health.py` + `routes_manifest_health.py` (GET `/api/v1/manifest/health`), Frontend `ManifestHealth.tsx` unter `/octoboss/manifest-health`, 16 Backend-Tests + 11 Frontend-Tests grün. Capability `cap.moag.manifest.health` in `docs/capabilities/moag.yaml` eingetragen.
 

@@ -413,6 +413,98 @@ export const api = {
     /** GET /api/v1/oberon/platform/status — Plattform-Status. */
     getPlatformStatus: (): Promise<unknown> =>
       request<unknown>("/v1/oberon/platform/status"),
+
+    /**
+     * GET /api/v1/oberon/contract/classification-guide — DSGVO-Klassifizierungs-Leitfaden.
+     *
+     * Liefert publicationAllowlist, denyList und decisionTree.
+     * ETag-Caching: beim ersten Aufruf kein ETag (kalt). Danach kann der
+     * gecachte ETag via If-None-Match gesendet werden — Backend reicht ihn
+     * an Oberon weiter. Cache-Empfehlung: 24h (staleTime in React-Query).
+     *
+     * Fehlerfall 503: Oberon DSGVO deaktiviert → wirft ApiError mit status 503.
+     */
+    getContractClassificationGuide: async (): Promise<unknown> => {
+      // ETag aus localStorage lesen (Schluessel stabiler String)
+      const ETAG_KEY = "moag.oberon.classification-guide.etag";
+      const cachedEtag = localStorage.getItem(ETAG_KEY);
+
+      const headers: Record<string, string> = {};
+      if (cachedEtag) {
+        headers["If-None-Match"] = cachedEtag;
+      }
+
+      const init: RequestInit = {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          ...headers,
+        },
+        credentials: "same-origin",
+      };
+
+      let res: Response;
+      try {
+        res = await fetch(`${API_BASE}/v1/oberon/contract/classification-guide`, init);
+      } catch (e) {
+        throw new ApiError(0, "/v1/oberon/contract/classification-guide", `Netzwerk-Fehler: ${(e as Error).message}`);
+      }
+
+      // 304 → gecachten Wert aus localStorage zurueckgeben
+      if (res.status === 304) {
+        const cached = localStorage.getItem("moag.oberon.classification-guide.body");
+        if (cached) {
+          try {
+            return JSON.parse(cached);
+          } catch {
+            // Cache korrupt → weiter zu Fehlerbehandlung
+          }
+        }
+        // Kein Cache-Body → nochmals ohne ETag holen (kein endlos-loop)
+        const freshRes = await fetch(`${API_BASE}/v1/oberon/contract/classification-guide`, {
+          method: "GET",
+          headers: { Accept: "application/json" },
+          credentials: "same-origin",
+        });
+        if (!freshRes.ok) {
+          throw new ApiError(freshRes.status, "/v1/oberon/contract/classification-guide", freshRes.statusText);
+        }
+        const data = await freshRes.json();
+        const newEtag = freshRes.headers.get("etag") || freshRes.headers.get("ETag");
+        if (newEtag) {
+          localStorage.setItem(ETAG_KEY, newEtag);
+          localStorage.setItem("moag.oberon.classification-guide.body", JSON.stringify(data));
+        }
+        return data;
+      }
+
+      if (!res.ok) {
+        let detail = res.statusText;
+        try {
+          const data = await res.json();
+          const d = data?.detail;
+          if (typeof d === "string") {
+            detail = d;
+          } else if (d && typeof d === "object") {
+            detail = (d.detail as string) || (d.message as string) || JSON.stringify(d);
+          } else if (typeof data?.message === "string") {
+            detail = data.message;
+          } else {
+            detail = JSON.stringify(data);
+          }
+        } catch { /* ignore */ }
+        throw new ApiError(res.status, "/v1/oberon/contract/classification-guide", detail || `HTTP ${res.status}`);
+      }
+
+      const body = await res.json();
+      // ETag + Body in localStorage cachen
+      const etag = res.headers.get("etag") || res.headers.get("ETag");
+      if (etag) {
+        localStorage.setItem(ETAG_KEY, etag);
+        localStorage.setItem("moag.oberon.classification-guide.body", JSON.stringify(body));
+      }
+      return body;
+    },
   },
 
   // ─── OctoBoss Drilldown-API (neue /api/v1/octoboss/* Routen) ─────────────────
