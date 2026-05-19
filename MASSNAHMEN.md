@@ -4,7 +4,16 @@ Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
 
 ## 2026-05-19
 
-- [2026-05-19] [v0.2.2] **OctoBoss-Bench-Dashboard:** Backend `routes_octoboss.py` um `_proxy_post`-Helper + 5 neue Benchmark-Routen erweitert (GET benchmarks/matrix, history, runs, runs/{id} + POST benchmarks/run). Frontend: neues `pages/Benchmarks.tsx` (Run-Panel mit ConfirmDialog + aktiver-Run-Indikator, Matrix-Tabelle sparse-fähig, History-Liste sortierbar, 503-Degraded-Banner). `api.ts` im `octoboss`-Namespace um 5 neue Methoden ergänzt (getBenchmarkMatrix, getBenchmarkHistory, getBenchmarkRuns, getBenchmarkRun, runBenchmark). Sub-Tab "Benchmarks" in OctoBossLayout + Route registriert. ADR-004 eingehalten (Tooltips auf allen Zellen, Status-Dots, Trend-Icons, Zahlen-Spalten). PageBadge `octoboss.benchmarks`. 7 neue Backend-Tests (test_routes_octoboss_bench.py, inkl. 503-Fall) + 12 neue Frontend-Tests (Benchmarks.test.tsx). Gesamt: 397 Backend + 422 Frontend Tests grün.
+- [2026-05-19] [v0.2.2] **OctoBoss-Bench-Dashboard:** Backend `routes_octoboss.py` um `_proxy_post`-Helper + 5 neue Benchmark-Routen erweitert (GET benchmarks/matrix, history, runs, runs/{id} + POST benchmarks/run). Frontend: neues `pages/Benchmarks.tsx` (Run-Panel mit ConfirmDialog + aktiver-Run-Indikator, Matrix-Tabelle sparse-fähig, History-Liste sortierbar, 503-Degraded-Banner). `api.ts` im `octoboss`-Namespace um 5 neue Methoden ergänzt (getBenchmarkMatrix, getBenchmarkHistory, getBenchmarkRuns, getBenchmarkRun, runBenchmark). Sub-Tab "Benchmarks" in OctoBossLayout + Route registriert. ADR-004 eingehalten (Tooltips auf allen Zellen, Status-Dots, Trend-Icons, Zahlen-Spalten). PageBadge `octoboss.benchmarks`. 7 neue Backend-Tests (test_routes_octoboss_bench.py, inkl. 503-Fall) + 12 neue Frontend-Tests (Benchmarks.test.tsx).
+- [2026-05-19] [v0.2.2] **Phase H: Visual-Redact + Classification-Guide** (Branch `feat/moag-oberon-visual-redact`, parallel mit Bench-Dashboard entwickelt):
+  - **Backend — Visual-Redact-Handler:** `backend/moag/upload/handlers/dsgvo_visual_redact.py` mit `@register_handler("dsgvo.visual-redact")`. Async-Pattern (202 → Polling 3s/90s → Download). 404-beim-Poll → HTTP-410-Semantik (`job_lost: true`). DSGVO-Gate-503-Behandlung. `__init__.py` um neuen Handler-Eintrag ergänzt.
+  - **Backend — Classification-Guide-Route:** `routes_oberon.py` um `GET /api/v1/oberon/contract/classification-guide` erweitert (ETag-Passthrough an Platform-Client, 503-DSGVO-Mapping). `oberon_platform_client.py` um `get_classification_guide()` ergänzt.
+  - **Frontend — uploadOperations.ts:** Neuer Eintrag `dsgvo.visual-redact` (PDF-only, category=dsgvo, 60s). Interface-Union erweitert.
+  - **Frontend — api.ts:** `api.oberon.getContractClassificationGuide()` mit ETag-localStorage-Cache (24h).
+  - **Frontend — Contract.tsx:** `<section class="classification-guide">` unter Capabilities-Liste hinzugefügt (Allowlist, Deny-List Tabelle, Decision-Tree). Fehler-State + Refetch-Button. Tooltip ADR-004.
+  - **Tests:** 7 neue Backend-Handler-Tests (`test_upload_handlers_dsgvo_visual_redact.py`) + 4 neue Routen-Tests (`test_routes_oberon.py`). 4 neue Frontend-Tests (ContractPage-Erweiterung, uploadOperations-Update).
+  - **Docs:** `docs/UPLOAD_SCHEMA.md` um `dsgvo.visual-redact`-Eintrag + Quirks-Abschnitt ergänzt.
+- [2026-05-19] [v0.2.2] **Test-Status nach beiden Wellen kombiniert:** 408 Backend + 426 Frontend Tests grün (Baseline 390/410 + 18 neue Backend + 16 neue Frontend).
 
 ## 2026-05-18
 

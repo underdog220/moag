@@ -11,6 +11,7 @@ export interface UploadOperation {
     | "llm.plan"
     | "audio.transcribe"
     | "dsgvo.redact"
+    | "dsgvo.visual-redact"
     | "pii.scan"
     | "pdf.split";
   name: string;
@@ -141,6 +142,19 @@ export const UPLOAD_OPERATIONS: UploadOperation[] = [
     ],
     requires_prompt: false,
     estimated_duration_s: 20,
+    category: "dsgvo",
+  },
+  {
+    id: "dsgvo.visual-redact",
+    name: "DSGVO Visual-Redact (PDF)",
+    system: "oberon",
+    description:
+      "Schwärzt personenbezogene Daten (PII) visuell in einer PDF-Datei. " +
+      "Oberon analysiert das Dokument asynchron und liefert eine anonymisierte PDF zum Download. " +
+      "Nur PDF-Dateien werden akzeptiert. Verarbeitungsdauer ca. 30–90 Sekunden.",
+    accepted_mimes: ["application/pdf"],
+    requires_prompt: false,
+    estimated_duration_s: 60,
     category: "dsgvo",
   },
   {

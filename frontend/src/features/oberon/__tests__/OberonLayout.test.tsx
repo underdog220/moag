@@ -231,8 +231,15 @@ describe("DbBrokerPage", () => {
 });
 
 describe("ContractPage", () => {
-  it("rendert ohne Crash", async () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("rendert ohne Crash (stub-Token)", async () => {
     vi.spyOn(apiModule.api.oberon, "getContractCapabilities").mockResolvedValue({
+      stub: true,
+      message: "Kein Token",
+      fetched_at: new Date().toISOString(),
+    } as any);
+    vi.spyOn(apiModule.api.oberon, "getContractClassificationGuide").mockResolvedValue({
       stub: true,
       message: "Kein Token",
       fetched_at: new Date().toISOString(),
@@ -241,6 +248,88 @@ describe("ContractPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("oberon-contract-page")).toBeInTheDocument();
     });
-    vi.restoreAllMocks();
+  });
+
+  it("Classification-Guide-Section mit Mock-Daten rendern", async () => {
+    vi.spyOn(apiModule.api.oberon, "getContractCapabilities").mockResolvedValue({
+      capabilities: [],
+    } as any);
+    vi.spyOn(apiModule.api.oberon, "getContractClassificationGuide").mockResolvedValue({
+      contractVersion: "2026-12",
+      legalBasis: "DSGVO Art. 5(1)(c)",
+      publicationAllowlist: [
+        {
+          subtype: "mietspiegel",
+          description: "Oeffentlicher Mietspiegel",
+          evidenceExamples: ["Mietspiegel Nuernberg 2024"],
+          exampleId: "MS_Nuernberg_2024",
+          legalNote: "Oeffentliches Dokument",
+        },
+      ],
+      denyList: [
+        { doctypePattern: "mietvertrag", reason: "Personenbezogen", alternative: "Redacted-Version" },
+      ],
+      decisionTree: {
+        publishedByPublicAuthority: "→ In Allowlist pruefen",
+        containsIndividualPersonData: "→ DENY",
+      },
+    } as any);
+
+    render(wrap(<ContractPage />));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("classification-guide-section")).toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(screen.getByTestId("classification-guide-content")).toBeInTheDocument();
+    });
+    // Allowlist
+    expect(screen.getByTestId("allowlist-entry-mietspiegel")).toBeInTheDocument();
+    expect(screen.getByText("Oeffentlicher Mietspiegel")).toBeInTheDocument();
+    // Deny-List
+    expect(screen.getByTestId("deny-list-table")).toBeInTheDocument();
+    expect(screen.getByText("mietvertrag")).toBeInTheDocument();
+    expect(screen.getByText("Personenbezogen")).toBeInTheDocument();
+    // Decision-Tree
+    expect(screen.getByTestId("classification-guide-decision-tree")).toBeInTheDocument();
+    expect(screen.getByText("publishedByPublicAuthority")).toBeInTheDocument();
+    expect(screen.getByText("→ In Allowlist pruefen")).toBeInTheDocument();
+  });
+
+  it("Fehler-State: zeigt Fehlermeldung + Refetch-Button", async () => {
+    vi.spyOn(apiModule.api.oberon, "getContractCapabilities").mockResolvedValue({
+      capabilities: [],
+    } as any);
+    vi.spyOn(apiModule.api.oberon, "getContractClassificationGuide").mockRejectedValue(
+      new Error("503 DSGVO deaktiviert"),
+    );
+
+    render(wrap(<ContractPage />));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("classification-guide-error")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Classification-Guide nicht verfügbar")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Nochmals laden" })).toBeInTheDocument();
+  });
+
+  it("leere Guide-Felder → kein Crash", async () => {
+    vi.spyOn(apiModule.api.oberon, "getContractCapabilities").mockResolvedValue({
+      capabilities: [],
+    } as any);
+    vi.spyOn(apiModule.api.oberon, "getContractClassificationGuide").mockResolvedValue({
+      contractVersion: "2026-12",
+      publicationAllowlist: [],
+      denyList: [],
+      decisionTree: {},
+    } as any);
+
+    render(wrap(<ContractPage />));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("classification-guide-section")).toBeInTheDocument();
+    });
+    // Kein Absturz bei leeren Feldern, Section ist sichtbar
+    expect(screen.getByText("Classification-Guide")).toBeInTheDocument();
   });
 });

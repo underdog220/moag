@@ -220,6 +220,14 @@ class OberonPlatformClient:
         """GET /api/v2/platform/status — Plattform-Gesundheitsstatus."""
         return self._get("/api/v2/platform/status")
 
+    def get_classification_guide(self) -> Any:
+        """GET /api/v2/contract/classification-guide — Klassifizierungs-Leitfaden.
+
+        Liefert publicationAllowlist, denyList und decisionTree.
+        ETag-Caching: der Client sendet If-None-Match wenn ein gecachter Wert vorliegt.
+        """
+        return self._get("/api/v2/contract/classification-guide")
+
     def get_dsgvo_status(self) -> Any:
         """GET /api/v2/dsgvo/status — DSGVO-Engine-Status."""
         return self._get("/api/v2/dsgvo/status")
