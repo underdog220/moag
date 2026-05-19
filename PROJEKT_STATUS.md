@@ -1,7 +1,7 @@
 # PROJEKT_STATUS — MOAG (Mother of All GUIs)
 
 ## Aktueller Stand
-**v0.2.2 live auf VDR (Cutover 2026-05-19).** Upload-Hub live mit 11 echt verkabelten Handlern (10 Bestand + `dsgvo.visual-redact` async). Manifest-Health unter `/octoboss/manifest-health`. OctoBoss-Bench-Dashboard unter `/octoboss/benchmarks`. Contract-Tab um Classification-Guide erweitert. 3 Post-Cutover-Bugs behoben: env-file chmod 644, MOAG_JOBS_DB im env-Block, /api/health Version via importlib.metadata. 409 Backend + 426 Frontend Tests grün.
+**v0.2.2 live auf VDR (Cutover 2026-05-19).** Container `moag:0.2.2` healthy, `/api/health` antwortet `version:"0.2.2"`. Upload-Hub live mit 11 echt verkabelten Handlern (10 Bestand + `dsgvo.visual-redact` async). Manifest-Health unter `/octoboss/manifest-health`. OctoBoss-Bench-Dashboard unter `/octoboss/benchmarks`. Contract-Tab um Classification-Guide erweitert. 3 Post-Cutover-Bugs behoben (env-file chmod 644, MOAG_JOBS_DB im env-Block, /api/health Version via importlib.metadata). 409 Backend + 426 Frontend Tests grün. Browser-Verifikation ausstehend.
 
 ## Version
 v0.2.2 (Phase 1–8 + Upload-Hub Y + Manifest-Health + Bench-Dashboard + Phase H)
@@ -18,6 +18,8 @@ Browser-Test auf `/octoboss/benchmarks` auf VDR (Hard-Reload, Live-OctoBoss-Benc
 - ocrexpert.shadow.batch: Body-Schema `{source_path, shadow_path}` — Live HTTP 403 path_not_allowed bis `OCREXPERT_SHADOW_ALLOWED_ROOTS` konfiguriert ist
 - qnapbackup: Status-Endpoint-CR einreichen (CR #3, Phase 5)
 - Panopticor: Status+Actions-API-CR einreichen (CR #4, Phase 6)
+- **Bug 4 Deploy-Skript-Idempotenz (offen, 2026-05-19):** Transfer-Stufe in `scripts/deploy-vdr.ps1` prueft nur ob Image-Tag auf VDR existiert, nicht ob lokales und VDR-SHA matchen. Folge: nach Rebuild mit gleichem Tag wird Transfer uebersprungen → Container laeuft mit altem Stand. Workaround: `ssh vdr docker rmi <tag> --force` vor Re-Deploy. Fix-Idee: SHA-Vergleich (`docker inspect --format '{{.Id}}'` lokal vs. VDR).
+- **Browser-Verifikation v0.2.2 ausstehend:** `/octoboss/benchmarks` + `/oberon/contract` im Browser oeffnen, PageBadges + UI-Render bestaetigen. Roman gibt Bescheid bei Crash.
 
 ## Letzte Änderung
 2026-05-19 — **3 Post-Cutover-Bugs behoben (Branch fix/moag-deploy-3bugs):** env-file chmod 600→644, MOAG_JOBS_DB ergaenzt, /api/health Version via importlib.metadata statt hardcoded "0.1.0". 409/409 Backend-Tests gruen.

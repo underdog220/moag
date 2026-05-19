@@ -4,6 +4,9 @@ Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
 
 ## 2026-05-19
 
+- [2026-05-19] [v0.2.2] **Re-Deploy auf VDR erfolgreich nach 3-Bug-Fix:** Container `moag:0.2.2` healthy, `/api/health` antwortet jetzt `version:"0.2.2"` (vorher `0.1.0` aus alter hardcoded-Konstante). Verifiziert: `/api/v1/octoboss/benchmarks/matrix` 200, `/api/v1/octoboss/benchmarks/runs` 200, `/api/v1/oberon/contract/classification-guide` 200, Frontend `/` 200. Alte `moag:0.1.0` Image weg, Volume `/home/underdog/moag-data` weiterverwendet. Browser-Test Roman ausstehend.
+- [2026-05-19] [v0.2.2] **Bug 4 entdeckt beim Re-Deploy, NICHT gefixt (TODO):** Idempotenz-Check in `deploy-vdr.ps1` Transfer-Stufe prueft nur ob Image-Tag existiert (`docker images <tag> --quiet`), nicht ob SHA matched. Folge: Nach lokalem Rebuild mit gleichem Tag wird der Transfer faelschlich uebersprungen. Workaround heute: `ssh vdr docker rmi <tag> --force` vor Re-Deploy. Sauberer Fix waere SHA-Vergleich (lokal vs. VDR) in der Idempotenz-Pruefung.
+
 - [2026-05-19] [v0.2.2] **3 Post-Cutover-Bugs behoben (Branch fix/moag-deploy-3bugs):**
   - **Bug 1 (env-file Permission-Drift):** `scripts/deploy-vdr.ps1` Z.280: `chmod 600` → `chmod 644` mit Kommentar. Docker liest `--env-file` als Container-User (underdog, uid 1002) — mit 600/root:root war die Datei nicht lesbar → `permission denied` beim Container-Start. Im Single-User-LAN ist 644 akzeptabel.
   - **Bug 2 (MOAG_JOBS_DB fehlt im env-Block):** `scripts/deploy-vdr.ps1` Heredoc: neue Zeile `MOAG_JOBS_DB=$VolumeMountPath/jobs.db` nach `MOAG_DB_CACHE_PATH` ergaenzt. Ohne diese Variable fiel `default_db_path()` auf `Path.home()/.moag/jobs.db` zurueck; Container-User 1002 hat kein Home → `PermissionError: '/.moag'`.
