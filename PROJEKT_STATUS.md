@@ -1,13 +1,13 @@
 # PROJEKT_STATUS — MOAG (Mother of All GUIs)
 
 ## Aktueller Stand
-**Phase Y komplett + Manifest-Health-Karte:** Upload-Hub live auf VDR:17900 mit DB-Persistenz, alle 10 Handler echt verkabelt. Neu: Manifest-Health-Karte unter `/octoboss/manifest-health` — prüft Bootstrapper- und Core-Manifest via Live-Hub-API (Option A): Schema-Validierung, Cross-Ref, node_overrides-Typ-Check, EXE-Existenz, SHA-Match, Live-Konsistenz. 390 Backend + 410 Frontend Tests grün.
+**Phase Y + Manifest-Health + Bench-Dashboard:** Upload-Hub live, alle 10 Handler echt verkabelt. Manifest-Health unter `/octoboss/manifest-health`. Neu (2026-05-19): OctoBoss-Bench-Dashboard unter `/octoboss/benchmarks` — Matrix (subjects x nodes, sparse), History-Liste (sortierbar), Run-Panel (ConfirmDialog + aktiver-Run-Indikator, dynamisches Polling 3s/30s). 397 Backend + 422 Frontend Tests grün.
 
 ## Version
-v0.2.1 (Phase 1–8 + Upload-Hub Y + Manifest-Health)
+v0.2.2 (Phase 1–8 + Upload-Hub Y + Manifest-Health + Bench-Dashboard)
 
 ## Nächste geplante Stufe
-Browser-Test auf `/upload` (Hard-Reload), realistische Mehr-Datei-Uploads über die spezialisierten Cluster-Karten. Folge-Themen aus Backlog-Memory (Alert-Center, Adapter-Status-Inspector, Multi-Hub-Polling).
+Browser-Test auf `/octoboss/benchmarks` auf VDR (Hard-Reload, Live-OctoBoss-Bench-API). Folge-Themen aus Backlog-Memory (Alert-Center, Adapter-Status-Inspector, Multi-Hub-Polling).
 
 ## Offene Punkte
 - ~~Upload-Hub Listing-Endpoint crash~~ — behoben (2026-05-17, psycopg dict_row + COUNT AS n, Commit `27d0774`)
@@ -20,6 +20,8 @@ Browser-Test auf `/upload` (Hard-Reload), realistische Mehr-Datei-Uploads über 
 - Panopticor: Status+Actions-API-CR einreichen (CR #4, Phase 6)
 
 ## Letzte Änderung
+2026-05-19 — **OctoBoss-Bench-Dashboard:** `routes_octoboss.py` + `_proxy_post` + 5 Benchmark-Routen. `pages/Benchmarks.tsx` (Matrix + History + Run-Panel). `api.ts` + 5 neue Methoden im octoboss-Namespace. Sub-Tab "Benchmarks" + Route in OctoBossLayout. 7 Backend + 12 Frontend neue Tests. Gesamt: 397 Backend + 422 Frontend grün.
+
 2026-05-18 — **Manifest-Health-Karte:** Backend `manifest_health.py` + `routes_manifest_health.py` (GET `/api/v1/manifest/health`), Frontend `ManifestHealth.tsx` unter `/octoboss/manifest-health`, 16 Backend-Tests + 11 Frontend-Tests grün. Capability `cap.moag.manifest.health` in `docs/capabilities/moag.yaml` eingetragen.
 
 2026-05-18 — **Cluster-CR-Schema v1.1 cluster-weit aktiviert:** `requests/`-Scaffold angelegt (open / done / rejected / README / TEMPLATE), Pre-Commit-Hook aktiv (`.githooks/pre-commit` delegiert an `sebald-suite/docs/cr-schema/scripts/validate-crs.py`). CR-Schema-Quelle: `C:\code\sebald-suite\docs\cr-schema\`. Hook aktivieren via `git config core.hooksPath .githooks`.

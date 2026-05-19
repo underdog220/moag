@@ -472,6 +472,46 @@ export const api = {
       const params = target !== "both" ? `?target=${encodeURIComponent(target)}` : "";
       return request<unknown>(`/v1/manifest/health${params}`);
     },
+
+    /** GET /api/v1/octoboss/benchmarks/matrix — Benchmark-Matrix (subjects x nodes, sparse).
+     *  Antwort-Schema: {subjects, nodes, matrix} — fehlende Zellen sind undefined (sparse). */
+    getBenchmarkMatrix: (): Promise<unknown> =>
+      request<unknown>("/v1/octoboss/benchmarks/matrix"),
+
+    /** GET /api/v1/octoboss/benchmarks/history — Benchmark-History.
+     *  Optionale Filter: nodeId, domain, subject, limit. */
+    getBenchmarkHistory: (params?: {
+      nodeId?: string;
+      domain?: string;
+      subject?: string;
+      limit?: number;
+    }): Promise<unknown> => {
+      const p = new URLSearchParams();
+      if (params?.nodeId) p.set("node_id", params.nodeId);
+      if (params?.domain) p.set("domain", params.domain);
+      if (params?.subject) p.set("subject", params.subject);
+      if (params?.limit != null) p.set("limit", String(params.limit));
+      const qs = p.toString() ? `?${p}` : "";
+      return request<unknown>(`/v1/octoboss/benchmarks/history${qs}`);
+    },
+
+    /** GET /api/v1/octoboss/benchmarks/runs — Run-Liste mit active_run_id.
+     *  active_run_id=null → idle, UUID → laufender Run. */
+    getBenchmarkRuns: (limit = 50): Promise<unknown> =>
+      request<unknown>(`/v1/octoboss/benchmarks/runs?limit=${limit}`),
+
+    /** GET /api/v1/octoboss/benchmarks/runs/{run_id} — Run-Detail + Einzel-Ergebnisse. */
+    getBenchmarkRun: (runId: string): Promise<unknown> =>
+      request<unknown>(`/v1/octoboss/benchmarks/runs/${encodeURIComponent(runId)}`),
+
+    /** POST /api/v1/octoboss/benchmarks/run — Benchmark-Run starten.
+     *  Antwort: {run_id, started_at, scope_filters, message}.
+     *  Bei laufendem Run: summary.skipped=true. */
+    runBenchmark: (params?: object): Promise<unknown> =>
+      request<unknown>("/v1/octoboss/benchmarks/run", {
+        method: "POST",
+        body: params ?? {},
+      }),
   },
 
   // ─── Custos (/api/v1/custos/*) ─────────────────────────────────────────────

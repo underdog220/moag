@@ -1,5 +1,5 @@
 """
-OctoBoss-Proxy-Routes fuer MOAG — alle Read-Only-Endpunkte.
+OctoBoss-Proxy-Routes fuer MOAG — alle Read-Only-Endpunkte + Bench-Endpoints.
 
 Prefix: /api/v1/octoboss
 
@@ -13,6 +13,13 @@ Routen:
   GET /cluster/peers      → GET /api/v1/mesh/peers
   GET /ocr/status         → GET /ocr/status
   GET /llm/models         → GET /v1/models
+
+  # Benchmark-Suite
+  GET  /benchmarks/matrix          → GET /api/v1/benchmarks/matrix
+  GET  /benchmarks/history         → GET /api/v1/benchmarks/history (Query-Param-Passthrough)
+  GET  /benchmarks/runs            → GET /api/v1/benchmarks/runs (mit ?limit=)
+  GET  /benchmarks/runs/{run_id}   → GET /api/v1/benchmarks/runs/{run_id}
+  POST /benchmarks/run             → POST /api/v1/benchmarks/run (body-passthrough)
 
 Hub-URL kommt aus Settings (default_hub_id-Lookup), Fallback:
   http://192.168.200.71:18765
@@ -82,6 +89,46 @@ async def _proxy_get(
                 return resp.json()
             return {"raw": resp.text}
         # Hub-Fehler durchreichen
+        raise HTTPException(
+            status_code=resp.status_code,
+            detail=f"OctoBoss-Hub {path} antwortete HTTP {resp.status_code}: {resp.text[:200]}",
+        )
+    except HTTPException:
+        raise
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail=f"OctoBoss-Hub Timeout ({path})")
+    except (httpx.ConnectError, httpx.HTTPError) as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"OctoBoss-Hub nicht erreichbar ({path}): {exc}",
+        )
+
+
+async def _proxy_post(
+    hub_url: str,
+    path: str,
+    token: Optional[str],
+    body: dict[str, Any] | None = None,
+) -> Any:
+    """Sendet ein POST an den Hub und gibt das JSON-Ergebnis zurueck.
+
+    Analog zu _proxy_get, aber mit JSON-Body und POST-Methode.
+    Wirft HTTPException mit passenden Status-Codes (inkl. 202 Accepted).
+    """
+    target = f"{hub_url}{path}"
+    try:
+        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as cli:
+            resp = await cli.post(
+                target,
+                headers={**_auth_headers(token), "Content-Type": "application/json"},
+                json=body or {},
+            )
+        # 202 Accepted ist fuer Bench-Run normal — ebenfalls als Erfolg behandeln
+        if resp.is_success:
+            ct = resp.headers.get("content-type", "")
+            if "application/json" in ct:
+                return resp.json()
+            return {"raw": resp.text}
         raise HTTPException(
             status_code=resp.status_code,
             detail=f"OctoBoss-Hub {path} antwortete HTTP {resp.status_code}: {resp.text[:200]}",
@@ -182,6 +229,85 @@ def build_octoboss_router(settings_store: SettingsStore) -> APIRouter:
         """
         hub_url, token = _resolve_hub(settings_store)
         return await _proxy_get(hub_url, "/v1/models", token)
+
+    # ── Benchmark-Routen ─────────────────────────────────────────────────────────
+
+    @router.get("/benchmarks/matrix")
+    async def get_benchmarks_matrix() -> Any:
+        """Benchmark-Matrix (subjects x nodes): GET /api/v1/benchmarks/matrix.
+
+        Sparse-Matrix — fehlende Zellen werden als null/None geliefert.
+        Kein Auth-Header noetig (OctoBoss-Bench ist offen).
+        503 wenn Benchmark-DB nicht verfuegbar.
+        """
+        hub_url, token = _resolve_hub(settings_store)
+        return await _proxy_get(hub_url, "/api/v1/benchmarks/matrix", token)
+
+    @router.get("/benchmarks/history")
+    async def get_benchmarks_history(
+        limit: int = Query(default=100, ge=1, le=1000),
+        node_id: Optional[str] = Query(default=None),
+        domain: Optional[str] = Query(default=None),
+        subject: Optional[str] = Query(default=None),
+        metric_key: Optional[str] = Query(default=None),
+    ) -> Any:
+        """Benchmark-History: GET /api/v1/benchmarks/history.
+
+        Alle Query-Parameter werden an OctoBoss durchgereicht.
+        ?limit=N  ?node_id=...  ?domain=...  ?subject=...  ?metric_key=...
+        503 wenn Benchmark-DB nicht verfuegbar.
+        """
+        hub_url, token = _resolve_hub(settings_store)
+        params: dict[str, str] = {"limit": str(limit)}
+        if node_id:
+            params["node_id"] = node_id
+        if domain:
+            params["domain"] = domain
+        if subject:
+            params["subject"] = subject
+        if metric_key:
+            params["metric_key"] = metric_key
+        return await _proxy_get(hub_url, "/api/v1/benchmarks/history", token, params=params)
+
+    @router.get("/benchmarks/runs")
+    async def get_benchmarks_runs(
+        limit: int = Query(default=50, ge=1, le=500),
+    ) -> Any:
+        """Benchmark-Run-Liste: GET /api/v1/benchmarks/runs.
+
+        Antwort enthaelt active_run_id (null = idle, UUID = laeuft).
+        503 wenn Benchmark-DB nicht verfuegbar.
+        """
+        hub_url, token = _resolve_hub(settings_store)
+        return await _proxy_get(
+            hub_url, "/api/v1/benchmarks/runs", token, params={"limit": str(limit)}
+        )
+
+    @router.get("/benchmarks/runs/{run_id}")
+    async def get_benchmarks_run_detail(run_id: str) -> Any:
+        """Benchmark-Run-Detail: GET /api/v1/benchmarks/runs/{run_id}.
+
+        Liefert Run-Metadaten + alle Einzel-Ergebnisse.
+        503 wenn Benchmark-DB nicht verfuegbar.
+        """
+        hub_url, token = _resolve_hub(settings_store)
+        return await _proxy_get(hub_url, f"/api/v1/benchmarks/runs/{run_id}", token)
+
+    @router.post("/benchmarks/run")
+    async def post_benchmarks_run(request: Request) -> Any:
+        """Benchmark-Run starten: POST /api/v1/benchmarks/run.
+
+        Body wird 1:1 an OctoBoss weitergeleitet (scope_filters etc.).
+        Antwort: 202 {run_id, started_at, scope_filters, message}.
+        Bei laufendem Run: Antwort enthaelt summary.skipped=true.
+        Kein Auth-Header noetig.
+        """
+        hub_url, token = _resolve_hub(settings_store)
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        return await _proxy_post(hub_url, "/api/v1/benchmarks/run", token, body=body)
 
     return router
 
