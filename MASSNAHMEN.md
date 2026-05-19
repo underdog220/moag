@@ -2,6 +2,10 @@
 
 Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
 
+## 2026-05-19
+
+- [2026-05-19] [v0.2.2] **OctoBoss-Bench-Dashboard:** Backend `routes_octoboss.py` um `_proxy_post`-Helper + 5 neue Benchmark-Routen erweitert (GET benchmarks/matrix, history, runs, runs/{id} + POST benchmarks/run). Frontend: neues `pages/Benchmarks.tsx` (Run-Panel mit ConfirmDialog + aktiver-Run-Indikator, Matrix-Tabelle sparse-fähig, History-Liste sortierbar, 503-Degraded-Banner). `api.ts` im `octoboss`-Namespace um 5 neue Methoden ergänzt (getBenchmarkMatrix, getBenchmarkHistory, getBenchmarkRuns, getBenchmarkRun, runBenchmark). Sub-Tab "Benchmarks" in OctoBossLayout + Route registriert. ADR-004 eingehalten (Tooltips auf allen Zellen, Status-Dots, Trend-Icons, Zahlen-Spalten). PageBadge `octoboss.benchmarks`. 7 neue Backend-Tests (test_routes_octoboss_bench.py, inkl. 503-Fall) + 12 neue Frontend-Tests (Benchmarks.test.tsx). Gesamt: 397 Backend + 422 Frontend Tests grün.
+
 ## 2026-05-18
 
 - [2026-05-18] [v0.2.1] **Manifest-Health-Karte:** Backend `moag/manifest_health.py` (Schema-Validierung + Live-Consistency-Checks via Hub-API Option A), `moag/routes_manifest_health.py` (GET `/api/v1/manifest/health?target=both|bootstrapper|core`), Frontend `pages/ManifestHealth.tsx` (Traffic-Light + expandierbare Check-Zeilen + Tooltip ADR-004). Route `/octoboss/manifest-health` in OctoBoss-Feature + Sub-Tab "Manifest-Health" eingehängt. `api.octoboss.getManifestHealth()` in `lib/api.ts`. Capability `cap.moag.manifest.health` in `docs/capabilities/moag.yaml`. 16 Backend-Tests (test_manifest_health.py) + 11 Frontend-Tests (ManifestHealth.test.tsx) grün. Gesamt: 390 Backend + 410 Frontend grün.

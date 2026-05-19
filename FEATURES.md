@@ -46,10 +46,20 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 - **Aktionen integriert:** ActionCards für `oberon.smoke`, `oberon.llm.test`, `oberon.dsgvo.check`
 
 #### OctoBoss (`/octoboss/*`)
-- **Sub-Routen:** `nodes` (Liste) · `nodes/:id` (Detail) · `jobs` · `assets` · `cluster` (Sync/Peers) · `ocr` · `llm-models`
-- **Backend:** `routes_octoboss.py` (9 Proxy-Routes)
+- **Sub-Routen:** `nodes` (Liste) · `nodes/:id` (Detail) · `jobs` · `assets` · `cluster` (Sync/Peers) · `ocr` · `llm-models` · `manifest-health` · `benchmarks`
+- **Backend:** `routes_octoboss.py` (14 Proxy-Routes + `_proxy_post`-Helper)
 - **Score-Formel:** ehrlich gewichtet (40% connected · 30% Ollama · 20% Hardware-Telemetrie · 10% Mode IDLE/ACTIVE)
 - **Aktionen integriert:** `octoboss.cluster.status`, `octoboss.bench.start`, `octoboss.ollama.pull`
+
+#### OctoBoss Bench-Dashboard (`/octoboss/benchmarks`)
+- **Was:** Vollstaendiges Benchmark-Dashboard fuer die OctoBoss-Bench-Suite
+- **Run-Panel:** Button mit ConfirmDialog + aktiver-Run-Indikator (pulsierender Dot). Polling dynamisch: 3s bei laufendem Run, 30s im Idle (via React-Query refetchInterval).
+- **Matrix:** subjects x nodes, sparse (fehlende Zellen = "—"), Passed/Failed-Dot, Trend-Icon (up/down/stable), Stale-Markierung (>24h ausgegraut). Tooltips ADR-004: metric_string, age_hours, trend, error_text.
+- **History:** Letzte 50 Eintraege, sortierbar nach Subject/Node/Wert/Zeitpunkt. Status-Badge (✓ ok / ✗ fail).
+- **503-Degraded-State:** Banner "Benchmark-DB nicht verfuegbar — OctoBoss pruefen" statt Crash.
+- **Skipped-Run:** Hinweis "uebersprungen — anderer Run aktiv" wenn summary.skipped=true.
+- **Code:** `frontend/src/features/octoboss/pages/Benchmarks.tsx`, `backend/moag/routes_octoboss.py` (benchmarks/*), `frontend/src/lib/api.ts` (octoboss namespace)
+- **Tests:** `backend/tests/test_routes_octoboss_bench.py` (7 Tests), `frontend/src/features/octoboss/__tests__/Benchmarks.test.tsx` (12 Tests)
 
 #### OCRexpert (`/ocrexpert/*`)
 - **Sub-Routen:** `jobs` (mit Upload-Card + Pfad-Eingabe + UNC→Linux-Konvertierung) · `history` · `charts` · `capabilities` · `logs` (Tail mit Copy)
