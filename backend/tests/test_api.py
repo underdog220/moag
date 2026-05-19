@@ -631,3 +631,35 @@ def test_list_actions_includes_mandatory_ids(client):
     }
     missing = mandatory - ids
     assert not missing, f"Fehlende action_ids: {missing}"
+
+
+# ── Version-Drift-Regression (Bug 3, Cutover 2026-05-19) ─────────────────────
+
+
+def test_health_version_semver_format(client):
+    """/api/health muss eine SemVer-Version zurueckgeben, nicht die alte hardcoded '0.1.0'.
+
+    Regression-Test fuer Bug 3 vom ersten VDR-Cutover (2026-05-19):
+    __init__.py hatte __version__ = "0.1.0" hardcoded, waehrend pyproject.toml
+    schon 0.2.2 war. Seitdem liest __init__.py die Version via importlib.metadata.
+    Dieser Test faengt einen erneuten Drift auf.
+    """
+    import re
+    r = client.get("/api/health")
+    assert r.status_code == 200
+    data = r.json()
+    version = data.get("version", "")
+    assert isinstance(version, str), f"version muss String sein, ist: {type(version)}"
+    assert version, "version darf nicht leer sein"
+    # SemVer-Muster: X.Y.Z (optional -dev-Suffix)
+    semver_pattern = re.compile(r"^\d+\.\d+\.\d+(-[\w.]+)?$")
+    assert semver_pattern.match(version), (
+        f"version '{version}' entspricht nicht SemVer X.Y.Z — "
+        "moag.__version__ korrekt gesetzt? (importlib.metadata oder __init__.py pruefen)"
+    )
+    # Explizit: nicht mehr die alte hardcoded Uralt-Version
+    assert version != "0.1.0", (
+        f"version ist noch '0.1.0' (hardcoded in __init__.py) — "
+        "importlib.metadata liest die Version aus pyproject.toml, "
+        "ist das Paket mit 'pip install -e .' installiert?"
+    )

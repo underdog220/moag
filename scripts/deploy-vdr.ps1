@@ -264,6 +264,7 @@ MOAG_NASDOMINATOR_PASSWORD=$NasDomPassword
 MOAG_OCTOBOSS_HUBS=$OctobossHubs
 MOAG_CUSTOS_BASE_URL=$CustosBaseUrl
 MOAG_DB_CACHE_PATH=$VolumeMountPath/db.json
+MOAG_JOBS_DB=$VolumeMountPath/jobs.db
 MOAG_UPLOAD_DIR=$VolumeMountPath/uploads
 "@
 
@@ -276,8 +277,12 @@ MOAG_UPLOAD_DIR=$VolumeMountPath/uploads
     Write-Host "[DEPLOY] Uebertrage env-Datei nach VDR ..."
     scp $localTmp "${VdrHost}:/tmp/moag-deploy.env"
 
-    Write-Host "[DEPLOY] Installiere /etc/moag.env auf VDR (root, chmod 600) ..."
-    ssh $VdrHost "sudo mv /tmp/moag-deploy.env /etc/moag.env && sudo chmod 600 /etc/moag.env && sudo chown root:root /etc/moag.env && echo 'OK: /etc/moag.env installiert'"
+    Write-Host "[DEPLOY] Installiere /etc/moag.env auf VDR (root, chmod 644) ..."
+    # chmod 644 (nicht 600): Docker liest --env-file als Container-User (underdog, uid 1002),
+    # nicht als root. Mit 600/root:root waere die Datei fuer den Container-User nicht lesbar
+    # und der Start schlaegt mit "open /etc/moag.env: permission denied" fehl.
+    # Single-User-LAN — Lesbarkeit durch andere Accounts akzeptabel.
+    ssh $VdrHost "sudo mv /tmp/moag-deploy.env /etc/moag.env && sudo chmod 644 /etc/moag.env && sudo chown root:root /etc/moag.env && echo 'OK: /etc/moag.env installiert'"
 
     # Lokal aufraumen
     Remove-Item $localTmp -Force

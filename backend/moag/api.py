@@ -77,8 +77,13 @@ EDGE_LOG_MAX = 200
 
 
 def _build_info() -> dict[str, str]:
-    """Liefert (version, build, build_ts) — best-effort."""
-    version = "0.1.0"
+    """Liefert (version, build, build_ts) — best-effort.
+
+    Version-Quelle: moag.__version__ (wird via importlib.metadata aus
+    pyproject.toml gelesen wenn das Paket installiert ist).
+    Fallback "0.0.0-dev" nur bei komplett nicht-installiertem Paket.
+    """
+    version = "0.0.0-dev"
     try:
         from moag import __version__ as v
         version = v
