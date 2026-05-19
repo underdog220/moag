@@ -4,6 +4,11 @@ Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
 
 ## 2026-05-19
 
+- [2026-05-19] [v0.2.2] **3 Post-Cutover-Bugs behoben (Branch fix/moag-deploy-3bugs):**
+  - **Bug 1 (env-file Permission-Drift):** `scripts/deploy-vdr.ps1` Z.280: `chmod 600` → `chmod 644` mit Kommentar. Docker liest `--env-file` als Container-User (underdog, uid 1002) — mit 600/root:root war die Datei nicht lesbar → `permission denied` beim Container-Start. Im Single-User-LAN ist 644 akzeptabel.
+  - **Bug 2 (MOAG_JOBS_DB fehlt im env-Block):** `scripts/deploy-vdr.ps1` Heredoc: neue Zeile `MOAG_JOBS_DB=$VolumeMountPath/jobs.db` nach `MOAG_DB_CACHE_PATH` ergaenzt. Ohne diese Variable fiel `default_db_path()` auf `Path.home()/.moag/jobs.db` zurueck; Container-User 1002 hat kein Home → `PermissionError: '/.moag'`.
+  - **Bug 3 (Version-Drift /api/health):** `backend/moag/__init__.py`: `__version__ = "0.1.0"` (hardcoded) → `importlib.metadata.version("moag")` mit Fallback `"0.0.0-dev"`. `backend/moag/api.py`: `_build_info()`-Fallback von `"0.1.0"` auf `"0.0.0-dev"` geaendert. `tests/test_api.py`: neuer Regression-Test `test_health_version_semver_format` (prueft SemVer-Format + explizit != "0.1.0"). 409 Backend-Tests gruen (408 Bestand + 1 neu).
+
 - [2026-05-19] [v0.2.2] **Deploy-Pipeline gehaerdened (Build+Transfer+dynamische Version):**
   - `backend/pyproject.toml` Version 0.1.0 -> 0.2.2 (Single-Source-of-Truth wiederhergestellt).
   - `scripts/deploy-vdr.ps1` vollstaendig erweitert: neue Hilfsfunktion `Get-PyprojectVersion` liest Version aus pyproject.toml; neuer Build-Schritt (`docker build`) mit hartem Abbruch bei Fehler; neuer Transfer-Schritt (Stream-Pipe `docker save | ssh vdr docker load`) mit Idempotenz-Check + Tarball-Fallback; neue Flags `-SkipBuild`, `-SkipTransfer`, `-BuildOnly`; bestehende Flags `SmokeOnly` und Deploy-Pfad unveraendert erhalten.
