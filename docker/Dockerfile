@@ -3,13 +3,17 @@
 # Stage 1 (builder): Node.js baut das React/Vite-Frontend
 # Stage 2 (runtime): Python-Slim serviert Backend + eingebettetes Frontend
 #
-# Build:
-#   docker build -t moag:0.1.0 -f docker/Dockerfile .
+# Build (Version wird aus backend/pyproject.toml gelesen, deploy-vdr.ps1 erledigt das automatisch):
+#   VERSION=$(grep '^version' backend/pyproject.toml | head -1 | grep -oP '"\K[^"]+')
+#   docker build -t moag:$VERSION -f docker/Dockerfile .
 #
-# Run (LAN-Bind, Auth-Layer ist TODO Phase 9+):
+# Empfohlen: einziger Aufruf via deploy-Skript (baut + transferiert + deployt):
+#   pwsh -File scripts/deploy-vdr.ps1
+#
+# Manuell (LAN-Bind, Auth-Layer ist TODO Phase 9+):
 #   docker run --rm -p 17900:17900 \
 #       --env-file .env \
-#       moag:0.1.0
+#       moag:$VERSION
 #
 # Health-Check: /api/health
 

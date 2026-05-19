@@ -20,6 +20,8 @@ Browser-Test auf `/octoboss/benchmarks` auf VDR (Hard-Reload, Live-OctoBoss-Benc
 - Panopticor: Status+Actions-API-CR einreichen (CR #4, Phase 6)
 
 ## Letzte Änderung
+2026-05-19 — **Deploy-Pipeline gehaerdened:** Build+Transfer in `scripts/deploy-vdr.ps1` integriert. Version aus `backend/pyproject.toml` automatisch gelesen (0.1.0 -> 0.2.2). Neue Flags: `-SkipBuild`, `-SkipTransfer`, `-BuildOnly`. Stream-Pipe-Transfer mit Idempotenz-Check + Tarball-Fallback. `docs/DEPLOYMENT_VDR.md` komplett ueberarbeitet, Hot-Patch-Workflow als deprecated markiert. 6/6 isolierte Parser-Tests gruen.
+
 2026-05-19 — **Bench-Dashboard + Phase H parallel gemerged:** OctoBoss-Bench-Dashboard (`routes_octoboss.py` + `_proxy_post` + 5 Benchmark-Routen, `pages/Benchmarks.tsx` mit Matrix/History/Run-Panel, Sub-Tab "Benchmarks") und Phase H Visual-Redact + Classification-Guide (`dsgvo_visual_redact.py` Async-Handler, `routes_oberon.py` Classification-Guide-Route mit ETag-Passthrough, `Contract.tsx` um Allowlist/Deny-List/Decision-Tree erweitert, 24h-localStorage-ETag-Cache). 18 neue Backend + 16 neue Frontend Tests. Gesamt: 408 Backend + 426 Frontend grün.
 
 2026-05-18 — **Manifest-Health-Karte:** Backend `manifest_health.py` + `routes_manifest_health.py` (GET `/api/v1/manifest/health`), Frontend `ManifestHealth.tsx` unter `/octoboss/manifest-health`, 16 Backend-Tests + 11 Frontend-Tests grün. Capability `cap.moag.manifest.health` in `docs/capabilities/moag.yaml` eingetragen.
