@@ -4,6 +4,8 @@ Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
 
 ## 2026-05-20
 
+- [2026-05-20] [v0.2.2] **Fix: Bootstrapper-Field-Mapping Top-Level-Fallback (manifest_health.py):** `pseudo_entry` in `get_manifest_health` las `sha256` + `size` nur aus `binaries.bootstrapper{}`, das im Production-Hub-Format kein `sha256`/`size_bytes` hat. SHA + size liegen Top-Level als `bootstrapper_sha256` / `bootstrapper_size_bytes`. Fix F1: Top-Level-Fallback ergaenzt. Folge war: `schema-version-entries` war gegen jeden Production-Hub seit erstem Commit immer rot. Test `test_route_manifest_health_top_level_bootstrapper_fields_v0_4_17` ergaenzt der Production-Format simuliert. `test_route_manifest_health_both` um explizite Assertion auf `schema-version-entries == green` verscharft. 414 Backend-Tests gruen.
+
 - [2026-05-20] [v0.2.2] **Multi-Hub-Manifest-Health-View:** Neuer Backend-Endpoint `GET /api/v1/manifest/health/all` probt alle konfigurierten Hubs (`settings_store.hubs`) parallel (asyncio.gather, 5s Timeout pro Hub). Antwort-Schema `manifest-health-all-v1` mit `active_hub_id` + `hubs[{id, url, is_active, health}]`. Frontend `ManifestHealth.tsx` nutzt neuen `getManifestHealthAll`-API-Call, rendert pro Hub eine `HubCard` vertikal gestapelt; aktiver Hub (default_hub_id) hat gruenen Border-Highlight + Stern-Badge "★ Aktiv" (Tooltip erklaert Bedeutung), inaktive Hubs zeigen "Sekundaer"-Badge. PageBadge unveraendert. 413 Backend + 431 Frontend Tests gruen.
 
 ## 2026-05-19

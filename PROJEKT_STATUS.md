@@ -22,6 +22,8 @@ Browser-Test auf `/octoboss/benchmarks` auf VDR (Hard-Reload, Live-OctoBoss-Benc
 - **Browser-Verifikation v0.2.2 ausstehend:** `/octoboss/benchmarks` + `/oberon/contract` im Browser oeffnen, PageBadges + UI-Render bestaetigen. Roman gibt Bescheid bei Crash.
 
 ## Letzte Änderung
+2026-05-20 — **Fix: Bootstrapper-Field-Mapping Top-Level-Fallback:** `schema-version-entries` war gegen Production-Hub seit erstem Commit immer rot — `pseudo_entry` las SHA+size aus `binaries.bootstrapper{}` statt Top-Level. Fix F1 + neuer Test. 414 Backend-Tests gruen.
+
 2026-05-19 — **3 Post-Cutover-Bugs behoben (Branch fix/moag-deploy-3bugs):** env-file chmod 600→644, MOAG_JOBS_DB ergaenzt, /api/health Version via importlib.metadata statt hardcoded "0.1.0". 409/409 Backend-Tests gruen.
 
 2026-05-19 — **Deploy-Pipeline gehaerdened:** Build+Transfer in `scripts/deploy-vdr.ps1` integriert. Version aus `backend/pyproject.toml` automatisch gelesen (0.1.0 -> 0.2.2). Neue Flags: `-SkipBuild`, `-SkipTransfer`, `-BuildOnly`. Stream-Pipe-Transfer mit Idempotenz-Check + Tarball-Fallback. `docs/DEPLOYMENT_VDR.md` komplett ueberarbeitet, Hot-Patch-Workflow als deprecated markiert. 6/6 isolierte Parser-Tests gruen.

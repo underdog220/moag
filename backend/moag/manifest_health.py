@@ -822,8 +822,19 @@ async def get_manifest_health(
                         binaries = raw_b.get("binaries", {})
                         boot_bin = binaries.get("bootstrapper", {})
                         pseudo_entry: dict = {
-                            "sha256": boot_bin.get("sha256", ""),
-                            "size": boot_bin.get("size_bytes", boot_bin.get("size", 0)),
+                            # SHA liegt im Production-Hub Top-Level (bootstrapper_sha256),
+                            # nicht in binaries.bootstrapper{} — daher Top-Level-Fallback.
+                            "sha256": (
+                                boot_bin.get("sha256")
+                                or raw_b.get("bootstrapper_sha256", "")
+                            ),
+                            # size liegt Top-Level als bootstrapper_size_bytes.
+                            # _validate_bootstrapper_schema erwartet Feld "size" (nicht size_bytes).
+                            "size": (
+                                boot_bin.get("size")
+                                or boot_bin.get("size_bytes")
+                                or raw_b.get("bootstrapper_size_bytes", 0)
+                            ),
                             "url": boot_bin.get("url", f"{hub_base}/seti/distribute/download/bootstrapper"),
                         }
                         raw_b_pseudo: dict = {

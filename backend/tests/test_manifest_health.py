@@ -256,7 +256,12 @@ def test_core_schema_node_overrides_object_is_error() -> None:
 
 
 def test_route_manifest_health_both(monkeypatch: Any) -> None:
-    """GET /api/v1/manifest/health liefert 200 mit manifests.bootstrapper + manifests.core."""
+    """GET /api/v1/manifest/health liefert 200 mit manifests.bootstrapper + manifests.core.
+
+    Mock entspricht Production-Format: binaries.bootstrapper enthaelt KEIN sha256/size_bytes,
+    SHA + size liegen Top-Level als bootstrapper_sha256 / bootstrapper_size_bytes.
+    Mit Fix F1 muss schema-version-entries gruen sein.
+    """
     hub_responses = {
         "seti/distribute/info": {
             "bootstrapper_version": "0.3.9-rc5",
@@ -284,7 +289,59 @@ def test_route_manifest_health_both(monkeypatch: Any) -> None:
     assert "bootstrapper" in data["manifests"]
     assert "core" in data["manifests"]
     assert "summary" in data
-    assert data["summary"]["overall_status"] in ("green", "yellow", "red")
+    # Mit Top-Level-Fallback muss schema-version-entries gruen sein
+    boot_checks = {c["id"]: c["status"] for c in data["manifests"]["bootstrapper"]["checks"]}
+    assert boot_checks.get("schema-version-entries") == "green", (
+        f"schema-version-entries nicht gruen (Field-Mapping-Bug?): {boot_checks}"
+    )
+
+
+def test_route_manifest_health_top_level_bootstrapper_fields_v0_4_17(monkeypatch: Any) -> None:
+    """Production-Format v0.4.17+: binaries.bootstrapper enthaelt NUR available/version/url.
+
+    SHA und size liegen Top-Level als bootstrapper_sha256 / bootstrapper_size_bytes.
+    Reproduziert den Bug aus Bug-Klasse #79: pseudo_entry mappte nur binaries.bootstrapper{},
+    sha256="" + size=0 → schema-version-entries war immer rot gegen Production-Hub.
+
+    Fix F1: pseudo_entry liest Top-Level-Felder als Fallback.
+    Dieser Test verifiziert dass schema-version-entries gruen ist und
+    summary.overall_status fuer den Bootstrapper-Branch nicht rot ist.
+    """
+    hub_responses = {
+        "seti/distribute/info": {
+            # Top-Level-Felder (Production-Realitaet laut Hub VDR 18765)
+            "bootstrapper_version": "0.3.9-rc5.11",
+            "bootstrapper_sha256": "3faedd0a8b866b0436f53c51089a23970517e364336e1ef62cc12b46deb9f567",
+            "bootstrapper_size_bytes": 4_669_952,
+            # binaries.bootstrapper enthaelt KEIN sha256 / size_bytes
+            "binaries": {
+                "bootstrapper": {
+                    "available": True,
+                    "version": "0.3.9-rc5.11",
+                    "url": "http://mock-hub:18765/seti/distribute/download/bootstrapper",
+                }
+            },
+        },
+    }
+    client = _make_app(monkeypatch, hub_responses)
+    resp = client.get("/api/v1/manifest/health?target=bootstrapper")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "bootstrapper" in data["manifests"]
+
+    boot_checks = {c["id"]: c["status"] for c in data["manifests"]["bootstrapper"]["checks"]}
+
+    # schema-version-entries muss gruen sein — SHA + size korrekt gemappt
+    assert boot_checks.get("schema-version-entries") == "green", (
+        f"schema-version-entries rot — Top-Level-Fallback fehlt oder kaputt: {boot_checks}"
+    )
+
+    # Bootstrapper-Status darf nicht rot sein wenn Felder korrekt befuellt
+    boot_status = data["manifests"]["bootstrapper"]["status"]
+    assert boot_status != "red", (
+        f"Bootstrapper-Status ist rot obwohl Manifest-Felder korrekt: {boot_status}\n"
+        f"Checks: {boot_checks}"
+    )
 
 
 def test_route_manifest_health_bootstrapper_only(monkeypatch: Any) -> None:
