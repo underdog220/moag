@@ -1,7 +1,7 @@
 # PROJEKT_STATUS — MOAG (Mother of All GUIs)
 
 ## Aktueller Stand
-**v0.2.2 + Multi-Hub-Manifest-Health.** Neuer Endpoint `/api/v1/manifest/health/all` probt alle konfigurierten Hubs parallel; Frontend zeigt alle Hubs gestapelt, aktiver Hub mit Stern-Badge. 413 Backend + 431 Frontend Tests grün. Deploy auf VDR ausstehend (kein Push heute).
+**v0.2.2 + Multi-Hub-Manifest-Health deployed auf VDR.** Neuer Endpoint `/api/v1/manifest/health/all` probt alle konfigurierten Hubs parallel; Frontend zeigt alle Hubs gestapelt, aktiver Hub mit Stern-Badge. 413 Backend + 431 Frontend Tests grün. Container `moag:0.2.2` auf VDR:17900 healthy, `overall_status=green` (alle Checks inkl. schema-version-entries + live-consistency). Push auf GitHub erfolgt (Commits bafa7ec + 0c9c89f).
 
 ## Version
 v0.2.2 (Phase 1–8 + Upload-Hub Y + Manifest-Health + Bench-Dashboard + Phase H)
@@ -22,6 +22,8 @@ Browser-Test auf `/octoboss/benchmarks` auf VDR (Hard-Reload, Live-OctoBoss-Benc
 - **Browser-Verifikation v0.2.2 ausstehend:** `/octoboss/benchmarks` + `/oberon/contract` im Browser oeffnen, PageBadges + UI-Render bestaetigen. Roman gibt Bescheid bei Crash.
 
 ## Letzte Änderung
+2026-05-20 — **Phase 3 Deploy auf VDR:** Commits bafa7ec (Multi-Hub-View) + 0c9c89f (Field-Mapping-Fix) gepusht + deployed. Container healthy, manifest/health overall_status=green, Bootstrapper + Core gruen.
+
 2026-05-20 — **Fix: Bootstrapper-Field-Mapping Top-Level-Fallback:** `schema-version-entries` war gegen Production-Hub seit erstem Commit immer rot — `pseudo_entry` las SHA+size aus `binaries.bootstrapper{}` statt Top-Level. Fix F1 + neuer Test. 414 Backend-Tests gruen.
 
 2026-05-19 — **3 Post-Cutover-Bugs behoben (Branch fix/moag-deploy-3bugs):** env-file chmod 600→644, MOAG_JOBS_DB ergaenzt, /api/health Version via importlib.metadata statt hardcoded "0.1.0". 409/409 Backend-Tests gruen.
