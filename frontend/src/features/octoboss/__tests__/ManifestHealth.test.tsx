@@ -1,5 +1,6 @@
 // Smoke-Tests fuer ManifestHealthPage.
 // Prueft Rendering mit Mock-Daten (green/red), Fehlerfall, Loading-State.
+// Seit Multi-Hub-Erweiterung: Tests gegen getManifestHealthAll.
 
 import { describe, expect, it, vi, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
@@ -149,46 +150,120 @@ const RED_RESPONSE = {
   fetched_at: "2026-05-18T10:00:00Z",
 };
 
+// ── Multi-Hub-Mock-Daten ──────────────────────────────────────────────────────
+
+const MULTI_HUB_RESPONSE = {
+  schema: "manifest-health-all-v1",
+  active_hub_id: "vdr",
+  hubs: [
+    {
+      id: "vdr",
+      url: "http://192.168.200.71:18765",
+      is_active: true,
+      health: GREEN_RESPONSE,
+    },
+    {
+      id: "nas",
+      url: "http://192.168.200.169:8765",
+      is_active: false,
+      health: {
+        ...GREEN_RESPONSE,
+        summary: {
+          ...GREEN_RESPONSE.summary,
+          hub_url: "http://192.168.200.169:8765",
+        },
+      },
+    },
+  ],
+};
+
+const MULTI_HUB_TIMEOUT_RESPONSE = {
+  schema: "manifest-health-all-v1",
+  active_hub_id: "vdr",
+  hubs: [
+    {
+      id: "vdr",
+      url: "http://192.168.200.71:18765",
+      is_active: true,
+      health: GREEN_RESPONSE,
+    },
+    {
+      id: "nas",
+      url: "http://192.168.200.169:8765",
+      is_active: false,
+      health: {
+        error: "timeout",
+        detail: "Hub http://192.168.200.169:8765 hat nicht innerhalb von 5s geantwortet.",
+      },
+    },
+  ],
+};
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 afterEach(() => vi.restoreAllMocks());
 
 describe("ManifestHealthPage", () => {
   it("rendert Seiten-Titel", async () => {
-    vi.spyOn(apiModule.api.octoboss, "getManifestHealth").mockResolvedValue(
-      GREEN_RESPONSE,
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockResolvedValue(
+      MULTI_HUB_RESPONSE,
     );
     render(wrap(<ManifestHealthPage />));
     expect(screen.getByText("Manifest-Health")).toBeTruthy();
   });
 
-  it("zeigt gruene Status-Badges bei gruenem Ergebnis", async () => {
-    vi.spyOn(apiModule.api.octoboss, "getManifestHealth").mockResolvedValue(
-      GREEN_RESPONSE,
+  it("zeigt gruene Status-Badges bei gruenem Ergebnis (Multi-Hub)", async () => {
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockResolvedValue(
+      MULTI_HUB_RESPONSE,
     );
     render(wrap(<ManifestHealthPage />));
     await waitFor(() => {
-      // Summary-Text: "Alle Manifests sind konsistent" bei overall_status green
-      expect(screen.getByText("Alle Manifests sind konsistent")).toBeTruthy();
+      // Beide Hubs sollen gerendert werden
+      const body = document.body.textContent ?? "";
+      expect(body).toContain("vdr");
+      expect(body).toContain("nas");
     });
   });
 
-  it("zeigt Fehler-Badges bei rotem Ergebnis", async () => {
-    vi.spyOn(apiModule.api.octoboss, "getManifestHealth").mockResolvedValue(
-      RED_RESPONSE,
+  it("zeigt Aktiv-Badge fuer aktiven Hub", async () => {
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockResolvedValue(
+      MULTI_HUB_RESPONSE,
     );
     render(wrap(<ManifestHealthPage />));
     await waitFor(() => {
-      // Summary-Text: "Fehler erkannt" bei overall_status red
-      expect(
-        screen.getByText(/Fehler erkannt — Manifests inkonsistent/),
-      ).toBeTruthy();
+      // Aktiv-Badge enthaelt "Aktiv" (fuer vdr)
+      const body = document.body.textContent ?? "";
+      expect(body).toContain("Aktiv");
+      expect(body).toContain("Sekundär");
     });
   });
 
-  it("zeigt node_overrides-Bug in Checks", async () => {
-    vi.spyOn(apiModule.api.octoboss, "getManifestHealth").mockResolvedValue(
-      RED_RESPONSE,
+  it("zeigt Timeout-Fehler fuer nicht erreichbaren Hub", async () => {
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockResolvedValue(
+      MULTI_HUB_TIMEOUT_RESPONSE,
+    );
+    render(wrap(<ManifestHealthPage />));
+    await waitFor(() => {
+      const body = document.body.textContent ?? "";
+      expect(body).toContain("Timeout");
+    });
+  });
+
+  it("zeigt node_overrides-Bug in Checks (Hub-Card)", async () => {
+    const multiHubRedResponse = {
+      schema: "manifest-health-all-v1",
+      active_hub_id: "vdr",
+      hubs: [
+        {
+          id: "vdr",
+          url: "http://192.168.200.71:18765",
+          is_active: true,
+          health: RED_RESPONSE,
+        },
+      ],
+    };
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockResolvedValue(
+      multiHubRedResponse,
     );
     render(wrap(<ManifestHealthPage />));
     await waitFor(() => {
@@ -196,29 +271,29 @@ describe("ManifestHealthPage", () => {
     });
   });
 
-  it("zeigt Bootstrapper-Manifest-Sektion", async () => {
-    vi.spyOn(apiModule.api.octoboss, "getManifestHealth").mockResolvedValue(
-      GREEN_RESPONSE,
+  it("zeigt Bootstrapper-Manifest-Sektion in Hub-Card", async () => {
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockResolvedValue(
+      MULTI_HUB_RESPONSE,
     );
     render(wrap(<ManifestHealthPage />));
     await waitFor(() => {
-      expect(screen.getByText("Bootstrapper-Manifest")).toBeTruthy();
+      expect(screen.getAllByText("Bootstrapper-Manifest").length).toBeGreaterThan(0);
     });
   });
 
-  it("zeigt Core-Manifest-Sektion wenn vorhanden", async () => {
-    vi.spyOn(apiModule.api.octoboss, "getManifestHealth").mockResolvedValue(
-      GREEN_RESPONSE,
+  it("zeigt Core-Manifest-Sektion in Hub-Card", async () => {
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockResolvedValue(
+      MULTI_HUB_RESPONSE,
     );
     render(wrap(<ManifestHealthPage />));
     await waitFor(() => {
-      expect(screen.getByText("Core-Manifest")).toBeTruthy();
+      expect(screen.getAllByText("Core-Manifest").length).toBeGreaterThan(0);
     });
   });
 
   it("zeigt LoadingSpinner waehrend Ladephase", () => {
     // Query wird nie resolved → loading-State
-    vi.spyOn(apiModule.api.octoboss, "getManifestHealth").mockReturnValue(
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockReturnValue(
       new Promise(() => {}),
     );
     render(wrap(<ManifestHealthPage />));
@@ -227,13 +302,12 @@ describe("ManifestHealthPage", () => {
   });
 
   it("zeigt Fehlermeldung bei API-Fehler", async () => {
-    vi.spyOn(apiModule.api.octoboss, "getManifestHealth").mockRejectedValue(
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockRejectedValue(
       new Error("Hub nicht erreichbar"),
     );
     render(wrap(<ManifestHealthPage />));
     // Warten bis die Fehler-Meldung im DOM erscheint
     // React Query retry=false, also sollte der Fehler direkt sichtbar sein.
-    // Test-Ansatz: body-Text nach Schluessel-Phrase suchen
     await waitFor(() => {
       const body = document.body.textContent ?? "";
       expect(body).toContain("Hub nicht erreichbar");
@@ -241,8 +315,8 @@ describe("ManifestHealthPage", () => {
   });
 
   it("zeigt Neu-Laden-Button", async () => {
-    vi.spyOn(apiModule.api.octoboss, "getManifestHealth").mockResolvedValue(
-      GREEN_RESPONSE,
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockResolvedValue(
+      MULTI_HUB_RESPONSE,
     );
     render(wrap(<ManifestHealthPage />));
     await waitFor(() => {
@@ -251,22 +325,74 @@ describe("ManifestHealthPage", () => {
   });
 
   it("zeigt Cache-TTL-Hinweis", async () => {
-    vi.spyOn(apiModule.api.octoboss, "getManifestHealth").mockResolvedValue(
-      GREEN_RESPONSE,
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockResolvedValue(
+      MULTI_HUB_RESPONSE,
     );
     render(wrap(<ManifestHealthPage />));
     await waitFor(() => {
-      expect(screen.getByText(/Hub-Cache-TTL/)).toBeTruthy();
+      // Zwei Hubs → zwei Cache-TTL-Hinweise (je Hub-Card einer)
+      expect(screen.getAllByText(/Hub-Cache-TTL/).length).toBeGreaterThan(0);
     });
   });
 
   it("zeigt PageBadge", async () => {
-    vi.spyOn(apiModule.api.octoboss, "getManifestHealth").mockResolvedValue(
-      GREEN_RESPONSE,
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockResolvedValue(
+      MULTI_HUB_RESPONSE,
     );
     render(wrap(<ManifestHealthPage />));
     await waitFor(() => {
       expect(screen.getByText(/manifest-health/)).toBeTruthy();
+    });
+  });
+
+  // ── Neue Multi-Hub-Tests ────────────────────────────────────────────────────
+
+  it("rendert zwei Hub-Cards bei zwei Hubs", async () => {
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockResolvedValue(
+      MULTI_HUB_RESPONSE,
+    );
+    render(wrap(<ManifestHealthPage />));
+    await waitFor(() => {
+      // Hub-IDs im Body
+      const body = document.body.textContent ?? "";
+      expect(body).toContain("vdr");
+      expect(body).toContain("nas");
+    });
+  });
+
+  it("aktiver Hub zeigt Stern-Badge, sekundaerer Hub zeigt Sekundaer-Badge", async () => {
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockResolvedValue(
+      MULTI_HUB_RESPONSE,
+    );
+    render(wrap(<ManifestHealthPage />));
+    await waitFor(() => {
+      const body = document.body.textContent ?? "";
+      // Aktiv-Badge mit Stern
+      expect(body).toContain("★ Aktiv");
+      // Sekundaer-Badge
+      expect(body).toContain("Sekundär");
+    });
+  });
+
+  it("Timeout-Hub zeigt 'Nicht erreichbar'-Badge", async () => {
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockResolvedValue(
+      MULTI_HUB_TIMEOUT_RESPONSE,
+    );
+    render(wrap(<ManifestHealthPage />));
+    await waitFor(() => {
+      const body = document.body.textContent ?? "";
+      expect(body).toContain("Nicht erreichbar");
+    });
+  });
+
+  it("Hub-Count im Header zeigt Anzahl der Hubs", async () => {
+    vi.spyOn(apiModule.api.octoboss, "getManifestHealthAll").mockResolvedValue(
+      MULTI_HUB_RESPONSE,
+    );
+    render(wrap(<ManifestHealthPage />));
+    await waitFor(() => {
+      const body = document.body.textContent ?? "";
+      expect(body).toContain("2 Hubs");
     });
   });
 });

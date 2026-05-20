@@ -1,7 +1,7 @@
 # PROJEKT_STATUS — MOAG (Mother of All GUIs)
 
 ## Aktueller Stand
-**v0.2.2 live auf VDR (Cutover 2026-05-19).** Container `moag:0.2.2` healthy, `/api/health` antwortet `version:"0.2.2"`. Upload-Hub live mit 11 echt verkabelten Handlern (10 Bestand + `dsgvo.visual-redact` async). Manifest-Health unter `/octoboss/manifest-health`. OctoBoss-Bench-Dashboard unter `/octoboss/benchmarks`. Contract-Tab um Classification-Guide erweitert. 3 Post-Cutover-Bugs behoben (env-file chmod 644, MOAG_JOBS_DB im env-Block, /api/health Version via importlib.metadata). 409 Backend + 426 Frontend Tests grün. Browser-Verifikation ausstehend.
+**v0.2.2 + Multi-Hub-Manifest-Health.** Neuer Endpoint `/api/v1/manifest/health/all` probt alle konfigurierten Hubs parallel; Frontend zeigt alle Hubs gestapelt, aktiver Hub mit Stern-Badge. 413 Backend + 431 Frontend Tests grün. Deploy auf VDR ausstehend (kein Push heute).
 
 ## Version
 v0.2.2 (Phase 1–8 + Upload-Hub Y + Manifest-Health + Bench-Dashboard + Phase H)

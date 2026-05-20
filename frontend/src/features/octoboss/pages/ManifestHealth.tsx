@@ -1,9 +1,12 @@
-// ManifestHealth — Hub-Manifest-Health-Karte
+// ManifestHealth — Hub-Manifest-Health-Karte (Multi-Hub-View)
 // Sub-Route: /octoboss/manifest-health
-// Datenquelle: GET /api/v1/manifest/health
+// Datenquellen:
+//   GET /api/v1/manifest/health/all — alle konfigurierten Hubs parallel
+//   GET /api/v1/manifest/health     — Einzel-Hub (Backward-Compat, beibehalten)
 //
 // Zeigt Schema-Validierung, Cross-Ref, node_overrides-Bug, EXE-Existenz,
 // SHA-Match und Live-Konsistenz fuer Bootstrapper- und Core-Manifests.
+// Aktiver Hub (default_hub_id) wird visuell hervorgehoben.
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -51,6 +54,23 @@ interface ManifestHealthData {
     cache_ttl_note: string;
   };
   fetched_at: string;
+}
+
+// Typen fuer das Multi-Hub-Response (schema: manifest-health-all-v1)
+
+interface HubHealthEntry {
+  id: string;
+  url: string;
+  is_active: boolean;
+  // Bei Erfolg: vollstaendiges ManifestHealthData-Objekt
+  // Bei Timeout / Verbindungsfehler: {error: string, detail: string}
+  health: ManifestHealthData | { error: string; detail: string };
+}
+
+interface ManifestHealthAllData {
+  schema: "manifest-health-all-v1";
+  active_hub_id: string;
+  hubs: HubHealthEntry[];
 }
 
 // ── Hilfsfunktionen ────────────────────────────────────────────────────────────
@@ -249,18 +269,157 @@ function ManifestSection({
   );
 }
 
+// ── Hilfsfunktion: ist health ein Fehler? ────────────────────────────────────
+
+function isHealthError(h: HubHealthEntry["health"]): h is { error: string; detail: string } {
+  return typeof (h as { error?: unknown }).error === "string";
+}
+
+// ── Hub-Card (eine Karte pro konfiguriertem Hub) ──────────────────────────────
+
+function HubCard({ entry }: { entry: HubHealthEntry }) {
+  const health = entry.health;
+  const hasError = isHealthError(health);
+
+  // Gesamt-Status fuer den Card-Header
+  const overallStatus: "green" | "yellow" | "red" = hasError
+    ? "red"
+    : (health as ManifestHealthData).summary?.overall_status ?? "yellow";
+
+  return (
+    <div
+      className={`rounded border-2 bg-bg-panel ${
+        entry.is_active
+          ? "border-status-ok/60 ring-1 ring-status-ok/20"
+          : "border-white/10"
+      }`}
+      data-testid={`hub-card-${entry.id}`}
+    >
+      {/* Card-Header */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Hub-Aktiv-Badge */}
+          {entry.is_active ? (
+            <Tooltip
+              title="Dies ist der aktuell als default_hub_id konfigurierte Hub — pollende Nodes greifen typischerweise auf diesen zu."
+              source="/api/v1/manifest/health/all"
+            >
+              <span className="inline-flex items-center gap-1 rounded border border-status-ok/40 bg-status-ok/10 px-2 py-0.5 text-xs font-semibold text-status-ok">
+                ★ Aktiv
+              </span>
+            </Tooltip>
+          ) : (
+            <Tooltip
+              title="Theoretisch erreichbar, aber nicht als default konfiguriert. Nodes pollen typischerweise den aktiven Hub."
+              source="/api/v1/manifest/health/all"
+            >
+              <span className="inline-flex items-center gap-1 rounded border border-white/20 bg-bg-elevated px-2 py-0.5 text-xs font-semibold text-fg-muted">
+                Sekundär
+              </span>
+            </Tooltip>
+          )}
+
+          {/* Hub-ID */}
+          <Tooltip
+            title={`Hub-ID: ${entry.id} · URL: ${entry.url}`}
+            source="/api/v1/manifest/health/all"
+          >
+            <span className="font-semibold text-fg">{entry.id}</span>
+          </Tooltip>
+
+          {/* Gesamt-Status-Badge */}
+          {!hasError && <StatusBadge status={overallStatus} />}
+          {hasError && (
+            <span className="inline-flex items-center gap-1 rounded border border-status-error/30 bg-status-error/10 px-2 py-0.5 text-xs font-semibold text-status-error">
+              ✗ Nicht erreichbar
+            </span>
+          )}
+        </div>
+
+        {/* Hub-URL (dezent) */}
+        <Tooltip
+          title={`Hub-Endpunkt: ${entry.url}`}
+          source="/api/v1/manifest/health/all"
+        >
+          <span className="font-mono text-xs text-fg-subtle">{entry.url}</span>
+        </Tooltip>
+      </div>
+
+      {/* Fehler-Zustand: Timeout oder Verbindungsfehler */}
+      {hasError && (
+        <div className="px-4 py-3">
+          <p className="mb-1 text-xs font-semibold text-status-error">
+            {(health as { error: string }).error === "timeout"
+              ? "Timeout: Hub hat nicht innerhalb von 5s geantwortet"
+              : "Verbindungsfehler"}
+          </p>
+          <p className="font-mono text-xs text-fg-subtle">
+            {(health as { detail: string }).detail}
+          </p>
+        </div>
+      )}
+
+      {/* Erfolg: Bootstrapper- + Core-Sektionen */}
+      {!hasError && (() => {
+        const h = health as ManifestHealthData;
+        return (
+          <div className="flex flex-col gap-4 p-4">
+            {h.manifests?.bootstrapper && (
+              <ManifestSection
+                title="Bootstrapper-Manifest"
+                result={h.manifests.bootstrapper}
+                endpoint={h.manifests.bootstrapper.manifest_endpoint}
+              />
+            )}
+            {h.manifests?.core && (
+              <ManifestSection
+                title="Core-Manifest"
+                result={h.manifests.core}
+                endpoint={h.manifests.core.manifest_endpoint}
+              />
+            )}
+
+            {/* Cache-TTL-Hinweis */}
+            {h.summary?.cache_ttl_note && (
+              <p className="text-xs text-fg-subtle">{h.summary.cache_ttl_note}</p>
+            )}
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
 // ── Haupt-Komponente ──────────────────────────────────────────────────────────
 
 export function ManifestHealthPage() {
-  const { data, isLoading, error, refetch, dataUpdatedAt } = useQuery({
-    queryKey: ["octoboss", "manifest-health"],
-    queryFn: () => api.octoboss.getManifestHealth(),
+  // Multi-Hub-Query: alle konfigurierten Hubs parallel
+  const { data: allData, isLoading, error, refetch, dataUpdatedAt } = useQuery({
+    queryKey: ["octoboss", "manifest-health-all"],
+    queryFn: () => api.octoboss.getManifestHealthAll(),
     refetchInterval: 60_000,  // alle 60s automatisch — Cache-TTL ist 30s
   });
 
-  const health = data as ManifestHealthData | undefined;
+  const allHealth = allData as ManifestHealthAllData | undefined;
   const lastUpdated = dataUpdatedAt
     ? new Date(dataUpdatedAt).toLocaleTimeString("de-DE")
+    : null;
+
+  // Gesamt-Status aus allen Hubs aggregieren
+  const overallStatus: "green" | "yellow" | "red" | null = allHealth
+    ? (() => {
+        let worst: "green" | "yellow" | "red" = "green";
+        for (const entry of allHealth.hubs) {
+          if (isHealthError(entry.health)) {
+            worst = "red";
+            break;
+          }
+          const s = (entry.health as ManifestHealthData).summary?.overall_status;
+          if (s === "red") { worst = "red"; break; }
+          if (s === "yellow" && worst === "green") worst = "yellow";
+        }
+        return worst;
+      })()
     : null;
 
   return (
@@ -269,14 +428,24 @@ export function ManifestHealthPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h2 className="text-lg font-semibold text-fg">Manifest-Health</h2>
-          {health && <StatusBadge status={health.summary.overall_status} />}
+          {overallStatus && <StatusBadge status={overallStatus} />}
+          {allHealth && (
+            <Tooltip
+              title={`${allHealth.hubs.length} Hub(s) konfiguriert · aktiver Hub: ${allHealth.active_hub_id}`}
+              source="/api/v1/manifest/health/all"
+            >
+              <span className="text-xs text-fg-subtle">
+                {allHealth.hubs.length} Hub{allHealth.hubs.length !== 1 ? "s" : ""}
+              </span>
+            </Tooltip>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
           {lastUpdated && (
             <Tooltip
               title="Zeitpunkt der letzten Abfrage"
-              source="/api/v1/manifest/health"
+              source="/api/v1/manifest/health/all"
               updatedAt={lastUpdated}
             >
               <span className="text-xs text-fg-subtle">Stand: {lastUpdated}</span>
@@ -305,64 +474,19 @@ export function ManifestHealthPage() {
         </div>
       )}
 
-      {/* Summary-Header */}
-      {health && (
-        <div className={`rounded border px-4 py-3 ${statusBg(health.summary.overall_status)}`}>
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <span className={`font-semibold ${statusColor(health.summary.overall_status)}`}>
-              {health.summary.overall_status === "green"
-                ? "Alle Manifests sind konsistent"
-                : health.summary.overall_status === "yellow"
-                  ? "Warnungen erkannt — pruefen empfohlen"
-                  : "Fehler erkannt — Manifests inkonsistent"}
-            </span>
-            {health.summary.errors_count > 0 && (
-              <span className="text-status-error">
-                {health.summary.errors_count} Fehler
-              </span>
-            )}
-            {health.summary.warnings_count > 0 && (
-              <span className="text-status-warn">
-                {health.summary.warnings_count} Warnungen
-              </span>
-            )}
-            <Tooltip
-              title={`Daten-Quelle: ${health.summary.data_source_note}`}
-              source="/api/v1/manifest/health"
-            >
-              <span className="ml-auto text-xs text-fg-subtle">
-                Hub: {health.summary.hub_url}
-              </span>
-            </Tooltip>
-          </div>
+      {/* Multi-Hub-Cards — vertikal gestapelt */}
+      {allHealth && allHealth.hubs.map((entry) => (
+        <HubCard key={entry.id} entry={entry} />
+      ))}
 
-          {/* Cache-TTL-Hinweis */}
-          <p className="mt-2 text-xs text-fg-subtle">{health.summary.cache_ttl_note}</p>
-        </div>
-      )}
-
-      {/* Manifest-Sektionen */}
-      {health?.manifests.bootstrapper && (
-        <ManifestSection
-          title="Bootstrapper-Manifest"
-          result={health.manifests.bootstrapper}
-          endpoint={health.manifests.bootstrapper.manifest_endpoint}
-        />
-      )}
-
-      {health?.manifests.core && (
-        <ManifestSection
-          title="Core-Manifest"
-          result={health.manifests.core}
-          endpoint={health.manifests.core.manifest_endpoint}
-        />
-      )}
-
-      {/* Hinweis: Daten-Quellen-Limitierung */}
-      {health && (
+      {/* Hinweis: Daten-Quellen-Limitierung (nur wenn mindestens ein Hub erfolgreich) */}
+      {allHealth && allHealth.hubs.some((e) => !isHealthError(e.health)) && (
         <div className="rounded border border-white/10 bg-bg-panel px-4 py-3">
           <p className="mb-1 text-xs font-semibold text-fg-muted">Daten-Quellen-Hinweis (Option A)</p>
-          <p className="text-xs text-fg-subtle">{health.summary.data_source_note}</p>
+          <p className="text-xs text-fg-subtle">
+            Schema-Validierung basiert auf vom Hub aufgeloesten Feldern, nicht auf rohem Manifest-File.
+            node_overrides-Drift wird nur erkannt wenn Hub ihn exponiert.
+          </p>
           <p className="mt-2 text-xs text-fg-subtle">
             Vollstaendige Manifest-Datei-Validierung (inkl. node_overrides aller Nodes)
             ist mit einem OctoBoss-Admin-Endpoint moeglich (Option C — CR ausstehend).

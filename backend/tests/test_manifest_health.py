@@ -399,3 +399,215 @@ def test_overall_status_red_when_any_red() -> None:
     checks = _validate_bootstrapper_schema(raw)
     from moag.manifest_health import _overall
     assert _overall(checks) == "red"
+
+
+# ── /health/all — Multi-Hub-Endpoint ─────────────────────────────────────────
+
+
+def _make_app_two_hubs(
+    monkeypatch: Any,
+    hub1_responses: dict[str, Any],
+    hub2_responses: dict[str, Any],
+) -> TestClient:
+    """Erstellt TestClient mit zwei gemockten Hubs (vdr + nas)."""
+    store = SettingsStore.__new__(SettingsStore)
+    store._settings = Settings(
+        hubs=[
+            HubConfig(id="vdr", name="VDR-Production", url="http://mock-vdr:18765"),
+            HubConfig(id="nas", name="NAS-Legacy", url="http://mock-nas:8765"),
+        ],
+        default_hub_id="vdr",
+        cluster_enabled=True,
+        voting_engines=[],
+        voting_strategy="consensus",
+        fallback_to_local=False,
+        api_token=None,
+        pipeline_log_enabled=False,
+        doctype_text_gewicht=0.5,
+        doctype_layout_gewicht=0.5,
+    )
+    store._path = None  # type: ignore[assignment]
+    store._listeners = []
+    store._lock = threading.Lock()
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        url_str = str(req.url)
+        # Welcher Hub wird angesprochen?
+        if "mock-vdr" in url_str:
+            responses = hub1_responses
+        elif "mock-nas" in url_str:
+            responses = hub2_responses
+        else:
+            return httpx.Response(404, json={"detail": "unbekannter host"})
+        for fragment, data in responses.items():
+            if fragment in url_str:
+                if data is None:
+                    return httpx.Response(404, json={"detail": "not found"})
+                return httpx.Response(200, json=data)
+        return httpx.Response(404, json={"detail": "not found"})
+
+    class MockAsyncClient:
+        def __init__(self, *a: Any, **kw: Any) -> None:
+            pass
+
+        async def __aenter__(self) -> "MockAsyncClient":
+            return self
+
+        async def __aexit__(self, *a: Any) -> None:
+            pass
+
+        async def get(self, url: str, **kw: Any) -> httpx.Response:
+            req = httpx.Request("GET", url)
+            return handler(req)
+
+    monkeypatch.setattr(httpx, "AsyncClient", MockAsyncClient)
+
+    app = create_app(settings_store=store, enable_pipeline=False)
+    return TestClient(app)
+
+
+def test_health_all_schema_v1(monkeypatch: Any) -> None:
+    """GET /api/v1/manifest/health/all liefert schema=manifest-health-all-v1."""
+    hub_ok = {
+        "seti/distribute/info": {
+            "bootstrapper_version": "0.3.9-rc5",
+            "binaries": {"bootstrapper": {"available": True, "version": "0.3.9-rc5"}},
+        },
+        "seti/core/desired": {"version": "0.3.1"},
+    }
+    client = _make_app_two_hubs(monkeypatch, hub_ok, hub_ok)
+    resp = client.get("/api/v1/manifest/health/all")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["schema"] == "manifest-health-all-v1"
+    assert "active_hub_id" in data
+    assert data["active_hub_id"] == "vdr"
+    assert "hubs" in data
+    assert len(data["hubs"]) == 2
+
+
+def test_health_all_active_hub_flag(monkeypatch: Any) -> None:
+    """GET /api/v1/manifest/health/all: nur der aktive Hub hat is_active=true."""
+    hub_ok = {
+        "seti/distribute/info": {
+            "bootstrapper_version": "0.3.9-rc5",
+            "binaries": {"bootstrapper": {"available": True}},
+        },
+        "seti/core/desired": {"version": "0.3.1"},
+    }
+    client = _make_app_two_hubs(monkeypatch, hub_ok, hub_ok)
+    resp = client.get("/api/v1/manifest/health/all")
+    assert resp.status_code == 200
+    data = resp.json()
+    hubs_by_id = {h["id"]: h for h in data["hubs"]}
+    assert hubs_by_id["vdr"]["is_active"] is True
+    assert hubs_by_id["nas"]["is_active"] is False
+
+
+def test_health_all_one_hub_timeout(monkeypatch: Any) -> None:
+    """Wenn Hub 2 (nas) einen Timeout erzeugt, liefert health.error=timeout."""
+    hub_ok = {
+        "seti/distribute/info": {
+            "bootstrapper_version": "0.3.9-rc5",
+            "binaries": {"bootstrapper": {"available": True}},
+        },
+        "seti/core/desired": {"version": "0.3.1"},
+    }
+
+    import asyncio as _asyncio
+    from moag import routes_manifest_health as rmh
+
+    original_probe = rmh._probe_hub_with_timeout
+
+    async def mock_probe(hub_id: str, hub_url: str, is_active: bool, timeout_s: float) -> dict:
+        if hub_id == "nas":
+            return {
+                "id": hub_id,
+                "url": hub_url,
+                "is_active": is_active,
+                "health": {"error": "timeout", "detail": f"Hub {hub_url} Timeout simuliert"},
+            }
+        return await original_probe(hub_id, hub_url, is_active, timeout_s)
+
+    monkeypatch.setattr(rmh, "_probe_hub_with_timeout", mock_probe)
+
+    # AsyncClient-Mock fuer den vdr-Hub (nas-Probe wird abgefangen)
+    hub1_responses = hub_ok
+
+    store = SettingsStore.__new__(SettingsStore)
+    store._settings = Settings(
+        hubs=[
+            HubConfig(id="vdr", name="VDR-Production", url="http://mock-vdr:18765"),
+            HubConfig(id="nas", name="NAS-Legacy", url="http://mock-nas:8765"),
+        ],
+        default_hub_id="vdr",
+        cluster_enabled=True,
+        voting_engines=[],
+        voting_strategy="consensus",
+        fallback_to_local=False,
+        api_token=None,
+        pipeline_log_enabled=False,
+        doctype_text_gewicht=0.5,
+        doctype_layout_gewicht=0.5,
+    )
+    store._path = None  # type: ignore[assignment]
+    store._listeners = []
+    store._lock = threading.Lock()
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        url_str = str(req.url)
+        for fragment, data in hub1_responses.items():
+            if fragment in url_str:
+                if data is None:
+                    return httpx.Response(404, json={"detail": "not found"})
+                return httpx.Response(200, json=data)
+        return httpx.Response(404, json={"detail": "not found"})
+
+    class MockAsyncClient:
+        def __init__(self, *a: Any, **kw: Any) -> None:
+            pass
+
+        async def __aenter__(self) -> "MockAsyncClient":
+            return self
+
+        async def __aexit__(self, *a: Any) -> None:
+            pass
+
+        async def get(self, url: str, **kw: Any) -> httpx.Response:
+            req = httpx.Request("GET", url)
+            return handler(req)
+
+    monkeypatch.setattr(httpx, "AsyncClient", MockAsyncClient)
+
+    app = create_app(settings_store=store, enable_pipeline=False)
+    client = TestClient(app)
+
+    resp = client.get("/api/v1/manifest/health/all")
+    assert resp.status_code == 200
+    data = resp.json()
+    hubs_by_id = {h["id"]: h for h in data["hubs"]}
+    # nas hat Timeout
+    assert hubs_by_id["nas"]["health"]["error"] == "timeout"
+    # vdr hat health.manifests (kein Fehler)
+    assert "manifests" in hubs_by_id["vdr"]["health"]
+
+
+def test_health_all_backward_compat_single_endpoint_unchanged(monkeypatch: Any) -> None:
+    """GET /api/v1/manifest/health (alter Endpoint) funktioniert weiterhin."""
+    hub_responses = {
+        "seti/distribute/info": {
+            "bootstrapper_version": "0.3.9-rc5",
+            "binaries": {"bootstrapper": {"available": True, "version": "0.3.9-rc5"}},
+        },
+        "seti/core/desired": {
+            "version": "0.3.1",
+            "sha256": "b" * 64,
+            "size_bytes": 16_000_000,
+        },
+    }
+    client = _make_app(monkeypatch, hub_responses)
+    resp = client.get("/api/v1/manifest/health")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "manifests" in data
+    assert "summary" in data

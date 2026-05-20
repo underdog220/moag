@@ -565,6 +565,11 @@ export const api = {
       return request<unknown>(`/v1/manifest/health${params}`);
     },
 
+    /** GET /api/v1/manifest/health/all — Multi-Hub-View: alle konfigurierten Hubs parallel.
+     *  Antwort-Schema: manifest-health-all-v1 (schema, active_hub_id, hubs[]) */
+    getManifestHealthAll: (): Promise<unknown> =>
+      request<unknown>("/v1/manifest/health/all"),
+
     /** GET /api/v1/octoboss/benchmarks/matrix — Benchmark-Matrix (subjects x nodes, sparse).
      *  Antwort-Schema: {subjects, nodes, matrix} — fehlende Zellen sind undefined (sparse). */
     getBenchmarkMatrix: (): Promise<unknown> =>

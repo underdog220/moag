@@ -2,6 +2,10 @@
 
 Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
 
+## 2026-05-20
+
+- [2026-05-20] [v0.2.2] **Multi-Hub-Manifest-Health-View:** Neuer Backend-Endpoint `GET /api/v1/manifest/health/all` probt alle konfigurierten Hubs (`settings_store.hubs`) parallel (asyncio.gather, 5s Timeout pro Hub). Antwort-Schema `manifest-health-all-v1` mit `active_hub_id` + `hubs[{id, url, is_active, health}]`. Frontend `ManifestHealth.tsx` nutzt neuen `getManifestHealthAll`-API-Call, rendert pro Hub eine `HubCard` vertikal gestapelt; aktiver Hub (default_hub_id) hat gruenen Border-Highlight + Stern-Badge "★ Aktiv" (Tooltip erklaert Bedeutung), inaktive Hubs zeigen "Sekundaer"-Badge. PageBadge unveraendert. 413 Backend + 431 Frontend Tests gruen.
+
 ## 2026-05-19
 
 - [2026-05-19] [v0.2.2] **Re-Deploy auf VDR erfolgreich nach 3-Bug-Fix:** Container `moag:0.2.2` healthy, `/api/health` antwortet jetzt `version:"0.2.2"` (vorher `0.1.0` aus alter hardcoded-Konstante). Verifiziert: `/api/v1/octoboss/benchmarks/matrix` 200, `/api/v1/octoboss/benchmarks/runs` 200, `/api/v1/oberon/contract/classification-guide` 200, Frontend `/` 200. Alte `moag:0.1.0` Image weg, Volume `/home/underdog/moag-data` weiterverwendet. Browser-Test Roman ausstehend.
