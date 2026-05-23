@@ -98,6 +98,8 @@ class Settings(BaseModel):
     ocrexpert_base_url: str = "http://192.168.200.71:17810"
     # SonOfSETI
     sonofseti_token: Optional[str] = None
+    # OctoBoss Admin (fuer Manifest-Default / Node-Pinning)
+    octoboss_admin_token: Optional[str] = None
     # NasDominator
     nasdominator_base_url: str = "http://192.168.200.169:9090"
     nasdominator_user: Optional[str] = None
@@ -130,6 +132,7 @@ class SettingsUpdate(BaseModel):
     oberon_token: Optional[str] = None
     ocrexpert_base_url: Optional[str] = None
     sonofseti_token: Optional[str] = None
+    octoboss_admin_token: Optional[str] = None
     nasdominator_base_url: Optional[str] = None
     nasdominator_user: Optional[str] = None
     nasdominator_password: Optional[str] = None

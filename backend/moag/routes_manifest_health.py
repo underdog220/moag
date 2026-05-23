@@ -21,6 +21,7 @@ import httpx
 from fastapi import APIRouter, Query
 
 from .manifest_health import get_manifest_health
+from .manifest_inventory import gather_all_inventories
 from .settings_store import SettingsStore
 
 logger = logging.getLogger("moag.routes_manifest_health")
@@ -182,5 +183,41 @@ def build_manifest_health_router(settings_store: SettingsStore) -> APIRouter:
             "active_hub_id": active_id,
             "hubs": hub_results,
         }
+
+    @router.get("/inventory")
+    async def get_inventory() -> dict:
+        """Cluster-Intent pro Hub: Core- + Bootstrapper-Versionen, Node-Overrides
+        und Module-by-Node + Drift.
+
+        Antwort-Schema:
+          schema:        "manifest-inventory-v1"
+          active_hub_id: ID des default_hub_id aus Settings
+          hubs: [
+            {
+              id, url, is_active,
+              inventory: {
+                core:         {default, versions[], overrides[], supports_versions_api},
+                bootstrapper: {default, versions[], overrides[], supports_versions_api,
+                               cr_pending, available, sha256, size_bytes},
+                modules:      {by_node[], drift[], node_count, module_count}
+              } | null,
+              error: null | "timeout" | "connection_error: ..."
+            },
+            ...
+          ]
+        """
+        s = settings_store.get()
+        active_id = s.default_hub_id
+        hubs_arg: list[tuple[str, str, bool]] = []
+        for hub in s.hubs:
+            url_clean = (hub.url or "").rstrip("/")
+            if not url_clean:
+                continue
+            hubs_arg.append((hub.id, url_clean, hub.id == active_id))
+
+        if not hubs_arg:
+            hubs_arg = [("fallback", _FALLBACK_HUB, True)]
+
+        return await gather_all_inventories(hubs_arg)
 
     return router

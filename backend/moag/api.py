@@ -533,6 +533,9 @@ def create_app(
     from moag.routes_manifest_health import build_manifest_health_router
     app.include_router(build_manifest_health_router(settings_store))
 
+    from moag.routes_manifest_admin import build_manifest_admin_router
+    app.include_router(build_manifest_admin_router(settings_store))
+
     # ── Upload-Hub ────────────────────────────────────────────────────────────
     # Handler-Registry befüllen (Import-Seiteneffekt)
     import moag.upload.handlers as _upload_handlers_pkg  # noqa: F401

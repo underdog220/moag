@@ -134,3 +134,21 @@ def test_doctype_gewichte_default(settings_store: SettingsStore):
     s = settings_store.get()
     assert s.doctype_text_gewicht == 0.7
     assert s.doctype_layout_gewicht == 0.3
+
+
+def test_octoboss_admin_token_env_override(tmp_settings_path: Path, monkeypatch):
+    """ENV MOAG_OCTOBOSS_ADMIN_TOKEN gewinnt gegenueber Default + Datei."""
+    monkeypatch.setenv("MOAG_OCTOBOSS_ADMIN_TOKEN", "secret-from-env")
+    store = SettingsStore(tmp_settings_path)
+    assert store.get().octoboss_admin_token == "secret-from-env"
+
+
+def test_octoboss_admin_token_masked_in_response(settings_store: SettingsStore):
+    """Token-Maskierung in get_response — Klartext darf nicht in API-Response landen."""
+    settings_store.update(
+        SettingsUpdate(octoboss_admin_token="real-secret-value")
+    )
+    resp = settings_store.get_response()
+    assert resp.octoboss_admin_token == "***"
+    # Im internen Settings-Objekt bleibt der Klartext erhalten
+    assert settings_store.get().octoboss_admin_token == "real-secret-value"

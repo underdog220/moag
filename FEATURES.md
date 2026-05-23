@@ -61,6 +61,24 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 - **Code:** `frontend/src/features/octoboss/pages/Benchmarks.tsx`, `backend/moag/routes_octoboss.py` (benchmarks/*), `frontend/src/lib/api.ts` (octoboss namespace)
 - **Tests:** `backend/tests/test_routes_octoboss_bench.py` (7 Tests), `frontend/src/features/octoboss/__tests__/Benchmarks.test.tsx` (12 Tests)
 
+#### Manifest-Health + Cluster-Intent (`/octoboss/manifest-health`)
+- **Was:** Multi-Hub-Manifest-Validierung + Cluster-Intent-Steuerung (Versionen, Pinning, Modul-Drift). Architektur-Aussage: "Cluster-Intent sichtbar und steuerbar machen".
+- **Health-Sektion:** Schema-Validierung (default_version, versions, node_overrides), Cross-Reference, EXE-Existenz, SHA-Match, Live-Konsistenz pro Hub-Card (aktiver Hub mit Stern-Badge, Sekundaer-Hubs gelistet).
+- **Cluster-Intent-Sektion (`ClusterIntentSection`):**
+  - **Versions-Panel** pro Manifest-Typ (Core + Bootstrapper): aktive default-Version + aufklappbare Versions-Liste (SHA-Kurz, size). Default-Tausch-Knopf pro nicht-aktiver Version.
+  - **Override-Tabelle**: pro Node-Zeile Pin-/Unpin-Button via `PinDialog` (Versions-Dropdown).
+  - **Modul-Drift-Anzeige**: Drift-Liste (Modul X laeuft auf >= 2 Versionen) + Module-by-Node-Detail (`installed_modules_detail` aus `/seti/nodes`-Heartbeat).
+  - **DefaultFlipDialog**: Doppel-Confirm + Impact-Vorschau (`nodes_affected` vs. `nodes_pinned`) + Panopticor-Pretest-Hart-Block bis GREEN-Verdict (Spec-File-Pattern Weg A).
+- **Bootstrapper-Sektion**: UI vorhanden, Schreib-Pfade disabled bis OctoBoss-CR `2026-05-23-bootstrapper-admin-api` durch (`supports_versions_api`-Flag im Inventory).
+- **Backend:**
+  - `manifest_health.py` (Schema-/Live-Checks)
+  - `manifest_inventory.py` (Versionen + Overrides + Modules + Drift aggregieren)
+  - `manifest_admin.py` (Admin-Proxy mit Bearer-Token, Impact-Berechnung, Pretest-Spec-File-Erzeugung)
+  - `routes_manifest_health.py` (`GET /api/v1/manifest/health`, `/health/all`, `/inventory`)
+  - `routes_manifest_admin.py` (`GET /admin/core/default/impact`, `POST /admin/core/default`, `/override`, `/override/delete`, `/pretest`, `/pretest-callback`, `GET /admin/pretest/{spec_id}`)
+- **Settings:** `octoboss_admin_token` (ENV `MOAG_OCTOBOSS_ADMIN_TOKEN`, in API-Response maskiert)
+- **Tests:** `test_manifest_health.py`, `test_manifest_inventory.py` (10), `test_manifest_admin.py` (17), `ClusterIntentSection.test.tsx` (10), `ManifestHealth.test.tsx`
+
 #### OCRexpert (`/ocrexpert/*`)
 - **Sub-Routen:** `jobs` (mit Upload-Card + Pfad-Eingabe + UNC→Linux-Konvertierung) · `history` · `charts` · `capabilities` · `logs` (Tail mit Copy)
 - **Backend:** `routes_ocrexpert.py` (4 Proxy-Routes inkl. POST /process)

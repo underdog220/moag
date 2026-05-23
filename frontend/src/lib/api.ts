@@ -570,6 +570,38 @@ export const api = {
     getManifestHealthAll: (): Promise<unknown> =>
       request<unknown>("/v1/manifest/health/all"),
 
+    /** GET /api/v1/manifest/inventory — Cluster-Intent: Versionen, Overrides,
+     *  Module-by-Node + Drift fuer alle konfigurierten Hubs. */
+    getManifestInventory: (): Promise<unknown> =>
+      request<unknown>("/v1/manifest/inventory"),
+
+    /** GET /api/v1/manifest/admin/core/default/impact — Vorschau des Default-Tauschs. */
+    getCoreDefaultImpact: (version: string, hubId?: string): Promise<unknown> => {
+      const p = new URLSearchParams({ version });
+      if (hubId) p.set("hub_id", hubId);
+      return request<unknown>(`/v1/manifest/admin/core/default/impact?${p.toString()}`);
+    },
+
+    /** POST /api/v1/manifest/admin/pretest — Panopticor-Spec-File anlegen. */
+    startManifestPretest: (body: { target_version: string; hub_id?: string; target_kind?: string }): Promise<unknown> =>
+      request<unknown>("/v1/manifest/admin/pretest", { method: "POST", body }),
+
+    /** GET /api/v1/manifest/admin/pretest/{spec_id} — Status holen (Polling). */
+    getManifestPretestStatus: (specId: string): Promise<unknown> =>
+      request<unknown>(`/v1/manifest/admin/pretest/${encodeURIComponent(specId)}`),
+
+    /** POST /api/v1/manifest/admin/core/default — Default-Tausch (Pretest-Pflicht). */
+    setCoreDefault: (body: { version: string; hub_id?: string; pretest_run_id: string }): Promise<unknown> =>
+      request<unknown>("/v1/manifest/admin/core/default", { method: "POST", body }),
+
+    /** POST /api/v1/manifest/admin/core/override — Node-Pinning setzen. */
+    setCoreOverride: (body: { node_id: string; version: string; hub_id?: string }): Promise<unknown> =>
+      request<unknown>("/v1/manifest/admin/core/override", { method: "POST", body }),
+
+    /** POST /api/v1/manifest/admin/core/override/delete — Node-Pinning loeschen. */
+    deleteCoreOverride: (body: { node_id: string; hub_id?: string }): Promise<unknown> =>
+      request<unknown>("/v1/manifest/admin/core/override/delete", { method: "POST", body }),
+
     /** GET /api/v1/octoboss/benchmarks/matrix — Benchmark-Matrix (subjects x nodes, sparse).
      *  Antwort-Schema: {subjects, nodes, matrix} — fehlende Zellen sind undefined (sparse). */
     getBenchmarkMatrix: (): Promise<unknown> =>

@@ -83,6 +83,7 @@ def _apply_env_overrides(d: dict[str, Any]) -> dict[str, Any]:
         "MOAG_OBERON_TOKEN":     "oberon_token",
         "MOAG_OCREXPERT_BASE_URL": "ocrexpert_base_url",
         "MOAG_SONOFSETI_TOKEN":  "sonofseti_token",
+        "MOAG_OCTOBOSS_ADMIN_TOKEN": "octoboss_admin_token",
         "MOAG_NASDOMINATOR_BASE_URL": "nasdominator_base_url",
         "MOAG_NASDOMINATOR_USER":     "nasdominator_user",
         "MOAG_NASDOMINATOR_PASSWORD": "nasdominator_password",
@@ -159,6 +160,9 @@ class SettingsStore:
             # Passwort-Maskierung: in der API-Response nur Platzhalter ausgeben
             if base.get("nasdominator_password"):
                 base["nasdominator_password"] = "***"
+            # Token-Maskierung: Admin-Tokens nicht in der API-Response klartextlich ausgeben
+            if base.get("octoboss_admin_token"):
+                base["octoboss_admin_token"] = "***"
             return SettingsResponse(
                 **base,
                 active_env={

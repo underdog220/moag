@@ -14,6 +14,11 @@ import { api } from "../../../lib/api";
 import { Tooltip } from "../../../components/Tooltip";
 import { PageBadge } from "../../../components/PageBadge";
 import { LoadingSpinner } from "../../../components/LoadingSpinner";
+import {
+  ClusterIntentSection,
+  type HubInventory,
+  type ManifestInventoryAll,
+} from "../components/ClusterIntentSection";
 
 // ── Typen ─────────────────────────────────────────────────────────────────────
 
@@ -277,7 +282,13 @@ function isHealthError(h: HubHealthEntry["health"]): h is { error: string; detai
 
 // ── Hub-Card (eine Karte pro konfiguriertem Hub) ──────────────────────────────
 
-function HubCard({ entry }: { entry: HubHealthEntry }) {
+function HubCard({
+  entry,
+  inventory,
+}: {
+  entry: HubHealthEntry;
+  inventory: HubInventory | null;
+}) {
   const health = entry.health;
   const hasError = isHealthError(health);
 
@@ -379,6 +390,23 @@ function HubCard({ entry }: { entry: HubHealthEntry }) {
               />
             )}
 
+            {/* Cluster-Intent: Versionen + Overrides + Module-Drift */}
+            {inventory && (
+              <div className="mt-2 border-t border-white/10 pt-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <span aria-hidden="true" className="text-fg-muted">⛁</span>
+                  <h4 className="text-sm font-semibold text-fg">Cluster-Intent</h4>
+                  <Tooltip
+                    title="Soll-Zustand des Clusters: welche Versionen sollen wo laufen, wer ist gepinnt, wo driftet die Realitaet."
+                    source="/api/v1/manifest/inventory"
+                  >
+                    <span className="text-xs text-fg-subtle cursor-help">(?)</span>
+                  </Tooltip>
+                </div>
+                <ClusterIntentSection inventory={inventory} hubId={entry.id} />
+              </div>
+            )}
+
             {/* Cache-TTL-Hinweis */}
             {h.summary?.cache_ttl_note && (
               <p className="text-xs text-fg-subtle">{h.summary.cache_ttl_note}</p>
@@ -400,7 +428,23 @@ export function ManifestHealthPage() {
     refetchInterval: 60_000,  // alle 60s automatisch — Cache-TTL ist 30s
   });
 
+  // Cluster-Intent-Inventar (Versionen, Overrides, Module): eigener Endpoint,
+  // unabhaengiges Polling-Intervall (15s — Pinning-/Default-Aktionen sollen
+  // schnell sichtbar werden).
+  const { data: inventoryData } = useQuery({
+    queryKey: ["octoboss", "manifest-inventory"],
+    queryFn: () => api.octoboss.getManifestInventory(),
+    refetchInterval: 15_000,
+  });
+
   const allHealth = allData as ManifestHealthAllData | undefined;
+  const inventoryAll = inventoryData as ManifestInventoryAll | undefined;
+  const inventoryByHub: Record<string, HubInventory | null> = {};
+  if (inventoryAll) {
+    for (const h of inventoryAll.hubs) {
+      inventoryByHub[h.id] = h.inventory;
+    }
+  }
   const lastUpdated = dataUpdatedAt
     ? new Date(dataUpdatedAt).toLocaleTimeString("de-DE")
     : null;
@@ -476,7 +520,11 @@ export function ManifestHealthPage() {
 
       {/* Multi-Hub-Cards — vertikal gestapelt */}
       {allHealth && allHealth.hubs.map((entry) => (
-        <HubCard key={entry.id} entry={entry} />
+        <HubCard
+          key={entry.id}
+          entry={entry}
+          inventory={inventoryByHub[entry.id] ?? null}
+        />
       ))}
 
       {/* Hinweis: Daten-Quellen-Limitierung (nur wenn mindestens ein Hub erfolgreich) */}
