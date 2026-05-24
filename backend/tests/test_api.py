@@ -663,3 +663,51 @@ def test_health_version_semver_format(client):
         "importlib.metadata liest die Version aus pyproject.toml, "
         "ist das Paket mit 'pip install -e .' installiert?"
     )
+
+
+def test_health_version_matches_pyproject(client):
+    """/api/health.version MUSS gleich der Version in backend/pyproject.toml sein.
+
+    Regression-Test fuer Bug 5 (Container-Deploy 2026-05-24): Container meldete
+    /api/health version=0.2.2 obwohl pyproject.toml=0.2.3 und Image-Tag=0.2.3.
+    Wurzel war eine stale moag.egg-info/PKG-INFO im backend/-Tree (alter
+    `pip install -e .`); per `COPY backend/ ./` ins Image kopiert, las
+    `importlib.metadata.version("moag")` daraus statt aus der pyproject.toml.
+
+    Container-Fix lebt in `.dockerignore` (schliesst **/*.egg-info aus) und
+    `docker/Dockerfile` (`pip install --no-deps --no-cache-dir .` nach dem
+    COPY-Schritt — frische dist-info aus aktueller pyproject.toml).
+
+    Dieser Test fuehrt die Invariante auch lokal: wenn pyproject.toml bumpt,
+    muss `pip install -e backend/` neu laufen, sonst hat man dasselbe Phaenomen
+    in der Test-Umgebung. Test-Fehler in dieser Form ist genau das Signal.
+    """
+    import re
+
+    # 1) Pyproject-Version parsen (selbe Logik wie deploy-vdr.ps1.Get-PyprojectVersion)
+    pyproject_path = Path(__file__).resolve().parent.parent / "pyproject.toml"
+    assert pyproject_path.is_file(), f"backend/pyproject.toml nicht gefunden: {pyproject_path}"
+    pyproject_text = pyproject_path.read_text(encoding="utf-8")
+    match = re.search(r'^\s*version\s*=\s*"([^"]+)"', pyproject_text, re.MULTILINE)
+    assert match is not None, (
+        f"Keine version-Zeile (`version = \"x.y.z\"`) in {pyproject_path} gefunden"
+    )
+    pyproject_version = match.group(1)
+
+    # 2) /api/health.version holen
+    response = client.get("/api/health")
+    assert response.status_code == 200
+    api_version = response.json().get("version", "")
+
+    # 3) Vergleich — das ist die Bug-5-Invariante
+    assert api_version == pyproject_version, (
+        f"Version-Drift: /api/health.version='{api_version}' weicht von "
+        f"backend/pyproject.toml='{pyproject_version}' ab.\n"
+        "Wahrscheinliche Ursachen:\n"
+        "  (a) stale backend/moag.egg-info aus altem `pip install -e .` "
+        "(reproduzierbar wenn pyproject.toml gebumpt aber nicht reinstalled) — "
+        "Loesung: `pip install -e backend/` lokal.\n"
+        "  (b) im Container: COPY backend/ ./ kopiert stale egg-info ins Image — "
+        ".dockerignore muss **/*.egg-info ausschliessen und Dockerfile muss "
+        "`pip install --no-deps --no-cache-dir .` nach dem COPY-Schritt laufen lassen."
+    )
