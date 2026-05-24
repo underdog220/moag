@@ -4,7 +4,7 @@
 // einem HubInventory-Mock-Objekt gerendert.
 
 import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, waitFor, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
