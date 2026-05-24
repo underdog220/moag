@@ -10,6 +10,11 @@
 **/.ruff_cache
 **/.coverage
 **/*.tsbuildinfo
+# Lokale pip-install-Artefakte ausschliessen (sonst kopiert COPY backend/ ./
+# eine veraltete egg-info ins Image und importlib.metadata.version("moag")
+# liefert die alte Version statt der aus pyproject.toml — Bug 5, 2026-05-24).
+**/*.egg-info
+**/*.dist-info
 tests/
 .env
 .env.*

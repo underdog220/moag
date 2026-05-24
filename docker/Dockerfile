@@ -62,6 +62,13 @@ RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 # Backend-Anwendungscode
 COPY backend/ ./
 
+# moag selbst als Paket installieren (--no-deps weil requirements.txt schon lief).
+# Ohne diesen Schritt liefert `importlib.metadata.version("moag")` 0.0.0-dev
+# oder — schlimmer — die Version einer veralteten egg-info aus dem Build-Context
+# (Bug 5, 2026-05-24). Mit pip install entsteht eine frische dist-info aus
+# der aktuellen pyproject.toml.
+RUN pip install --no-deps --no-cache-dir .
+
 # Frontend-Bundle aus Stage 1 einkopieren
 # Backend serviert statische Dateien aus moag/static/ als SPA
 COPY --from=builder /build/backend/moag/static ./moag/static

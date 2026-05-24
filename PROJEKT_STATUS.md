@@ -1,13 +1,13 @@
 # PROJEKT_STATUS — MOAG (Mother of All GUIs)
 
 ## Aktueller Stand
-**v0.2.3 lokal fertig, Deploy ausstehend — Manifest-Health-Karte zur Cluster-Intent-Steuerzentrale ausgebaut.** Neue Komponente `ClusterIntentSection` pro Hub-Card mit Versions-Panel (Core + Bootstrapper), Override-Tabelle (Pin/Unpin pro Node), Modul-Drift-Anzeige. Default-Tausch hart blockiert bis Panopticor-Pretest GREEN (Spec-File-Pattern via `/api/v1/manifest/admin/pretest`). Bootstrapper-Steuerung UI-vorbereitet, disabled bis OctoBoss-CR `2026-05-23-bootstrapper-admin-api` durch. 443 Backend + 441 Frontend Tests grün.
+**v0.2.3 auf VDR live (inkl. Bug-4-Fix Idempotenz-SHA + Bug-5-Fix Container-Version-Drift) — Manifest-Health-Karte zur Cluster-Intent-Steuerzentrale ausgebaut.** Neue Komponente `ClusterIntentSection` pro Hub-Card mit Versions-Panel (Core + Bootstrapper), Override-Tabelle (Pin/Unpin pro Node), Modul-Drift-Anzeige. Default-Tausch hart blockiert bis Panopticor-Pretest GREEN (Spec-File-Pattern via `/api/v1/manifest/admin/pretest`). Bootstrapper-Steuerung UI-vorbereitet, disabled bis OctoBoss-CR `2026-05-23-bootstrapper-admin-api` durch. Deploy-Skript vergleicht jetzt Image-SHA (lokal vs. VDR) statt nur Tag-Existenz — Re-Deploy mit gleichem Tag uebertraegt zuverlaessig. Dockerfile installiert moag selbst (`pip install --no-deps .`), Versions-Drift durch stale egg-info ausgeschlossen. 443 Backend + 441 Frontend Tests grün, plus 14/14 PS1-Logik-Tests. Live-Smoke 5/5 PASS, manifest/health beide Branches green.
 
 ## Version
-v0.2.3 (Phase 1–8 + Upload-Hub Y + Manifest-Health + Bench-Dashboard + Phase H + Cluster-Intent)
+v0.2.3 (Phase 1–8 + Upload-Hub Y + Manifest-Health + Bench-Dashboard + Phase H + Cluster-Intent) — live auf VDR
 
 ## Nächste geplante Stufe
-Deploy `moag:0.2.3` auf VDR + Browser-Verifikation `/octoboss/manifest-health` mit Cluster-Intent-Sektion. OctoBoss-CR begleiten (Bootstrapper-Admin-API). Folge-Themen aus Backlog-Memory (Alert-Center, Adapter-Status-Inspector).
+Browser-Verifikation `/octoboss/manifest-health` mit Cluster-Intent-Sektion durch Roman. OctoBoss-CR begleiten (Bootstrapper-Admin-API). Folge-Themen aus Backlog-Memory (Alert-Center, Adapter-Status-Inspector). Regression-Test `test_health_version_matches_pyproject` ergaenzen (vergleicht /api/health.version mit pyproject.toml.version — faengt Bug-5-Wiederkehr ab).
 
 ## Offene Punkte
 - ~~Upload-Hub Listing-Endpoint crash~~ — behoben (2026-05-17, psycopg dict_row + COUNT AS n, Commit `27d0774`)
@@ -18,10 +18,14 @@ Deploy `moag:0.2.3` auf VDR + Browser-Verifikation `/octoboss/manifest-health` m
 - ocrexpert.shadow.batch: Body-Schema `{source_path, shadow_path}` — Live HTTP 403 path_not_allowed bis `OCREXPERT_SHADOW_ALLOWED_ROOTS` konfiguriert ist
 - qnapbackup: Status-Endpoint-CR einreichen (CR #3, Phase 5)
 - Panopticor: Status+Actions-API-CR einreichen (CR #4, Phase 6)
-- **Bug 4 Deploy-Skript-Idempotenz (offen, 2026-05-19):** Transfer-Stufe in `scripts/deploy-vdr.ps1` prueft nur ob Image-Tag auf VDR existiert, nicht ob lokales und VDR-SHA matchen. Folge: nach Rebuild mit gleichem Tag wird Transfer uebersprungen → Container laeuft mit altem Stand. Workaround: `ssh vdr docker rmi <tag> --force` vor Re-Deploy. Fix-Idee: SHA-Vergleich (`docker inspect --format '{{.Id}}'` lokal vs. VDR).
+- ~~Bug 4 Deploy-Skript-Idempotenz~~ — behoben (2026-05-24, `scripts/deploy-vdr.ps1` vergleicht jetzt lokale + remote Image-SHA via `docker inspect --format '{{.Id}}'`, drei reine Hilfsfunktionen + 8 isolierte Logik-Tests in `tests/test-image-sha-compare.ps1`).
 - **Browser-Verifikation v0.2.2 ausstehend:** `/octoboss/benchmarks` + `/oberon/contract` im Browser oeffnen, PageBadges + UI-Render bestaetigen. Roman gibt Bescheid bei Crash.
 
 ## Letzte Änderung
+2026-05-24 — **Deploy v0.2.3 auf VDR live + Bug 5 (Container-Version-Drift) behoben:** Erster Deploy-Versuch deckte Bug 5 auf: `/api/health` meldete `version=0.2.2`, obwohl Image `moag:0.2.3`. Wurzel war `backend/moag.egg-info/PKG-INFO` mit Version 0.2.2 (alter `pip install -e .`), wurde per `COPY backend/ ./` ins Image kopiert und von `importlib.metadata` gelesen. Zwei Fixes: `.dockerignore` schliesst `**/*.egg-info` + `**/*.dist-info` aus, `Dockerfile` installiert moag selbst per `pip install --no-deps --no-cache-dir .` nach dem `COPY backend/ ./`. Re-Deploy: `Successfully installed moag-0.2.3`, `/api/health version=0.2.3`. Smoke-Suite 5/5 PASS, manifest/health beide Branches green (bootstrapper 8/0/0, core 9/0/0), inventory zeigt beide Hubs. Bug-4-Fix (SHA-Vergleich) im selben Deploy live verifiziert: `SHA-Drift erkannt: local=... vs remote=... - Transfer noetig`.
+
+2026-05-24 — **Bug 4 (Deploy-Skript-Idempotenz) behoben:** `scripts/deploy-vdr.ps1` vergleicht jetzt lokale und Remote-Image-SHA via `docker inspect --format '{{.Id}}'` statt nur Tag-Existenz auf VDR. Drei reine Hilfsfunktionen (`Get-LocalImageSha`, `Get-RemoteImageSha`, `Compare-ImageShas`); SHA-Vergleichs-Logik ist Docker-frei testbar. Neues isoliertes Test-Skript `tests/test-image-sha-compare.ps1` (8/8 grün, deckt skip/transfer/missing-local-Faelle ab inkl. der Bug-4-Regression unterschiedlicher SHAs bei gleichem Tag). Bestehender Test `tests/test-get-pyproject-version.ps1` auf 0.2.3 nachgezogen (6/6 grün). Skript syntaktisch validiert (Parser-Check ohne Errors). Workaround `docker rmi --force` vor Re-Deploy ist damit nicht mehr noetig.
+
 2026-05-23 — **Cluster-Intent-Erweiterung der Manifest-Health-Karte:** Neue Backend-Module `manifest_inventory.py` + `manifest_admin.py`, neue Routen `/api/v1/manifest/inventory`, `/api/v1/manifest/admin/*` (Default-Tausch mit Panopticor-Pretest-Hart-Block, Node-Pinning, Impact-Preview). Frontend: `ClusterIntentSection.tsx` (Versions-Panel + Overrides-Tabelle + Modul-Drift) inkl. `DefaultFlipDialog` (Doppel-Confirm + Pretest-Polling) und `PinDialog`. Bootstrapper-Admin-Pfad disabled bis OctoBoss-CR durch. Settings: `octoboss_admin_token` (ENV `MOAG_OCTOBOSS_ADMIN_TOKEN`). Version 0.2.2 → 0.2.3. 443 + 441 Tests grün. OctoBoss-CR `2026-05-23-bootstrapper-admin-api` angelegt.
 
 2026-05-20 — **Phase 3 Deploy auf VDR:** Commits bafa7ec (Multi-Hub-View) + 0c9c89f (Field-Mapping-Fix) gepusht + deployed. Container healthy, manifest/health overall_status=green, Bootstrapper + Core gruen.

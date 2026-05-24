@@ -111,6 +111,54 @@ function Get-PyprojectVersion {
     throw "[VERSION] Konnte Versions-String nicht aus Zeile parsen: $line"
 }
 
+# ---- Hilfsfunktion: lokale Image-SHA holen ---------------------------------
+# Bug 4 (2026-05-19): Idempotenz-Check pruefte nur Tag-Existenz, nicht SHA.
+# Nach Rebuild mit gleichem Tag wurde Transfer faelschlich uebersprungen.
+# Diese Funktion liefert die volle Image-ID (sha256:...) oder $null wenn das
+# Image lokal nicht existiert.
+function Get-LocalImageSha {
+    [OutputType([string])]
+    param([string]$ImageTag)
+    $output = docker inspect --format '{{.Id}}' $ImageTag 2>$null
+    if ($LASTEXITCODE -ne 0) { return $null }
+    if ($null -eq $output) { return $null }
+    $trimmed = ($output | Out-String).Trim()
+    if ($trimmed.Length -eq 0) { return $null }
+    return $trimmed
+}
+
+# ---- Hilfsfunktion: remote Image-SHA auf VDR holen -------------------------
+# Liefert die volle Image-ID (sha256:...) auf $VdrHost oder $null wenn das
+# Image dort nicht existiert. Fehler werden remote nach /dev/null geschluckt
+# (docker inspect schreibt "Error: No such object" auf stderr).
+function Get-RemoteImageSha {
+    [OutputType([string])]
+    param([string]$VdrHost, [string]$ImageTag)
+    $output = ssh $VdrHost "docker inspect --format '{{.Id}}' $ImageTag 2>/dev/null"
+    if ($null -eq $output) { return $null }
+    $trimmed = ($output | Out-String).Trim()
+    if ($trimmed.Length -eq 0) { return $null }
+    return $trimmed
+}
+
+# ---- Hilfsfunktion: SHA-Vergleich -> Transfer-Aktion -----------------------
+# Reine Logik-Funktion (Docker-frei, testbar). Vergleicht zwei Image-SHAs
+# und entscheidet was die Transfer-Stufe tun soll:
+#   "missing-local" — lokal nicht vorhanden (Caller sollte werfen)
+#   "transfer"      — remote fehlt ODER beide vorhanden aber unterschiedlich
+#   "skip"          — beide vorhanden und identisch (Transfer ueberspringen)
+function Compare-ImageShas {
+    [OutputType([string])]
+    param(
+        [string]$LocalSha,
+        [string]$RemoteSha
+    )
+    if (-not $LocalSha)  { return "missing-local" }
+    if (-not $RemoteSha) { return "transfer" }
+    if ($LocalSha -eq $RemoteSha) { return "skip" }
+    return "transfer"
+}
+
 # ---- 0. Version + ImageTag bestimmen ---------------------------------------
 if (-not $ImageTag) {
     $version = Get-PyprojectVersion
@@ -157,12 +205,27 @@ if (-not $SmokeOnly) {
     if ($SkipTransfer) {
         Write-Host "[TRANSFER] Uebersprungen (-SkipTransfer gesetzt)"
     } else {
-        # Idempotenz-Check: Image auf VDR bereits vorhanden?
-        Write-Host "[TRANSFER] Pruefe ob $ImageTag auf VDR schon vorhanden ..."
-        $remoteImageId = ssh $VdrHost "docker images $ImageTag --quiet 2>/dev/null"
-        if ($remoteImageId -and $remoteImageId.Trim().Length -gt 0) {
-            Write-Host "[TRANSFER] Image $ImageTag ist auf VDR bereits vorhanden (ID: $($remoteImageId.Trim())) - Transfer uebersprungen"
+        # Idempotenz-Check via SHA-Vergleich (Bug-4-Fix 2026-05-24):
+        # Vorher: nur Tag-Existenz auf VDR geprueft -> Rebuild mit gleichem Tag
+        # wurde faelschlich uebersprungen, Container lief mit altem Stand.
+        # Jetzt: lokale + remote Image-ID per `docker inspect` vergleichen.
+        Write-Host "[TRANSFER] Vergleiche lokale und VDR-Image-SHA fuer $ImageTag ..."
+        $localSha  = Get-LocalImageSha  -ImageTag $ImageTag
+        $remoteSha = Get-RemoteImageSha -VdrHost $VdrHost -ImageTag $ImageTag
+        $action    = Compare-ImageShas  -LocalSha $localSha -RemoteSha $remoteSha
+
+        if ($action -eq "missing-local") {
+            throw "[TRANSFER] Lokales Image $ImageTag nicht gefunden (Build-Stufe ausgefuehrt? -SkipBuild gesetzt obwohl Image fehlt?)"
+        }
+
+        if ($action -eq "skip") {
+            Write-Host "[TRANSFER] SHA matched (local=$($localSha.Substring(0,19))... remote=$($remoteSha.Substring(0,19))...) - Transfer uebersprungen"
         } else {
+            if ($remoteSha) {
+                Write-Host "[TRANSFER] SHA-Drift erkannt: local=$($localSha.Substring(0,19))... vs remote=$($remoteSha.Substring(0,19))... - Transfer noetig"
+            } else {
+                Write-Host "[TRANSFER] Image $ImageTag auf VDR nicht vorhanden - Transfer noetig"
+            }
             Write-Host "[TRANSFER] Uebertrage $ImageTag per Stream-Pipe auf VDR ..."
             # docker save streamt das tar direkt via SSH in docker load.
             # PowerShell leitet den Binaer-Stream korrekt via | weiter wenn beide
