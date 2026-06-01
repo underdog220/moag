@@ -43,6 +43,7 @@ def _default_settings_dict() -> dict[str, Any]:
         "nasdominator_base_url": "http://192.168.200.169:9090",
         "custos_base_url": "http://192.168.200.71:17890",
         "panopticor_base_url": "http://127.0.0.1:8787",
+        "qnapbackup_base_url": "http://192.168.200.71:9000",
     }
 
 
@@ -89,6 +90,7 @@ def _apply_env_overrides(d: dict[str, Any]) -> dict[str, Any]:
         "MOAG_NASDOMINATOR_PASSWORD": "nasdominator_password",
         "MOAG_CUSTOS_BASE_URL":  "custos_base_url",
         "MOAG_PANOPTICOR_BASE_URL": "panopticor_base_url",
+        "MOAG_QNAPBACKUP_BASE_URL": "qnapbackup_base_url",
     }
     for env_key, settings_key in env_pairs.items():
         v = os.environ.get(env_key, "").strip()

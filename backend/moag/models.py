@@ -111,6 +111,7 @@ class Settings(BaseModel):
     nasdominator_password: Optional[str] = None
     # Custos
     custos_base_url: str = "http://192.168.200.71:17890"
+    qnapbackup_base_url: str = "http://192.168.200.71:9000"
     # Panopticor (Desktop-Endpoint)
     panopticor_base_url: str = "http://127.0.0.1:8787"
 
@@ -142,6 +143,7 @@ class SettingsUpdate(BaseModel):
     nasdominator_user: Optional[str] = None
     nasdominator_password: Optional[str] = None
     custos_base_url: Optional[str] = None
+    qnapbackup_base_url: Optional[str] = None
     panopticor_base_url: Optional[str] = None
 
 

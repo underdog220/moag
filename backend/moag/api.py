@@ -287,7 +287,7 @@ def create_app(
             _octoboss.get_status(hub_url=octoboss_url, token=s.api_token),
             _ocrexpert.get_status(base_url=s.ocrexpert_base_url),
             _nasdominator.get_status(base_url=s.nasdominator_base_url, username=s.nasdominator_user, password=s.nasdominator_password),
-            _qnapbackup.get_status(),
+            _qnapbackup.get_status(base_url=s.qnapbackup_base_url),
             _custos.get_status(base_url=s.custos_base_url),
             _panopticor.get_status(base_url=s.panopticor_base_url),
         ]
@@ -360,7 +360,7 @@ def create_app(
             _octoboss.get_status(hub_url=octoboss_url, token=s.api_token),
             _ocrexpert.get_status(base_url=s.ocrexpert_base_url),
             _nasdominator.get_status(base_url=s.nasdominator_base_url, username=s.nasdominator_user, password=s.nasdominator_password),
-            _qnapbackup.get_status(),
+            _qnapbackup.get_status(base_url=s.qnapbackup_base_url),
             _custos.get_status(base_url=s.custos_base_url),
             _panopticor.get_status(base_url=s.panopticor_base_url),
         ]
