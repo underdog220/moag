@@ -8,21 +8,8 @@ import { PageBadge } from "../../../components/PageBadge";
 import { LoadingSpinner } from "../../../components/LoadingSpinner";
 import { EmptyState } from "../../../components/EmptyState";
 import { Tooltip } from "../../../components/Tooltip";
+import { Panel, StatusBadge, Chip, ErrorBanner } from "../_oberon_ui";
 import type { CockpitProvider } from "../../../lib/types";
-
-function HealthBadge({ status }: { status: string }) {
-  const color =
-    status === "healthy"
-      ? "text-status-ok border-status-ok/30 bg-status-ok/10"
-      : status === "degraded"
-        ? "text-status-warn border-status-warn/30 bg-status-warn/10"
-        : "text-status-error border-status-error/30 bg-status-error/10";
-  return (
-    <span className={`rounded border px-1.5 py-0.5 text-xxs font-medium ${color}`}>
-      {status}
-    </span>
-  );
-}
 
 export function ProvidersPage() {
   const { data, isLoading, error, dataUpdatedAt } = useQuery({
@@ -33,11 +20,7 @@ export function ProvidersPage() {
 
   if (isLoading) return <LoadingSpinner label="Lade Provider..." />;
   if (error)
-    return (
-      <div className="p-4 text-sm text-status-error">
-        Fehler: {(error as Error).message}
-      </div>
-    );
+    return <ErrorBanner message={(error as Error).message} />;
 
   const providers: CockpitProvider[] = (data as any)?.providers ?? [];
   const updatedAt = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString("de-DE") : "–";
@@ -49,27 +32,34 @@ export function ProvidersPage() {
       {providers.length === 0 ? (
         <EmptyState title="Keine Provider" description="Kein Admin-Token konfiguriert oder Oberon nicht erreichbar." />
       ) : (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {providers.map((p) => (
-            <div
+            <Panel
               key={p.id}
-              className="rounded-lg border border-white/10 bg-bg-panel p-4"
+              title={p.name}
+              className="border-brand/20"
               data-testid={`provider-${p.id}`}
             >
-              <div className="flex items-center justify-between gap-3">
+
+              {/* Status + Default-Chip nebeneinander */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-fg">{p.name}</span>
                   {p.is_default && (
                     <Tooltip
                       title="Dieser Provider ist als Default konfiguriert"
                       source="GET /api/v1/oberon/providers"
                       updatedAt={`Zuletzt: ${updatedAt}`}
                     >
-                      <span className="text-xxs text-brand border border-brand/30 bg-brand/10 rounded px-1.5 py-0.5">
-                        Default
-                      </span>
+                      <Chip tone="brand">Default</Chip>
                     </Tooltip>
                   )}
+                  <Tooltip
+                    title={`Typ: ${p.type}`}
+                    source="GET /api/v1/oberon/providers"
+                    updatedAt={`Zuletzt: ${updatedAt}`}
+                  >
+                    <Chip tone="neutral">{p.type}</Chip>
+                  </Tooltip>
                 </div>
                 <Tooltip
                   title={`Health-Status: ${p.status}`}
@@ -77,40 +67,58 @@ export function ProvidersPage() {
                   updatedAt={`Zuletzt: ${updatedAt}`}
                   thresholds="healthy = voll verfuegbar · degraded = eingeschraenkt · down = nicht erreichbar"
                 >
-                  <HealthBadge status={p.status} />
+                  <StatusBadge status={p.status} />
                 </Tooltip>
               </div>
 
-              <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-fg-muted">
-                <span>Typ: <span className="text-fg">{p.type}</span></span>
-                <span>ID: <span className="text-fg font-mono">{p.id}</span></span>
-
-                {p.latency_p50_ms != null && (
-                  <Tooltip
-                    title={`Median-Latenz der letzten 24h: ${p.latency_p50_ms.toFixed(0)}ms`}
-                    source="GET /api/v1/oberon/providers"
-                    updatedAt={`Zuletzt: ${updatedAt}`}
-                    thresholds="< 500ms gut · 500–1500ms akzeptabel · > 1500ms langsam"
-                  >
-                    <span>P50: <span className="tabular-nums text-fg">{p.latency_p50_ms.toFixed(0)}ms</span></span>
-                  </Tooltip>
-                )}
-                {p.latency_p95_ms != null && (
-                  <Tooltip
-                    title={`P95-Latenz der letzten 24h: ${p.latency_p95_ms.toFixed(0)}ms`}
-                    source="GET /api/v1/oberon/providers"
-                    updatedAt={`Zuletzt: ${updatedAt}`}
-                    thresholds="< 1500ms gut · > 3000ms problematisch"
-                  >
-                    <span>P95: <span className="tabular-nums text-fg">{p.latency_p95_ms.toFixed(0)}ms</span></span>
-                  </Tooltip>
-                )}
-
-                {p.api_key_hint && (
-                  <span className="col-span-2">Key: <span className="font-mono text-fg">{p.api_key_hint}</span></span>
-                )}
+              {/* ID */}
+              <div className="flex items-start justify-between gap-3 py-1">
+                <span className="shrink-0 text-xs text-fg-muted">ID</span>
+                <span className="text-right font-mono text-xs text-fg">{p.id}</span>
               </div>
 
+              {/* Latenz */}
+              {(p.latency_p50_ms != null || p.latency_p95_ms != null) && (
+                <div className="flex items-start justify-between gap-3 py-1">
+                  <span className="shrink-0 text-xs text-fg-muted">Latenz</span>
+                  <div className="flex items-center gap-2">
+                    {p.latency_p50_ms != null && (
+                      <Tooltip
+                        title={`Median-Latenz der letzten 24h: ${p.latency_p50_ms.toFixed(0)}ms`}
+                        source="GET /api/v1/oberon/providers"
+                        updatedAt={`Zuletzt: ${updatedAt}`}
+                        thresholds="< 500ms gut · 500–1500ms akzeptabel · > 1500ms langsam"
+                      >
+                        <span className="text-xs tabular-nums text-fg">
+                          P50 {p.latency_p50_ms.toFixed(0)}ms
+                        </span>
+                      </Tooltip>
+                    )}
+                    {p.latency_p95_ms != null && (
+                      <Tooltip
+                        title={`P95-Latenz der letzten 24h: ${p.latency_p95_ms.toFixed(0)}ms`}
+                        source="GET /api/v1/oberon/providers"
+                        updatedAt={`Zuletzt: ${updatedAt}`}
+                        thresholds="< 1500ms gut · > 3000ms problematisch"
+                      >
+                        <span className="text-xs tabular-nums text-fg-muted">
+                          P95 {p.latency_p95_ms.toFixed(0)}ms
+                        </span>
+                      </Tooltip>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* API-Key-Hint */}
+              {p.api_key_hint && (
+                <div className="flex items-start justify-between gap-3 py-1">
+                  <span className="shrink-0 text-xs text-fg-muted">Key</span>
+                  <span className="text-right font-mono text-xs text-fg">{p.api_key_hint}</span>
+                </div>
+              )}
+
+              {/* Modell-Profile */}
               {p.profiles && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {Object.entries(p.profiles as Record<string, string | null>)
@@ -129,7 +137,7 @@ export function ProvidersPage() {
                     ))}
                 </div>
               )}
-            </div>
+            </Panel>
           ))}
         </div>
       )}

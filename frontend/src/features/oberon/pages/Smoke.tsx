@@ -2,6 +2,7 @@
 // Datenquelle: GET /api/v1/oberon/smoke
 
 import { useQuery } from "@tanstack/react-query";
+import { useQuery as useActionsQuery } from "@tanstack/react-query";
 import { api } from "../../../lib/api";
 import { qk } from "../../../lib/queryKeys";
 import { PageBadge } from "../../../components/PageBadge";
@@ -9,7 +10,7 @@ import { LoadingSpinner } from "../../../components/LoadingSpinner";
 import { EmptyState } from "../../../components/EmptyState";
 import { Tooltip } from "../../../components/Tooltip";
 import { ActionCard } from "../../aktionen/ActionCard";
-import { useQuery as useActionsQuery } from "@tanstack/react-query";
+import { Panel, ErrorBanner } from "../_oberon_ui";
 import type { Action } from "../../../lib/types";
 
 function SmokeStatusIcon({ status }: { status: string }) {
@@ -39,7 +40,6 @@ export function SmokePage() {
     refetchInterval: 30_000,
   });
 
-  // ActionCard fuer oberon.smoke aus Registry laden
   const { data: actionsData } = useActionsQuery({
     queryKey: qk.actions,
     queryFn: () => api.getActions(),
@@ -52,6 +52,7 @@ export function SmokePage() {
 
   return (
     <div className="p-4" data-testid="oberon-smoke-page">
+      {/* Header mit Verdict */}
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="text-base font-semibold text-fg">Smoke-Tests</h2>
         {summary && (
@@ -66,58 +67,99 @@ export function SmokePage() {
         )}
       </div>
 
-      {/* Zusammenfassung-Zeile */}
+      {/* Zusammenfassung-Panel */}
       {summary && (
-        <div className="mb-4 flex items-center gap-4 text-xs">
-          <span className="text-status-ok">✓ {summary.pass} OK</span>
-          <span className="text-status-warn">⚠ {summary.warn} Warn</span>
-          <span className="text-status-error">✗ {summary.fail} Fehler</span>
-          <span className="ml-auto text-fg-muted">Zuletzt: {updatedAt}</span>
-        </div>
+        <Panel title="Zusammenfassung" className="mb-4">
+          <div className="grid grid-cols-3 gap-3 pt-1 text-center">
+            <Tooltip
+              title={`${summary.pass} Sub-Checks mit Status PASS`}
+              source="GET /api/v1/oberon/smoke"
+              updatedAt={`Zuletzt: ${updatedAt}`}
+            >
+              <div>
+                <div className="text-2xl font-bold tabular-nums text-status-ok">{summary.pass}</div>
+                <div className="text-xxs text-fg-muted uppercase tracking-wide">OK</div>
+              </div>
+            </Tooltip>
+            <Tooltip
+              title={`${summary.warn} Sub-Checks mit Status WARN`}
+              source="GET /api/v1/oberon/smoke"
+              updatedAt={`Zuletzt: ${updatedAt}`}
+            >
+              <div>
+                <div className="text-2xl font-bold tabular-nums text-status-warn">{summary.warn}</div>
+                <div className="text-xxs text-fg-muted uppercase tracking-wide">Warn</div>
+              </div>
+            </Tooltip>
+            <Tooltip
+              title={`${summary.fail} Sub-Checks mit Status FAIL`}
+              source="GET /api/v1/oberon/smoke"
+              updatedAt={`Zuletzt: ${updatedAt}`}
+            >
+              <div>
+                <div className="text-2xl font-bold tabular-nums text-status-error">{summary.fail}</div>
+                <div className="text-xxs text-fg-muted uppercase tracking-wide">Fehler</div>
+              </div>
+            </Tooltip>
+          </div>
+          <div className="mt-2 border-t border-white/10 pt-1 text-right text-xxs text-fg-muted">
+            Zuletzt: {updatedAt}
+          </div>
+        </Panel>
       )}
 
       {isLoading && <LoadingSpinner label="Lade Smoke-Ergebnisse..." />}
-      {error && <div className="p-2 text-sm text-status-error">Fehler: {(error as Error).message}</div>}
+      {error && <ErrorBanner message={(error as Error).message} />}
 
       {!isLoading && !error && (
         <>
           {suites.length === 0 ? (
             <EmptyState title="Keine Smoke-Daten" description="Kein Admin-Token konfiguriert oder Oberon nicht erreichbar." />
           ) : (
-            <div className="space-y-1">
-              {suites.map((check: any) => (
-                <div
-                  key={check.name}
-                  className="flex items-center gap-3 rounded border border-white/5 bg-bg-panel px-3 py-2"
-                >
-                  <Tooltip
-                    title={`Status: ${check.status}${check.error ? ` — ${check.error}` : ""}`}
-                    source="GET /api/v1/oberon/smoke"
-                    updatedAt={`Zuletzt: ${updatedAt}`}
-                    thresholds="PASS = alles OK · WARN = Einschraenkung · FAIL = kritischer Fehler"
+            <Panel title={`Sub-Checks (${suites.length})`}>
+              <div className="space-y-1">
+                {suites.map((check: any) => (
+                  <div
+                    key={check.name}
+                    className={`flex items-center gap-3 rounded border px-3 py-2 ${
+                      check.status === "FAIL"
+                        ? "border-status-error/20 bg-status-error/5"
+                        : check.status === "WARN"
+                          ? "border-status-warn/20 bg-status-warn/5"
+                          : "border-white/5 bg-bg-elevated/20"
+                    }`}
                   >
-                    <SmokeStatusIcon status={check.status} />
-                  </Tooltip>
-                  <span className="flex-1 text-sm text-fg">{check.name}</span>
-                  <Tooltip
-                    title={`Messdauer dieses Sub-Checks: ${check.latency_ms}ms`}
-                    source="GET /api/v1/oberon/smoke"
-                    updatedAt={`Zuletzt: ${updatedAt}`}
-                  >
-                    <span className="tabular-nums text-xs text-fg-muted">{check.latency_ms}ms</span>
-                  </Tooltip>
-                  {check.error && (
                     <Tooltip
-                      title={check.error}
+                      title={`Status: ${check.status}${check.error ? ` — ${check.error}` : ""}`}
+                      source="GET /api/v1/oberon/smoke"
+                      updatedAt={`Zuletzt: ${updatedAt}`}
+                      thresholds="PASS = alles OK · WARN = Einschraenkung · FAIL = kritischer Fehler"
+                    >
+                      <SmokeStatusIcon status={check.status} />
+                    </Tooltip>
+                    <span className="flex-1 text-sm text-fg">{check.name}</span>
+                    <Tooltip
+                      title={`Messdauer dieses Sub-Checks: ${check.latency_ms}ms`}
                       source="GET /api/v1/oberon/smoke"
                       updatedAt={`Zuletzt: ${updatedAt}`}
                     >
-                      <span className="text-xs text-status-error">Fehler</span>
+                      <span className="tabular-nums text-xs text-fg-muted">{check.latency_ms}ms</span>
                     </Tooltip>
-                  )}
-                </div>
-              ))}
-            </div>
+                    {check.error && (
+                      <Tooltip
+                        title={check.error}
+                        source="GET /api/v1/oberon/smoke"
+                        updatedAt={`Zuletzt: ${updatedAt}`}
+                      >
+                        <span className="rounded border border-status-error/30 bg-status-error/10 px-1.5 py-0.5 text-xxs text-status-error">
+                          Fehler
+                        </span>
+                      </Tooltip>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Panel>
           )}
         </>
       )}

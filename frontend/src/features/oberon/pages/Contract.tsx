@@ -10,6 +10,7 @@ import { PageBadge } from "../../../components/PageBadge";
 import { LoadingSpinner } from "../../../components/LoadingSpinner";
 import { EmptyState } from "../../../components/EmptyState";
 import { Tooltip } from "../../../components/Tooltip";
+import { Panel, Chip, StatusBadge, ErrorBanner } from "../_oberon_ui";
 
 // ── Typ-Helfer fuer Classification-Guide ──────────────────────────────────────
 
@@ -33,6 +34,18 @@ interface ClassificationGuide {
   publicationAllowlist?: AllowlistEntry[];
   denyList?: DenyEntry[];
   decisionTree?: Record<string, string>;
+}
+
+// HTTP-Methode → Ton fuer Chip
+function methodTone(method: string): "ok" | "warn" | "error" | "brand" | "neutral" {
+  switch (method?.toUpperCase()) {
+    case "GET":    return "ok";
+    case "POST":   return "brand";
+    case "PUT":
+    case "PATCH":  return "warn";
+    case "DELETE": return "error";
+    default:       return "neutral";
+  }
 }
 
 export function ContractPage() {
@@ -59,7 +72,6 @@ export function ContractPage() {
   const updatedAt = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString("de-DE") : "–";
   const isStub = (data as any)?.stub === true;
 
-  // Capabilities koennen als Array oder Objekt mit capabilities-Feld kommen
   const capabilities: any[] = Array.isArray(data)
     ? data
     : Array.isArray((data as any)?.capabilities)
@@ -73,59 +85,73 @@ export function ContractPage() {
     <div className="p-4" data-testid="oberon-contract-page">
       <h2 className="mb-4 text-base font-semibold text-fg">API-Kontrakt</h2>
 
-      {/* ── Capabilities-Liste ─────────────────────────────────────────────── */}
+      {/* ── Capabilities ─────────────────────────────────────────────────── */}
       {isLoading && <LoadingSpinner label="Lade Kontrakt-Daten..." />}
-      {error && <div className="text-sm text-status-error">Fehler: {(error as Error).message}</div>}
+      {error && <ErrorBanner message={(error as Error).message} />}
 
       {!isLoading && !error && (
         <>
           {isStub ? (
             <EmptyState title="Kein Zugriff" description={(data as any).message} />
           ) : capabilities.length === 0 ? (
-            <div className="rounded border border-white/10 bg-bg-panel p-4">
-              <p className="text-sm text-fg-muted mb-2">Kontrakt-Rohdaten:</p>
-              <pre className="overflow-auto rounded bg-bg-elevated p-3 text-xs text-fg">
+            <Panel title="Kontrakt (Rohdaten)" className="mb-6">
+              <pre className="mt-1 overflow-auto rounded bg-bg-elevated p-3 text-xs text-fg max-h-96">
                 {JSON.stringify(data, null, 2)}
               </pre>
-            </div>
+            </Panel>
           ) : (
-            <div className="space-y-1">
-              {capabilities.map((cap: any, i: number) => (
-                <div
-                  key={cap.name ?? cap.path ?? i}
-                  className="flex items-center gap-3 rounded border border-white/5 bg-bg-panel px-3 py-2 text-xs"
-                >
-                  <Tooltip
-                    title={cap.description ?? cap.name ?? cap.path}
-                    source="GET /api/v1/oberon/contract/capabilities"
-                    updatedAt={`Zuletzt: ${updatedAt}`}
+            <Panel title={`Capabilities (${capabilities.length})`} className="mb-6">
+              <div className="max-h-80 overflow-y-auto pr-1 space-y-1">
+                {capabilities.map((cap: any, i: number) => (
+                  <div
+                    key={cap.name ?? cap.path ?? i}
+                    className="flex items-center gap-2 rounded border border-white/5 bg-bg-elevated/30 px-2 py-1.5"
                   >
-                    <span className="shrink-0 rounded border border-white/10 bg-bg-elevated px-1 py-0.5 font-mono text-fg-muted">
-                      {cap.method ?? "GET"}
-                    </span>
-                  </Tooltip>
-                  <span className="flex-1 font-mono text-fg">{cap.path ?? cap.name}</span>
-                  {cap.requires_auth && (
+                    {/* HTTP-Methode als farbiger Chip */}
                     <Tooltip
-                      title="Dieser Endpoint erfordert Authentifizierung (Bearer Token)"
+                      title={cap.description ?? cap.name ?? cap.path ?? "Endpoint"}
                       source="GET /api/v1/oberon/contract/capabilities"
                       updatedAt={`Zuletzt: ${updatedAt}`}
                     >
-                      <span className="text-fg-subtle">Auth</span>
+                      <Chip tone={methodTone(cap.method ?? "GET")}>
+                        {cap.method ?? "GET"}
+                      </Chip>
                     </Tooltip>
-                  )}
-                  {cap.version && (
-                    <span className="tabular-nums text-fg-subtle">v{cap.version}</span>
-                  )}
-                </div>
-              ))}
-            </div>
+
+                    {/* Pfad */}
+                    <span className="flex-1 font-mono text-xs text-fg truncate">
+                      {cap.path ?? cap.name}
+                    </span>
+
+                    {/* Auth-Badge */}
+                    {cap.requires_auth && (
+                      <Tooltip
+                        title="Dieser Endpoint erfordert Authentifizierung (Bearer Token)"
+                        source="GET /api/v1/oberon/contract/capabilities"
+                        updatedAt={`Zuletzt: ${updatedAt}`}
+                      >
+                        <span className="shrink-0 rounded border border-brand/30 bg-brand/10 px-1.5 py-0.5 text-xxs font-semibold text-brand">
+                          Auth
+                        </span>
+                      </Tooltip>
+                    )}
+
+                    {/* Version */}
+                    {cap.version && (
+                      <span className="shrink-0 text-xxs tabular-nums text-fg-subtle">
+                        v{cap.version}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </Panel>
           )}
         </>
       )}
 
       {/* ── Classification-Guide ───────────────────────────────────────────── */}
-      <section className="classification-guide mt-8" data-testid="classification-guide-section">
+      <section className="classification-guide" data-testid="classification-guide-section">
         <div className="mb-3 flex items-center gap-2">
           <h3 className="text-sm font-semibold text-fg">Classification-Guide</h3>
           <Tooltip
@@ -133,12 +159,12 @@ export function ContractPage() {
             source="GET /api/v1/oberon/contract/classification-guide"
             updatedAt="Cache: 24h"
           >
-            <span className="cursor-help rounded bg-bg-elevated px-1.5 py-0.5 text-xs text-fg-muted">
+            <span className="cursor-help rounded border border-white/10 bg-bg-elevated px-1.5 py-0.5 text-xxs text-fg-muted">
               ?
             </span>
           </Tooltip>
           {guide?.contractVersion && (
-            <span className="text-xs text-fg-subtle tabular-nums">
+            <span className="text-xxs tabular-nums text-fg-subtle">
               v{guide.contractVersion}
             </span>
           )}
@@ -174,7 +200,7 @@ export function ContractPage() {
         )}
 
         {!guideLoading && !guideError && !guideIsStub && guide && (
-          <div className="space-y-5" data-testid="classification-guide-content">
+          <div className="space-y-4" data-testid="classification-guide-content">
             {/* Legal-Basis */}
             {guide.legalBasis && (
               <p className="text-xs text-fg-muted italic">{guide.legalBasis}</p>
@@ -182,15 +208,12 @@ export function ContractPage() {
 
             {/* Publication-Allowlist */}
             {Array.isArray(guide.publicationAllowlist) && guide.publicationAllowlist.length > 0 && (
-              <div data-testid="classification-guide-allowlist">
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
-                  Publikations-Allowlist
-                </h4>
+              <Panel title="Publikations-Allowlist" data-testid="classification-guide-allowlist">
                 <div className="space-y-1">
                   {guide.publicationAllowlist.map((entry) => (
                     <div
                       key={entry.subtype}
-                      className="flex items-start gap-3 rounded border border-white/5 bg-bg-panel px-3 py-2 text-xs"
+                      className="flex items-start gap-3 rounded border border-white/5 bg-bg-elevated/30 px-2 py-1.5"
                       data-testid={`allowlist-entry-${entry.subtype}`}
                     >
                       <Tooltip
@@ -206,69 +229,71 @@ export function ContractPage() {
                         source="GET /api/v1/oberon/contract/classification-guide"
                         updatedAt="Cache: 24h"
                       >
-                        <span className="shrink-0 rounded border border-status-ok/30 bg-status-ok/10 px-1.5 py-0.5 font-mono text-status-ok">
-                          {entry.subtype}
-                        </span>
+                        <StatusBadge status="ok" />
                       </Tooltip>
-                      <span className="flex-1 text-fg">{entry.description}</span>
+                      <Tooltip
+                        title={entry.subtype}
+                        source="GET /api/v1/oberon/contract/classification-guide"
+                        updatedAt="Cache: 24h"
+                      >
+                        <span className="shrink-0 font-mono text-xs text-status-ok">{entry.subtype}</span>
+                      </Tooltip>
+                      <span className="flex-1 text-xs text-fg">{entry.description}</span>
                     </div>
                   ))}
                 </div>
-              </div>
+              </Panel>
             )}
 
             {/* Deny-List */}
             {Array.isArray(guide.denyList) && guide.denyList.length > 0 && (
-              <div data-testid="classification-guide-denylist">
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
-                  Deny-List
-                </h4>
-                <table className="w-full text-xs" data-testid="deny-list-table">
-                  <thead>
-                    <tr className="border-b border-white/10">
-                      <th className="py-1 pr-3 text-left text-fg-subtle">Muster</th>
-                      <th className="py-1 pr-3 text-left text-fg-subtle">Grund</th>
-                      <th className="py-1 text-left text-fg-subtle">Alternative</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {guide.denyList.map((entry) => (
-                      <tr
-                        key={entry.doctypePattern}
-                        className="border-b border-white/5 hover:bg-bg-elevated"
-                        data-testid={`deny-entry-${entry.doctypePattern}`}
-                      >
-                        <td className="py-1.5 pr-3 font-mono text-status-error">
-                          {entry.doctypePattern}
-                        </td>
-                        <td className="py-1.5 pr-3 text-fg">{entry.reason}</td>
-                        <td className="py-1.5 text-fg-muted">{entry.alternative ?? "–"}</td>
+              <Panel title="Deny-List" data-testid="classification-guide-denylist">
+                {/* Scrollbare Tabelle */}
+                <div className="max-h-60 overflow-y-auto pr-1">
+                  <table className="w-full text-xs" data-testid="deny-list-table">
+                    <thead className="sticky top-0 bg-bg-panel">
+                      <tr className="border-b border-white/10">
+                        <th className="py-1 pr-3 text-left text-fg-subtle">Muster</th>
+                        <th className="py-1 pr-3 text-left text-fg-subtle">Grund</th>
+                        <th className="py-1 text-left text-fg-subtle">Alternative</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {guide.denyList.map((entry) => (
+                        <tr
+                          key={entry.doctypePattern}
+                          className="border-b border-white/5 hover:bg-bg-elevated"
+                          data-testid={`deny-entry-${entry.doctypePattern}`}
+                        >
+                          <td className="py-1.5 pr-3 font-mono text-status-error">
+                            {entry.doctypePattern}
+                          </td>
+                          <td className="py-1.5 pr-3 text-fg">{entry.reason}</td>
+                          <td className="py-1.5 text-fg-muted">{entry.alternative ?? "–"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Panel>
             )}
 
             {/* Decision-Tree */}
             {guide.decisionTree && Object.keys(guide.decisionTree).length > 0 && (
-              <div data-testid="classification-guide-decision-tree">
-                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-fg-muted">
-                  Entscheidungsbaum
-                </h4>
+              <Panel title="Entscheidungsbaum" data-testid="classification-guide-decision-tree">
                 <div className="space-y-1">
                   {Object.entries(guide.decisionTree).map(([question, answer]) => (
                     <div
                       key={question}
-                      className="rounded border border-white/5 bg-bg-panel px-3 py-2 text-xs"
+                      className="rounded border border-white/5 bg-bg-elevated/30 px-3 py-2"
                       data-testid={`decision-tree-entry-${question}`}
                     >
-                      <p className="font-medium text-fg">{question}</p>
-                      <p className="mt-0.5 text-fg-muted">{answer}</p>
+                      <p className="text-xs font-medium text-fg">{question}</p>
+                      <p className="mt-0.5 text-xxs text-fg-muted">{answer}</p>
                     </div>
                   ))}
                 </div>
-              </div>
+              </Panel>
             )}
           </div>
         )}
