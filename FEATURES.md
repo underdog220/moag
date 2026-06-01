@@ -27,6 +27,23 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 - **Datenquelle:** `GET /api/v1/alerts` (Polling 15s) · `POST /api/v1/alerts/{key}/ack` · `POST .../unack`
 - **Persistenz:** `MOAG_ALERTS_DB` (Default `~/.moag/alerts.db`, im Deploy auf das Volume gelegt)
 
+#### Adapter-Status-Inspector `/inspector`
+- **Was:** Read-only Debug-Detailansicht aller Adapter — pro System die rohe `SystemStatus`-Antwort (ok, score, summary, error, fetched_at, alle `metrics` als Tabelle). „JSON kopieren" pro Karte + „Alles kopieren" (Pipeline-Logging-Kopierbar-Pflicht).
+- **Code:** `frontend/src/features/inspector/{InspectorPage,index}.tsx`
+- **Datenquelle:** `GET /api/v1/overview` (wiederverwendet, Polling 30s) — kein eigener Endpoint
+
+#### OpenAPI-Browser `/openapi`
+- **Was:** Browsebare OpenAPI-Specs von MOAG selbst + den erreichbaren Sub-Systemen. Target-Auswahl → Endpoint-Liste (Methode, Pfad, Summary, Tags), Suche. Nicht erreichbare Systeme werden als solche markiert (kein Crash).
+- **Code:** Backend `backend/moag/routes_openapi.py` (`build_openapi_router`), Frontend `frontend/src/features/openapi/*`
+- **Datenquelle:** `GET /api/v1/openapi/targets` · `GET /api/v1/openapi/{target}` (MOAG via `app.openapi()`, Sub-Systeme via httpx-Proxy auf `/openapi.json`, Timeout 5s)
+
+#### OCR-Upload `/ocr-upload` (Phase 1.5b)
+- **Was:** Echter `multipart/form-data`-Datei-Upload an OCRexpert (schließt die `ocrexpert.process`-Lücke: vorher JSON-`{pfad}` → HTTP 422). Drag&Drop/Picker + Parameter (profile/output/language), Ergebnis-/Fehler-Anzeige.
+- **Schema (verifiziert gegen OCRexpert):** File-Feld `file` (multipart), `profile`/`output`/`language`/`inline_pdfa` als **Query**-Params; OCRexpert akzeptiert nur PDF.
+- **Code:** Backend `backend/moag/routes_ocr_upload.py` (`build_ocr_upload_router`), Frontend `frontend/src/features/ocr-upload/*`
+- **Datenquelle:** `POST /api/v1/ocrexpert/upload` → leitet als multipart an OCRexpert `/api/v1/process` weiter
+- **Hinweis:** koexistiert mit dem alten `POST /api/v1/ocrexpert/process` (JSON-Pfad); Ablösung später.
+
 #### NavBar zweistufig (Achsen-Navigation)
 - **Was:** Top-Achsen `[Übersicht] [Aktionen]` + sekundäre System-Links (nur unter Übersicht)
 - **Code:** `frontend/src/components/NavBar.tsx`
