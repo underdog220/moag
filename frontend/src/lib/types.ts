@@ -637,6 +637,20 @@ export interface OberonContractCapability {
 // ─── OctoBoss Drilldown-Typen (neue /api/v1/octoboss/* Endpoints) ────────────
 
 /** Detaillierter Node-Status vom OctoBoss-Hub (/seti/nodes/{node_id}). */
+/** Detail eines installierten Moduls (OctoBoss installed_modules_detail). */
+export interface OctoBossModuleDetail {
+  name: string;
+  version: string;
+  status?: string | null;        // "running" | ...
+  port?: number | null;
+  direct_port?: number | null;
+  pid?: number | null;
+  min_core_version?: string | null;
+  installed_at?: string | null;  // ISO-8601
+  bundle_dir?: string | null;
+  [key: string]: unknown;
+}
+
 export interface OctoBossNodeDetail {
   node_id: string;
   hostname: string;
@@ -644,6 +658,20 @@ export interface OctoBossNodeDetail {
   mode: string | null;          // "IDLE" | "ACTIVE" | "OFFLINE" | ...
   last_heartbeat: string | null; // ISO-8601
   last_known_ip: string | null;
+  // Identität / Lifecycle
+  platform?: string | null;          // "Windows" | "Linux" | ...
+  mac_address?: string | null;       // meist leer (fragiler Fallback)
+  agent_version?: string | null;     // = Core-Version (sonofseti-core)
+  power_status?: string | null;      // "online" | "offline" | "standby"
+  node_pool?: string | null;         // "production" | "test" | "sandbox"
+  first_seen?: string | null;
+  last_active_at?: string | null;
+  session_id?: string | null;
+  // KI / GPU-Flags
+  vision_capable?: boolean | null;
+  gpu_fallback_detected?: boolean | null;
+  has_hardware?: boolean | null;
+  capabilities?: string[];
   hardware: {
     gpu_name: string | null;
     gpu_load_percent: number | null;
@@ -659,12 +687,26 @@ export interface OctoBossNodeDetail {
   } | null;
   ollama: {
     running: boolean;
-    models: string[];
-    version: string | null;
+    installed_models?: string[];     // echte Hub-Feld (NICHT "models")
+    active_model?: string | null;
+    compute_device?: string | null;  // "gpu" | "cpu" | "unknown"
+    bind_host?: string | null;
+    port?: number | null;
+    tokens_per_sec?: number | null;
+    models?: string[];               // (alt, Kompat)
+    version?: string | null;
     [key: string]: unknown;
   } | null;
-  modules: Array<{ name: string; version: string }>;
-  engines: string[];
+  // Module (echte Hub-Felder)
+  active_modules?: string[];
+  installed_modules_detail?: OctoBossModuleDetail[];
+  module_direct_ports?: Record<string, number>;
+  drift_modules?: Array<{ name: string; status?: string; [key: string]: unknown }>;
+  ocr_engines?: Record<string, unknown>;
+  alerts?: unknown[];
+  // (alt, Kompat)
+  modules?: Array<{ name: string; version: string }>;
+  engines?: string[];
   [key: string]: unknown;
 }
 
