@@ -68,16 +68,16 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
   - **Versions-Panel** pro Manifest-Typ (Core + Bootstrapper): aktive default-Version + aufklappbare Versions-Liste (SHA-Kurz, size). Default-Tausch-Knopf pro nicht-aktiver Version.
   - **Override-Tabelle**: pro Node-Zeile Pin-/Unpin-Button via `PinDialog` (Versions-Dropdown).
   - **Modul-Drift-Anzeige**: Drift-Liste (Modul X laeuft auf >= 2 Versionen) + Module-by-Node-Detail (`installed_modules_detail` aus `/seti/nodes`-Heartbeat).
-  - **DefaultFlipDialog**: Doppel-Confirm + Impact-Vorschau (`nodes_affected` vs. `nodes_pinned`) + Panopticor-Pretest-Hart-Block bis GREEN-Verdict (Spec-File-Pattern Weg A).
-- **Bootstrapper-Sektion**: UI vorhanden, Schreib-Pfade disabled bis OctoBoss-CR `2026-05-23-bootstrapper-admin-api` durch (`supports_versions_api`-Flag im Inventory).
+  - **DefaultFlipDialog**: Doppel-Confirm + Impact-Vorschau (`nodes_affected` vs. `nodes_pinned`) + Panopticor-Pretest-Hart-Block bis GREEN-Verdict (Spec-File-Pattern Weg A). Generisch fuer Core + Bootstrapper (`target`-Prop).
+- **Bootstrapper-Sektion**: **aktiv** seit 2026-06-01 (OctoBoss-CR `2026-05-23-bootstrapper-admin-api` durch). Symmetrisch zur Core-Sektion: Versions-Panel, Override-Tabelle (Pin/Unpin), Default-Flip mit Pretest-Pflicht. Quelle `GET /api/v1/seti/bootstrapper/versions`; alte Hubs ohne diesen Endpoint fallen auf `/seti/distribute/info` zurueck (`supports_versions_api=false` ⇒ Buttons disabled + CR-Hinweis).
 - **Backend:**
   - `manifest_health.py` (Schema-/Live-Checks)
-  - `manifest_inventory.py` (Versionen + Overrides + Modules + Drift aggregieren)
-  - `manifest_admin.py` (Admin-Proxy mit Bearer-Token, Impact-Berechnung, Pretest-Spec-File-Erzeugung)
+  - `manifest_inventory.py` (Versionen + Overrides + Modules + Drift aggregieren; Bootstrapper via `/bootstrapper/versions` mit Legacy-Fallback)
+  - `manifest_admin.py` (Admin-Proxy mit Bearer-Token, Impact-Berechnung, Pretest-Spec-File-Erzeugung; `target_kind`-parametrisiert fuer Core + Bootstrapper)
   - `routes_manifest_health.py` (`GET /api/v1/manifest/health`, `/health/all`, `/inventory`)
-  - `routes_manifest_admin.py` (`GET /admin/core/default/impact`, `POST /admin/core/default`, `/override`, `/override/delete`, `/pretest`, `/pretest-callback`, `GET /admin/pretest/{spec_id}`)
+  - `routes_manifest_admin.py` (symmetrische Routen je `{target}`=core|bootstrapper: `GET /admin/{target}/default/impact`, `POST /admin/{target}/default`, `/override`, `/override/delete`; plus `/pretest`, `/pretest-callback`, `GET /admin/pretest/{spec_id}`)
 - **Settings:** `octoboss_admin_token` (ENV `MOAG_OCTOBOSS_ADMIN_TOKEN`, in API-Response maskiert)
-- **Tests:** `test_manifest_health.py`, `test_manifest_inventory.py` (10), `test_manifest_admin.py` (17), `ClusterIntentSection.test.tsx` (10), `ManifestHealth.test.tsx`
+- **Tests:** `test_manifest_health.py`, `test_manifest_inventory.py` (12), `test_manifest_admin.py` (29), `ClusterIntentSection.test.tsx` (15), `ManifestHealth.test.tsx`
 
 #### OCRexpert (`/ocrexpert/*`)
 - **Sub-Routen:** `jobs` (mit Upload-Card + Pfad-Eingabe + UNC→Linux-Konvertierung) · `history` · `charts` · `capabilities` · `logs` (Tail mit Copy)
