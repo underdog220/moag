@@ -17,10 +17,13 @@ from moag.manifest_admin import (
     SetOverrideBody,
     compute_default_impact,
     delete_core_override,
+    delete_override,
     get_admin_token,
     resolve_hub,
     set_core_default,
     set_core_override,
+    set_default,
+    set_override,
 )
 from moag.models import HubConfig, Settings
 from moag.routes_manifest_admin import _get_pretest_store_for_tests
@@ -392,3 +395,223 @@ def test_route_pretest_callback_unbekannt(monkeypatch: Any) -> None:
         json={"spec_id": "ghost", "verdict": "green"},
     )
     assert r.status_code == 404
+
+
+# ── Bootstrapper-Admin (symmetrisch zu Core) ──────────────────────────────────
+#
+# Wire-Format-Wahrheit: C:\code\OctoBoss\src\octoboss\api\http\routes\
+# seti_bootstrapper_admin.py
+#   default-Setter   → POST /api/v1/admin/seti/bootstrapper/default  {version}
+#                      Antwort {ok, default_version}
+#   override-Setter  → POST /api/v1/admin/seti/bootstrapper/override {node_id, version|null}
+#                      Antwort {ok, node_id, version}  bzw. {ok, node_id, override_removed}
+#   versions-Liste   → GET  /api/v1/seti/bootstrapper/versions
+#                      {versions[], default, overrides{}, asset_inventory_versions[]}
+
+
+@pytest.mark.asyncio
+async def test_set_bootstrapper_default_proxy_pfad_und_body(monkeypatch: Any) -> None:
+    """set_default(target_kind='bootstrapper') trifft den Bootstrapper-Pfad."""
+    store = _make_store(token="boot-secret")
+    recorder = _patch_async_client(monkeypatch, {
+        "/api/v1/admin/seti/bootstrapper/default": {"ok": True, "default_version": "0.3.9-rc5"},
+    })
+    status, data = await set_default(
+        store,
+        SetDefaultBody(version="0.3.9-rc5", pretest_run_id="run-x"),
+        target_kind="bootstrapper",
+    )
+    assert status == 200
+    assert data["default_version"] == "0.3.9-rc5"
+    last_post = recorder["posts"][-1]
+    assert last_post["url"].endswith("/api/v1/admin/seti/bootstrapper/default")
+    assert last_post["headers"]["Authorization"] == "Bearer boot-secret"
+    assert last_post["json"] == {"version": "0.3.9-rc5"}
+
+
+@pytest.mark.asyncio
+async def test_set_bootstrapper_default_blockt_ohne_pretest() -> None:
+    store = _make_store()
+    status, data = await set_default(
+        store,
+        SetDefaultBody(version="0.3.9-rc5", pretest_run_id=None),
+        target_kind="bootstrapper",
+    )
+    assert status == 412
+    assert "pretest_run_id" in data["detail"]
+
+
+@pytest.mark.asyncio
+async def test_set_bootstrapper_override_proxy(monkeypatch: Any) -> None:
+    store = _make_store(token="tok")
+    recorder = _patch_async_client(monkeypatch, {
+        "/api/v1/admin/seti/bootstrapper/override": {"ok": True, "node_id": "n1", "version": "0.3.8-rc4"},
+    })
+    status, data = await set_override(
+        store,
+        SetOverrideBody(node_id="n1", version="0.3.8-rc4"),
+        target_kind="bootstrapper",
+    )
+    assert status == 200
+    assert recorder["posts"][-1]["url"].endswith("/api/v1/admin/seti/bootstrapper/override")
+    assert recorder["posts"][-1]["json"] == {"node_id": "n1", "version": "0.3.8-rc4"}
+
+
+@pytest.mark.asyncio
+async def test_delete_bootstrapper_override_sendet_null(monkeypatch: Any) -> None:
+    store = _make_store(token="tok")
+    recorder = _patch_async_client(monkeypatch, {
+        "/api/v1/admin/seti/bootstrapper/override": {"ok": True, "node_id": "n1", "override_removed": True},
+    })
+    await delete_override(store, DeleteOverrideBody(node_id="n1"), target_kind="bootstrapper")
+    assert recorder["posts"][-1]["url"].endswith("/api/v1/admin/seti/bootstrapper/override")
+    assert recorder["posts"][-1]["json"] == {"node_id": "n1", "version": None}
+
+
+@pytest.mark.asyncio
+async def test_set_default_unbekanntes_target_wirft() -> None:
+    store = _make_store()
+    with pytest.raises(ValueError, match="core|bootstrapper"):
+        await set_default(
+            store,
+            SetDefaultBody(version="x", pretest_run_id="r"),
+            target_kind="modules",
+        )
+
+
+@pytest.mark.asyncio
+async def test_compute_bootstrapper_impact_liest_bootstrapper_versions(monkeypatch: Any) -> None:
+    """Impact fuer Bootstrapper liest /api/v1/seti/bootstrapper/versions."""
+    store = _make_store()
+    recorder = _patch_async_client(monkeypatch, post_responses={}, get_responses={
+        "/api/v1/seti/bootstrapper/versions": {
+            "versions": ["0.3.8-rc4", "0.3.9-rc5"],
+            "default": "0.3.8-rc4",
+            "overrides": {"node-a": "0.3.8-rc4"},
+            "asset_inventory_versions": [],
+        },
+        "/seti/nodes": {
+            "nodes": [
+                {"node_id": "node-a", "connected": True},
+                {"node_id": "node-b", "connected": True},
+            ],
+        },
+    })
+
+    impact = await compute_default_impact(
+        store, target_version="0.3.9-rc5", hub_id=None, target_kind="bootstrapper"
+    )
+    assert impact.nodes_total == 2
+    assert impact.nodes_pinned == 1
+    assert impact.nodes_affected == 1
+    assert impact.current_default == "0.3.8-rc4"
+    # Es darf NICHT der Core-Versions-Endpoint angefragt worden sein
+    assert any("/api/v1/seti/bootstrapper/versions" in g for g in recorder["gets"])
+    assert not any("/api/v1/seti/core/versions" in g for g in recorder["gets"])
+
+
+# ── Bootstrapper-Routen-Integration ───────────────────────────────────────────
+
+
+def test_route_bootstrapper_impact(monkeypatch: Any) -> None:
+    store = _make_store()
+    _patch_async_client(monkeypatch, post_responses={}, get_responses={
+        "/api/v1/seti/bootstrapper/versions": {
+            "versions": ["0.3.9-rc5"],
+            "default": "0.3.8-rc4",
+            "overrides": {},
+            "asset_inventory_versions": [],
+        },
+        "/seti/nodes": {"nodes": [{"node_id": "n1"}, {"node_id": "n2"}]},
+    })
+    app = create_app(settings_store=store, enable_pipeline=False)
+    client = TestClient(app)
+    r = client.get("/api/v1/manifest/admin/bootstrapper/default/impact?version=0.3.9-rc5")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["nodes_total"] == 2
+    assert body["nodes_affected"] == 2
+    assert body["nodes_pinned"] == 0
+
+
+def test_route_bootstrapper_default_block_ohne_pretest(monkeypatch: Any) -> None:
+    store = _make_store()
+    app = create_app(settings_store=store, enable_pipeline=False)
+    client = TestClient(app)
+    r = client.post(
+        "/api/v1/manifest/admin/bootstrapper/default",
+        json={"version": "0.3.9-rc5"},
+    )
+    assert r.status_code == 412
+    assert "Pretest" in r.json()["detail"]
+
+
+def test_route_bootstrapper_default_apply_bei_green(monkeypatch: Any) -> None:
+    """Bootstrapper-Default-Tausch geht bei GREEN-Pretest durch."""
+    store = _make_store(token="real-token")
+    pretest_store = _get_pretest_store_for_tests()
+    pretest_store.add("boot-green-id", {"verdict": "green"})
+
+    recorder = _patch_async_client(monkeypatch, post_responses={
+        "/api/v1/admin/seti/bootstrapper/default": {"ok": True, "default_version": "0.3.9-rc5"},
+    })
+    app = create_app(settings_store=store, enable_pipeline=False)
+    client = TestClient(app)
+    r = client.post(
+        "/api/v1/manifest/admin/bootstrapper/default",
+        json={"version": "0.3.9-rc5", "pretest_run_id": "boot-green-id"},
+    )
+    assert r.status_code == 200
+    assert r.json()["ok"] is True
+    # Upstream-Antwort wird durchgereicht (Wire-Format default_version)
+    assert r.json()["upstream"]["default_version"] == "0.3.9-rc5"
+    assert recorder["posts"][-1]["url"].endswith("/api/v1/admin/seti/bootstrapper/default")
+
+
+def test_route_bootstrapper_override_setzen_und_loeschen(monkeypatch: Any) -> None:
+    store = _make_store(token="tok")
+    recorder = _patch_async_client(monkeypatch, post_responses={
+        "/api/v1/admin/seti/bootstrapper/override": {"ok": True, "node_id": "n1"},
+    })
+    app = create_app(settings_store=store, enable_pipeline=False)
+    client = TestClient(app)
+
+    r1 = client.post(
+        "/api/v1/manifest/admin/bootstrapper/override",
+        json={"node_id": "n1", "version": "0.3.8-rc4"},
+    )
+    assert r1.status_code == 200
+    assert recorder["posts"][-1]["json"] == {"node_id": "n1", "version": "0.3.8-rc4"}
+
+    r2 = client.post(
+        "/api/v1/manifest/admin/bootstrapper/override/delete",
+        json={"node_id": "n1"},
+    )
+    assert r2.status_code == 200
+    assert recorder["posts"][-1]["json"] == {"node_id": "n1", "version": None}
+
+
+def test_route_bootstrapper_pretest_target_kind(monkeypatch: Any, tmp_path: Path) -> None:
+    """POST /pretest mit target_kind=bootstrapper legt ein bootstrapper-Spec an."""
+    monkeypatch.setattr("moag.manifest_admin._PANOPTICOR_OPEN_DIR", tmp_path)
+    store = _make_store()
+    _patch_async_client(monkeypatch, post_responses={}, get_responses={
+        "/api/v1/seti/bootstrapper/versions": {
+            "versions": ["0.3.9-rc5"],
+            "default": "0.3.8-rc4",
+            "overrides": {},
+        },
+        "/seti/nodes": {"nodes": [{"node_id": "n1"}]},
+    })
+    app = create_app(settings_store=store, enable_pipeline=False)
+    client = TestClient(app)
+    r = client.post(
+        "/api/v1/manifest/admin/pretest",
+        json={"target_version": "0.3.9-rc5", "target_kind": "bootstrapper"},
+    )
+    assert r.status_code == 200
+    spec_path = Path(r.json()["spec_path"])
+    assert spec_path.exists()
+    text = spec_path.read_text(encoding="utf-8")
+    assert "bootstrapper" in text.lower()
+    assert "0.3.9-rc5" in text

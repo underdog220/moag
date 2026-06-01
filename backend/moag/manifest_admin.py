@@ -2,8 +2,15 @@
 
 Wraps OctoBoss-Bearer-geschuetzte Endpoints:
 
-  POST /api/v1/admin/seti/core/default      ← Default-Version global setzen
-  POST /api/v1/admin/seti/core/override     ← Per-Node-Override setzen/loeschen
+  POST /api/v1/admin/seti/core/default               ← Core-Default-Version global setzen
+  POST /api/v1/admin/seti/core/override              ← Core-Per-Node-Override setzen/loeschen
+  POST /api/v1/admin/seti/bootstrapper/default       ← Bootstrapper-Default-Version global setzen
+  POST /api/v1/admin/seti/bootstrapper/override      ← Bootstrapper-Per-Node-Override setzen/loeschen
+
+Bootstrapper-Pendant ist symmetrisch zum Core-Pfad (OctoBoss-CR
+2026-05-23-bootstrapper-admin-api). Wire-Format der Upstream-Endpoints:
+siehe `seti_bootstrapper_admin.py` in OctoBoss — Default-Setter antwortet mit
+`{ok, default_version}`, Override mit `{ok, node_id, version|override_removed}`.
 
 Plus zwei MOAG-eigene Hilfs-Endpoints:
 
@@ -155,16 +162,44 @@ async def _proxy_admin_post(
     return resp.status_code, data
 
 
-async def set_core_default(
+# Erlaubte Manifest-Ziele. Das Upstream-Pfad-Segment ist identisch zum Wert.
+_VALID_TARGET_KINDS = ("core", "bootstrapper")
+
+
+def _admin_default_path(target_kind: str) -> str:
+    """Upstream-Pfad fuer den Default-Setter je Ziel.
+
+    core         → /api/v1/admin/seti/core/default
+    bootstrapper → /api/v1/admin/seti/bootstrapper/default
+    """
+    return f"/api/v1/admin/seti/{target_kind}/default"
+
+
+def _admin_override_path(target_kind: str) -> str:
+    """Upstream-Pfad fuer den Override-Setter je Ziel."""
+    return f"/api/v1/admin/seti/{target_kind}/override"
+
+
+async def set_default(
     settings_store: SettingsStore,
     body: SetDefaultBody,
+    target_kind: str = "core",
 ) -> tuple[int, dict[str, Any]]:
-    """POST /api/v1/admin/seti/core/default (Bearer).
+    """POST /api/v1/admin/seti/{target_kind}/default (Bearer).
+
+    target_kind: "core" | "bootstrapper" — bestimmt das Upstream-Manifest.
 
     Pretest-Pflicht: body.pretest_run_id MUSS gesetzt sein und auf einen
     GREEN Pretest verweisen (Hart-Block — wird hier nicht inhaltlich geprueft,
     nur referenziert. Frontend verhindert den Aufruf solange Pretest != GREEN).
+
+    Hinweis Wire-Format: Der OctoBoss-Bootstrapper-Default-Setter antwortet mit
+    {ok, default_version} (NICHT previous_default/new_default — das stand zwar
+    im CR-Text, die Implementierung in seti_bootstrapper_admin.py weicht ab).
+    Diese Funktion reicht die Upstream-Antwort 1:1 durch.
     """
+    if target_kind not in _VALID_TARGET_KINDS:
+        raise ValueError(f"target_kind muss core|bootstrapper sein (got: {target_kind})")
     if not body.pretest_run_id:
         return 412, {
             "error": "precondition_failed",
@@ -174,40 +209,75 @@ async def set_core_default(
     token = get_admin_token(settings_store)
     return await _proxy_admin_post(
         hub_url=hub_url,
-        path="/api/v1/admin/seti/core/default",
+        path=_admin_default_path(target_kind),
         token=token,
         body={"version": body.version},
     )
+
+
+async def set_override(
+    settings_store: SettingsStore,
+    body: SetOverrideBody,
+    target_kind: str = "core",
+) -> tuple[int, dict[str, Any]]:
+    """POST /api/v1/admin/seti/{target_kind}/override mit version=<string>."""
+    if target_kind not in _VALID_TARGET_KINDS:
+        raise ValueError(f"target_kind muss core|bootstrapper sein (got: {target_kind})")
+    hub_url, _hid = resolve_hub(settings_store, body.hub_id)
+    token = get_admin_token(settings_store)
+    return await _proxy_admin_post(
+        hub_url=hub_url,
+        path=_admin_override_path(target_kind),
+        token=token,
+        body={"node_id": body.node_id, "version": body.version},
+    )
+
+
+async def delete_override(
+    settings_store: SettingsStore,
+    body: DeleteOverrideBody,
+    target_kind: str = "core",
+) -> tuple[int, dict[str, Any]]:
+    """POST /api/v1/admin/seti/{target_kind}/override mit version=null (Loeschen)."""
+    if target_kind not in _VALID_TARGET_KINDS:
+        raise ValueError(f"target_kind muss core|bootstrapper sein (got: {target_kind})")
+    hub_url, _hid = resolve_hub(settings_store, body.hub_id)
+    token = get_admin_token(settings_store)
+    return await _proxy_admin_post(
+        hub_url=hub_url,
+        path=_admin_override_path(target_kind),
+        token=token,
+        body={"node_id": body.node_id, "version": None},
+    )
+
+
+# ---------------------------------------------------------------------------
+# Backward-Compat-Wrapper (Core-spezifisch — bestehende Aufrufer + Tests)
+# ---------------------------------------------------------------------------
+
+
+async def set_core_default(
+    settings_store: SettingsStore,
+    body: SetDefaultBody,
+) -> tuple[int, dict[str, Any]]:
+    """Core-Variante von set_default (Backward-Compat)."""
+    return await set_default(settings_store, body, target_kind="core")
 
 
 async def set_core_override(
     settings_store: SettingsStore,
     body: SetOverrideBody,
 ) -> tuple[int, dict[str, Any]]:
-    """POST /api/v1/admin/seti/core/override mit version=<string>."""
-    hub_url, _hid = resolve_hub(settings_store, body.hub_id)
-    token = get_admin_token(settings_store)
-    return await _proxy_admin_post(
-        hub_url=hub_url,
-        path="/api/v1/admin/seti/core/override",
-        token=token,
-        body={"node_id": body.node_id, "version": body.version},
-    )
+    """Core-Variante von set_override (Backward-Compat)."""
+    return await set_override(settings_store, body, target_kind="core")
 
 
 async def delete_core_override(
     settings_store: SettingsStore,
     body: DeleteOverrideBody,
 ) -> tuple[int, dict[str, Any]]:
-    """POST /api/v1/admin/seti/core/override mit version=null (Loeschen)."""
-    hub_url, _hid = resolve_hub(settings_store, body.hub_id)
-    token = get_admin_token(settings_store)
-    return await _proxy_admin_post(
-        hub_url=hub_url,
-        path="/api/v1/admin/seti/core/override",
-        token=token,
-        body={"node_id": body.node_id, "version": None},
-    )
+    """Core-Variante von delete_override (Backward-Compat)."""
+    return await delete_override(settings_store, body, target_kind="core")
 
 
 # ---------------------------------------------------------------------------
@@ -215,23 +285,41 @@ async def delete_core_override(
 # ---------------------------------------------------------------------------
 
 
+def _versions_endpoint(target_kind: str) -> str:
+    """Read-Only-Versions-Endpoint je Ziel (offen, kein Auth).
+
+    core         → /api/v1/seti/core/versions
+    bootstrapper → /api/v1/seti/bootstrapper/versions
+
+    Beide liefern dasselbe Schema {versions[], default, overrides{}, ...}.
+    """
+    return f"/api/v1/seti/{target_kind}/versions"
+
+
 async def compute_default_impact(
     settings_store: SettingsStore,
     target_version: str,
     hub_id: Optional[str],
+    target_kind: str = "core",
 ) -> ImpactPreview:
     """Berechnet Betroffenheit eines Default-Tauschs.
 
     Zaehlt Nodes mit/ohne Override gegen den gewaehlten Hub. Nodes OHNE
     Override werden beim Default-Tausch umgestellt; Nodes MIT Override
     bleiben auf der gepinnten Version.
+
+    target_kind: "core" | "bootstrapper" — bestimmt die Versions-Quelle.
+    Beide Versions-Endpoints liefern dasselbe Schema (versions/default/overrides).
     """
+    if target_kind not in _VALID_TARGET_KINDS:
+        raise ValueError(f"target_kind muss core|bootstrapper sein (got: {target_kind})")
     hub_url, resolved_id = resolve_hub(settings_store, hub_id)
+    versions_path = _versions_endpoint(target_kind)
 
     async with httpx.AsyncClient(timeout=_PROXY_TIMEOUT_S) as client:
-        # 1) /core/versions fuer Overrides + aktuelle Default
+        # 1) /{kind}/versions fuer Overrides + aktuelle Default
         try:
-            v_resp = await client.get(f"{hub_url}/api/v1/seti/core/versions")
+            v_resp = await client.get(f"{hub_url}{versions_path}")
             v_data = v_resp.json() if v_resp.is_success else {}
         except (httpx.HTTPError, ValueError):
             v_data = {}

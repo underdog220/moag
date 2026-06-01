@@ -2,13 +2,20 @@
 
 Prefix: /api/v1/manifest/admin
 
-  POST /core/default               ← Body: {version, hub_id?, pretest_run_id}
-  POST /core/override              ← Body: {node_id, version, hub_id?}
-  POST /core/override/delete       ← Body: {node_id, hub_id?}
-  GET  /core/default/impact        ← ?version=...&hub_id=...
-  POST /pretest                    ← Body: {target_version, hub_id?, target_kind?}
-  POST /pretest-callback           ← Body: {spec_id, verdict, details?}
-  GET  /pretest/{spec_id}          ← liest aktuellen Status (pending|green|red)
+  POST /core/default                  ← Body: {version, hub_id?, pretest_run_id}
+  POST /core/override                 ← Body: {node_id, version, hub_id?}
+  POST /core/override/delete          ← Body: {node_id, hub_id?}
+  GET  /core/default/impact           ← ?version=...&hub_id=...
+  POST /bootstrapper/default          ← Body: {version, hub_id?, pretest_run_id}
+  POST /bootstrapper/override         ← Body: {node_id, version, hub_id?}
+  POST /bootstrapper/override/delete  ← Body: {node_id, hub_id?}
+  GET  /bootstrapper/default/impact   ← ?version=...&hub_id=...
+  POST /pretest                       ← Body: {target_version, hub_id?, target_kind?}
+  POST /pretest-callback              ← Body: {spec_id, verdict, details?}
+  GET  /pretest/{spec_id}             ← liest aktuellen Status (pending|green|red)
+
+Core- und Bootstrapper-Pfad sind symmetrisch. Bootstrapper-Pendant wurde mit
+OctoBoss-CR 2026-05-23-bootstrapper-admin-api freigeschaltet.
 """
 from __future__ import annotations
 
@@ -27,9 +34,9 @@ from .manifest_admin import (
     PretestBody,
     compute_default_impact,
     create_pretest_spec,
-    delete_core_override,
-    set_core_default,
-    set_core_override,
+    delete_override,
+    set_default,
+    set_override,
 )
 from .settings_store import SettingsStore
 
@@ -86,11 +93,26 @@ class PretestCallbackBody(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def build_manifest_admin_router(settings_store: SettingsStore) -> APIRouter:
-    router = APIRouter(prefix="/api/v1/manifest/admin", tags=["manifest-admin"])
+def _register_target_routes(
+    router: APIRouter,
+    settings_store: SettingsStore,
+    target_kind: str,
+) -> None:
+    """Registriert die vier Admin-Routen fuer ein Manifest-Ziel.
 
-    @router.get("/core/default/impact")
-    async def core_default_impact(
+    target_kind: "core" | "bootstrapper". Erzeugt Pfade unter
+    /{target_kind}/default, /{target_kind}/override,
+    /{target_kind}/override/delete und /{target_kind}/default/impact.
+
+    Core und Bootstrapper sind verhaltensgleich (Pretest-Hart-Block beim
+    Default-Tausch, Pinning ohne Pretest).
+    """
+
+    @router.get(
+        f"/{target_kind}/default/impact",
+        name=f"{target_kind}_default_impact",
+    )
+    async def default_impact(
         version: str = Query(..., min_length=1),
         hub_id: Optional[str] = Query(default=None),
     ) -> dict:
@@ -103,13 +125,14 @@ def build_manifest_admin_router(settings_store: SettingsStore) -> APIRouter:
                 settings_store=settings_store,
                 target_version=version,
                 hub_id=hub_id,
+                target_kind=target_kind,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         return impact.model_dump()
 
-    @router.post("/core/default")
-    async def core_set_default(body: SetDefaultBody) -> dict:
+    @router.post(f"/{target_kind}/default", name=f"{target_kind}_set_default")
+    async def set_default_route(body: SetDefaultBody) -> dict:
         """Setzt default_version global auf dem Hub.
 
         Pretest-Pflicht: body.pretest_run_id muss auf einen GREEN-Run zeigen.
@@ -134,7 +157,7 @@ def build_manifest_admin_router(settings_store: SettingsStore) -> APIRouter:
             )
 
         try:
-            status, data = await set_core_default(settings_store, body)
+            status, data = await set_default(settings_store, body, target_kind=target_kind)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         except RuntimeError as exc:
@@ -143,11 +166,11 @@ def build_manifest_admin_router(settings_store: SettingsStore) -> APIRouter:
             raise HTTPException(status_code=status, detail=data)
         return {"ok": True, "upstream": data, "pretest_run_id": body.pretest_run_id}
 
-    @router.post("/core/override")
-    async def core_set_override(body: SetOverrideBody) -> dict:
+    @router.post(f"/{target_kind}/override", name=f"{target_kind}_set_override")
+    async def set_override_route(body: SetOverrideBody) -> dict:
         """Setzt Override (Node-Pinning)."""
         try:
-            status, data = await set_core_override(settings_store, body)
+            status, data = await set_override(settings_store, body, target_kind=target_kind)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         except RuntimeError as exc:
@@ -156,11 +179,11 @@ def build_manifest_admin_router(settings_store: SettingsStore) -> APIRouter:
             raise HTTPException(status_code=status, detail=data)
         return {"ok": True, "upstream": data}
 
-    @router.post("/core/override/delete")
-    async def core_delete_override(body: DeleteOverrideBody) -> dict:
+    @router.post(f"/{target_kind}/override/delete", name=f"{target_kind}_delete_override")
+    async def delete_override_route(body: DeleteOverrideBody) -> dict:
         """Loescht Node-Override (Pinning entfernen)."""
         try:
-            status, data = await delete_core_override(settings_store, body)
+            status, data = await delete_override(settings_store, body, target_kind=target_kind)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         except RuntimeError as exc:
@@ -168,6 +191,14 @@ def build_manifest_admin_router(settings_store: SettingsStore) -> APIRouter:
         if status >= 400:
             raise HTTPException(status_code=status, detail=data)
         return {"ok": True, "upstream": data}
+
+
+def build_manifest_admin_router(settings_store: SettingsStore) -> APIRouter:
+    router = APIRouter(prefix="/api/v1/manifest/admin", tags=["manifest-admin"])
+
+    # Symmetrische Routen fuer beide Manifest-Ziele
+    _register_target_routes(router, settings_store, "core")
+    _register_target_routes(router, settings_store, "bootstrapper")
 
     @router.post("/pretest")
     async def pretest_start(body: PretestBody) -> dict:
@@ -176,11 +207,14 @@ def build_manifest_admin_router(settings_store: SettingsStore) -> APIRouter:
         Frontend pollt danach GET /pretest/{spec_id} bis verdict != "pending".
         """
         try:
-            # Impact-Vorschau einbinden, damit das Spec-File aussagekraeftig ist
+            # Impact-Vorschau einbinden, damit das Spec-File aussagekraeftig ist.
+            # target_kind durchreichen → liest /core/versions bzw.
+            # /bootstrapper/versions je nach Ziel.
             impact = await compute_default_impact(
                 settings_store=settings_store,
                 target_version=body.target_version,
                 hub_id=body.hub_id,
+                target_kind=body.target_kind,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc))

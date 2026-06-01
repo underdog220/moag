@@ -95,6 +95,25 @@ const INV_GREEN: HubInventory = {
   },
 };
 
+// Bootstrapper-Admin freigeschaltet (OctoBoss-CR 2026-05-23 durch):
+// supports_versions_api=true, mehrere Versionen, ein Override.
+const INV_BOOTSTRAPPER_ENABLED: HubInventory = {
+  ...INV_GREEN,
+  bootstrapper: {
+    default: "0.3.9-rc5",
+    versions: [
+      { version: "0.3.8-rc4" },
+      { version: "0.3.9-rc5" },
+    ],
+    overrides: [{ node_id: "22222222-2222-2222-2222-222222222222", version: "0.3.8-rc4" }],
+    supports_versions_api: true,
+    available: true,
+    sha256: "c".repeat(64),
+    size_bytes: 679000,
+    error: null,
+  },
+};
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 afterEach(() => vi.restoreAllMocks());
@@ -166,7 +185,8 @@ describe("ClusterIntentSection", () => {
 
 describe("ClusterIntentSection — Default-Tausch-Dialog", () => {
   beforeEach(() => {
-    vi.spyOn(apiModule.api.octoboss, "getCoreDefaultImpact").mockResolvedValue({
+    // Dialog ruft jetzt direkt getManifestDefaultImpact(target, ...).
+    vi.spyOn(apiModule.api.octoboss, "getManifestDefaultImpact").mockResolvedValue({
       target_version: "0.3.8-rc4",
       hub_id: "vdr",
       nodes_total: 2,
@@ -246,5 +266,92 @@ describe("ClusterIntentSection — Pin-Dialog", () => {
     await waitFor(() => {
       expect(document.querySelector('[data-testid="pin-unpin"]')).toBeTruthy();
     });
+  });
+});
+
+// ── Bootstrapper-Admin freigeschaltet (OctoBoss-CR 2026-05-23) ─────────────────
+
+describe("ClusterIntentSection — Bootstrapper entsperrt", () => {
+  it("zeigt KEIN 'CR pending' wenn supports_versions_api=true", () => {
+    render(wrap(<ClusterIntentSection inventory={INV_BOOTSTRAPPER_ENABLED} hubId="vdr" />));
+    const body = document.body.textContent ?? "";
+    // Core ist im Fixture supports_versions_api=true, Bootstrapper jetzt auch
+    // ⇒ nirgends mehr "CR pending"
+    expect(body).not.toContain("CR pending");
+    expect(body).not.toContain("2026-05-23-bootstrapper-admin-api");
+  });
+
+  it("zeigt 'wartet auf CR'-Hinweis nur fuer alte Hubs (supports_versions_api=false)", () => {
+    // INV_GREEN hat bootstrapper.supports_versions_api=false (alter Hub)
+    render(wrap(<ClusterIntentSection inventory={INV_GREEN} hubId="vdr" />));
+    expect(document.body.textContent ?? "").toContain("CR pending");
+  });
+
+  it("Bootstrapper-Versionen bekommen Default-Tausch-Button wenn freigeschaltet", () => {
+    render(wrap(<ClusterIntentSection inventory={INV_BOOTSTRAPPER_ENABLED} hubId="vdr" />));
+    // Bootstrapper-Liste aufklappen (2 Versionen → eingeklappt)
+    const toggle = document.querySelector(
+      '[data-testid="versions-toggle-bootstrapper-versionen"]',
+    ) as HTMLElement;
+    expect(toggle).toBeTruthy();
+    fireEvent.click(toggle);
+    // Default-Tausch-Button fuer die Nicht-Default-Version 0.3.8-rc4
+    const btn = document.querySelector('[data-testid="versions-set-default-0.3.8-rc4"]');
+    expect(btn).toBeTruthy();
+  });
+
+  it("Bootstrapper-Default-Tausch ruft getManifestDefaultImpact('bootstrapper', ...)", async () => {
+    const impactSpy = vi
+      .spyOn(apiModule.api.octoboss, "getManifestDefaultImpact")
+      .mockResolvedValue({
+        target_version: "0.3.8-rc4",
+        hub_id: "vdr",
+        nodes_total: 2,
+        nodes_affected: 1,
+        nodes_pinned: 1,
+        overrides: [],
+        current_default: "0.3.9-rc5",
+      });
+
+    render(wrap(<ClusterIntentSection inventory={INV_BOOTSTRAPPER_ENABLED} hubId="vdr" />));
+    fireEvent.click(
+      document.querySelector('[data-testid="versions-toggle-bootstrapper-versionen"]') as HTMLElement,
+    );
+    fireEvent.click(
+      document.querySelector('[data-testid="versions-set-default-0.3.8-rc4"]') as HTMLElement,
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-testid="default-flip-impact"]')).toBeTruthy();
+    });
+    // Erstes Argument muss "bootstrapper" sein
+    expect(impactSpy).toHaveBeenCalledWith("bootstrapper", "0.3.8-rc4", "vdr");
+    expect(document.body.textContent ?? "").toContain("Bootstrapper-Default-Version global tauschen");
+  });
+
+  it("Bootstrapper-Pin-Dialog setzt Override via setManifestOverride('bootstrapper', ...)", async () => {
+    const setSpy = vi
+      .spyOn(apiModule.api.octoboss, "setManifestOverride")
+      .mockResolvedValue({ ok: true });
+
+    render(wrap(<ClusterIntentSection inventory={INV_BOOTSTRAPPER_ENABLED} hubId="vdr" />));
+    // Es gibt zwei Override-Tabellen (Core + Bootstrapper) mit gleicher node_id.
+    // Die Bootstrapper-Tabelle ist die zweite — querySelectorAll und [1] nehmen.
+    const pinBtns = document.querySelectorAll(
+      '[data-testid="override-pin-11111111-1111-1111-1111-111111111111"]',
+    );
+    // ryzen (node-a) ist im Bootstrapper NICHT gepinnt → "festverankern" in beiden Tabellen
+    expect(pinBtns.length).toBe(2);
+    fireEvent.click(pinBtns[1] as HTMLElement); // Bootstrapper-Tabelle
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-testid="pin-version-select"]')).toBeTruthy();
+    });
+    fireEvent.click(document.querySelector('[data-testid="pin-apply"]') as HTMLElement);
+
+    await waitFor(() => {
+      expect(setSpy).toHaveBeenCalled();
+    });
+    expect(setSpy.mock.calls[0][0]).toBe("bootstrapper");
   });
 });

@@ -575,12 +575,22 @@ export const api = {
     getManifestInventory: (): Promise<unknown> =>
       request<unknown>("/v1/manifest/inventory"),
 
-    /** GET /api/v1/manifest/admin/core/default/impact — Vorschau des Default-Tauschs. */
-    getCoreDefaultImpact: (version: string, hubId?: string): Promise<unknown> => {
+    /** GET /api/v1/manifest/admin/{target}/default/impact — Vorschau des Default-Tauschs.
+     *  target = "core" | "bootstrapper" (symmetrische Pfade seit OctoBoss-CR
+     *  2026-05-23-bootstrapper-admin-api). */
+    getManifestDefaultImpact: (
+      target: "core" | "bootstrapper",
+      version: string,
+      hubId?: string,
+    ): Promise<unknown> => {
       const p = new URLSearchParams({ version });
       if (hubId) p.set("hub_id", hubId);
-      return request<unknown>(`/v1/manifest/admin/core/default/impact?${p.toString()}`);
+      return request<unknown>(`/v1/manifest/admin/${target}/default/impact?${p.toString()}`);
     },
+
+    /** GET /api/v1/manifest/admin/core/default/impact — Backward-Compat-Wrapper. */
+    getCoreDefaultImpact: (version: string, hubId?: string): Promise<unknown> =>
+      api.octoboss.getManifestDefaultImpact("core", version, hubId),
 
     /** POST /api/v1/manifest/admin/pretest — Panopticor-Spec-File anlegen. */
     startManifestPretest: (body: { target_version: string; hub_id?: string; target_kind?: string }): Promise<unknown> =>
@@ -590,17 +600,38 @@ export const api = {
     getManifestPretestStatus: (specId: string): Promise<unknown> =>
       request<unknown>(`/v1/manifest/admin/pretest/${encodeURIComponent(specId)}`),
 
-    /** POST /api/v1/manifest/admin/core/default — Default-Tausch (Pretest-Pflicht). */
+    /** POST /api/v1/manifest/admin/{target}/default — Default-Tausch (Pretest-Pflicht). */
+    setManifestDefault: (
+      target: "core" | "bootstrapper",
+      body: { version: string; hub_id?: string; pretest_run_id: string },
+    ): Promise<unknown> =>
+      request<unknown>(`/v1/manifest/admin/${target}/default`, { method: "POST", body }),
+
+    /** POST /api/v1/manifest/admin/{target}/override — Node-Pinning setzen. */
+    setManifestOverride: (
+      target: "core" | "bootstrapper",
+      body: { node_id: string; version: string; hub_id?: string },
+    ): Promise<unknown> =>
+      request<unknown>(`/v1/manifest/admin/${target}/override`, { method: "POST", body }),
+
+    /** POST /api/v1/manifest/admin/{target}/override/delete — Node-Pinning loeschen. */
+    deleteManifestOverride: (
+      target: "core" | "bootstrapper",
+      body: { node_id: string; hub_id?: string },
+    ): Promise<unknown> =>
+      request<unknown>(`/v1/manifest/admin/${target}/override/delete`, { method: "POST", body }),
+
+    /** POST /api/v1/manifest/admin/core/default — Backward-Compat-Wrapper. */
     setCoreDefault: (body: { version: string; hub_id?: string; pretest_run_id: string }): Promise<unknown> =>
-      request<unknown>("/v1/manifest/admin/core/default", { method: "POST", body }),
+      api.octoboss.setManifestDefault("core", body),
 
-    /** POST /api/v1/manifest/admin/core/override — Node-Pinning setzen. */
+    /** POST /api/v1/manifest/admin/core/override — Backward-Compat-Wrapper. */
     setCoreOverride: (body: { node_id: string; version: string; hub_id?: string }): Promise<unknown> =>
-      request<unknown>("/v1/manifest/admin/core/override", { method: "POST", body }),
+      api.octoboss.setManifestOverride("core", body),
 
-    /** POST /api/v1/manifest/admin/core/override/delete — Node-Pinning loeschen. */
+    /** POST /api/v1/manifest/admin/core/override/delete — Backward-Compat-Wrapper. */
     deleteCoreOverride: (body: { node_id: string; hub_id?: string }): Promise<unknown> =>
-      request<unknown>("/v1/manifest/admin/core/override/delete", { method: "POST", body }),
+      api.octoboss.deleteManifestOverride("core", body),
 
     /** GET /api/v1/octoboss/benchmarks/matrix — Benchmark-Matrix (subjects x nodes, sparse).
      *  Antwort-Schema: {subjects, nodes, matrix} — fehlende Zellen sind undefined (sparse). */

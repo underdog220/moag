@@ -4,12 +4,14 @@ Ergaenzung zum reinen Health-Check (manifest_health.py): liefert nicht nur
 "ist es gruen?", sondern den vollstaendigen Soll-Zustand:
 
   - Core: default-Version + alle bekannten Versionen + Node-Overrides
-  - Bootstrapper: heute nur default (versions[] folgt nach OctoBoss-CR
-    2026-05-23-bootstrapper-admin-api)
+  - Bootstrapper: default + Versionen + Node-Overrides via
+    /api/v1/seti/bootstrapper/versions (OctoBoss-CR 2026-05-23 umgesetzt);
+    Fallback auf /seti/distribute/info fuer alte Hubs
   - Modules: pro Node installierte SonOfSETI-Module + Versionen + Drift-Sicht
 
 Daten-Quellen pro Hub (parallel, jeweils Timeout 5s):
   GET /api/v1/seti/core/versions
+  GET /api/v1/seti/bootstrapper/versions
   GET /seti/distribute/info
   GET /seti/nodes?include_test_nodes=true
 
@@ -158,16 +160,16 @@ async def _gather_core(
 # Bootstrapper-Manifest
 # ---------------------------------------------------------------------------
 
-async def _gather_bootstrapper(
+async def _gather_bootstrapper_legacy_info(
     hub_base: str,
     client: httpx.AsyncClient,
 ) -> dict[str, Any]:
-    """Liefert Bootstrapper-Block fuer einen Hub.
+    """Fallback: GET /seti/distribute/info (default + sha + size + available).
 
-    Heute nur GET /seti/distribute/info (default + sha + size + available).
-    Versions-Liste + Overrides folgen nach OctoBoss-CR
-    2026-05-23-bootstrapper-admin-api — bis dahin leer und
-    supports_versions_api=False.
+    Genutzt, wenn der Hub die neue /api/v1/seti/bootstrapper/versions-API
+    (OctoBoss-CR 2026-05-23) noch nicht hat. Liefert nur die default-Version
+    ohne echte Versions-Liste/Overrides — supports_versions_api=False,
+    cr_pending bleibt gesetzt.
     """
     info_url = f"{hub_base}/seti/distribute/info"
     payload, err = await _fetch_json(client, info_url, "bootstrapper.info")
@@ -218,6 +220,90 @@ async def _gather_bootstrapper(
         "available": bool(boot_bin.get("available", default_version != "")),
         "sha256": str(sha or ""),
         "size_bytes": int(size or 0),
+        "error": None,
+    }
+
+
+async def _gather_bootstrapper(
+    hub_base: str,
+    client: httpx.AsyncClient,
+) -> dict[str, Any]:
+    """Liefert Bootstrapper-Block fuer einen Hub.
+
+    Primaer GET /api/v1/seti/bootstrapper/versions (OctoBoss-CR
+    2026-05-23-bootstrapper-admin-api): liefert versions[], default,
+    overrides{}, asset_inventory_versions[]. Symmetrisch zu /core/versions.
+    supports_versions_api=True ⇒ MOAG-Frontend schaltet Admin-Aktionen frei.
+
+    Fallback (Hub ohne den Endpoint, z.B. alter NAS-Hub): /seti/distribute/info
+    via _gather_bootstrapper_legacy_info — dann supports_versions_api=False
+    und cr_pending bleibt gesetzt.
+
+    Wire-Format-Hinweis: /bootstrapper/versions liefert nur Versions-Strings
+    (keine SHA/size pro Version) — genau wie /core/versions. sha256/size_bytes
+    auf Block-Ebene werden best-effort aus /seti/distribute/info ergaenzt.
+    """
+    versions_url = f"{hub_base}/api/v1/seti/bootstrapper/versions"
+    payload, err = await _fetch_json(client, versions_url, "bootstrapper.versions")
+
+    if err is not None or not isinstance(payload, dict):
+        # Endpoint fehlt (alter Hub) → Legacy-Fallback
+        return await _gather_bootstrapper_legacy_info(hub_base, client)
+
+    raw_versions = payload.get("versions") or []
+    raw_overrides = payload.get("overrides") or {}
+    if isinstance(raw_overrides, dict):
+        overrides = sorted(
+            (
+                {"node_id": str(k), "version": str(v)}
+                for k, v in raw_overrides.items()
+                if isinstance(v, str)
+            ),
+            key=lambda x: x["node_id"],
+        )
+    else:
+        overrides = []
+
+    # /bootstrapper/versions liefert nur Strings (analog /core/versions).
+    versions_list = [
+        {"version": str(v)}
+        for v in raw_versions
+        if isinstance(v, str)
+    ]
+
+    default_version = str(payload.get("default") or "")
+
+    # SHA/size der aufgeloesten default-Version best-effort aus /distribute/info
+    # nachladen (die Versions-API liefert die nicht).
+    sha = ""
+    size = 0
+    available = bool(default_version)
+    info_payload, info_err = await _fetch_json(
+        client, f"{hub_base}/seti/distribute/info", "bootstrapper.info"
+    )
+    if info_err is None and isinstance(info_payload, dict):
+        binaries = info_payload.get("binaries") or {}
+        boot_bin = binaries.get("bootstrapper") if isinstance(binaries, dict) else {}
+        if not isinstance(boot_bin, dict):
+            boot_bin = {}
+        sha = str(boot_bin.get("sha256") or info_payload.get("bootstrapper_sha256", "") or "")
+        size = int(
+            boot_bin.get("size")
+            or boot_bin.get("size_bytes")
+            or info_payload.get("bootstrapper_size_bytes", 0)
+            or 0
+        )
+        available = bool(boot_bin.get("available", default_version != ""))
+
+    return {
+        "default": default_version,
+        "versions": versions_list,
+        "overrides": overrides,
+        "supports_versions_api": True,
+        # CR ist umgesetzt — kein cr_pending mehr
+        "available": available,
+        "sha256": sha,
+        "size_bytes": size,
         "error": None,
     }
 

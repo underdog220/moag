@@ -107,8 +107,13 @@ export interface ManifestInventoryAll {
 
 type Verdict = "pending" | "green" | "red";
 
+// Manifest-Ziel: Core- oder Bootstrapper-Manifest. Steuert Endpoint-Pfade
+// (/api/v1/manifest/admin/<target>/*) und Pretest target_kind.
+export type ManifestTarget = "core" | "bootstrapper";
+
 interface DefaultFlipDialogProps {
   open: boolean;
+  target: ManifestTarget;
   hubId: string;
   targetVersion: string;
   currentDefault: string;
@@ -135,6 +140,7 @@ interface PretestStatusData {
 
 function DefaultFlipDialog({
   open,
+  target,
   hubId,
   targetVersion,
   currentDefault,
@@ -147,9 +153,9 @@ function DefaultFlipDialog({
 
   // 1) Impact-Vorschau
   const impact = useQuery({
-    queryKey: ["manifest", "impact", hubId, targetVersion],
+    queryKey: ["manifest", "impact", target, hubId, targetVersion],
     queryFn: () =>
-      api.octoboss.getCoreDefaultImpact(targetVersion, hubId) as Promise<ImpactPreviewData>,
+      api.octoboss.getManifestDefaultImpact(target, targetVersion, hubId) as Promise<ImpactPreviewData>,
     enabled: open,
     refetchOnWindowFocus: false,
   });
@@ -171,7 +177,7 @@ function DefaultFlipDialog({
       api.octoboss.startManifestPretest({
         target_version: targetVersion,
         hub_id: hubId,
-        target_kind: "core",
+        target_kind: target,
       }) as Promise<PretestStatusData>,
     onSuccess: (data) => setSpecId(data.spec_id),
   });
@@ -179,7 +185,7 @@ function DefaultFlipDialog({
   // 4) Apply (Default-Tausch)
   const apply = useMutation({
     mutationFn: () =>
-      api.octoboss.setCoreDefault({
+      api.octoboss.setManifestDefault(target, {
         version: targetVersion,
         hub_id: hubId,
         pretest_run_id: specId!,
@@ -214,7 +220,7 @@ function DefaultFlipDialog({
         <div className="flex items-center gap-3 rounded-t-xl border-b border-white/10 bg-status-error/10 px-5 py-4">
           <span aria-hidden="true" className="text-xl text-status-error">⚠</span>
           <h2 id="default-flip-title" className="text-base font-semibold text-status-error">
-            Default-Version global tauschen
+            {target === "bootstrapper" ? "Bootstrapper" : "Core"}-Default-Version global tauschen
           </h2>
         </div>
 
@@ -242,13 +248,13 @@ function DefaultFlipDialog({
                   <p className="text-2xl font-bold tabular-nums text-fg">{impact.data.nodes_total}</p>
                 </div>
                 <div>
-                  <Tooltip title="Diese Nodes haben kein Override und werden auf die neue Default-Version umgestellt." source="/api/v1/manifest/admin/core/default/impact">
+                  <Tooltip title="Diese Nodes haben kein Override und werden auf die neue Default-Version umgestellt." source={`/api/v1/manifest/admin/${target}/default/impact`}>
                     <p className="cursor-help text-xs text-status-warn">Werden umgestellt</p>
                   </Tooltip>
                   <p className="text-2xl font-bold tabular-nums text-status-warn">{impact.data.nodes_affected}</p>
                 </div>
                 <div>
-                  <Tooltip title="Diese Nodes haben einen Override gesetzt und bleiben auf ihrer gepinnten Version." source="/api/v1/manifest/admin/core/default/impact">
+                  <Tooltip title="Diese Nodes haben einen Override gesetzt und bleiben auf ihrer gepinnten Version." source={`/api/v1/manifest/admin/${target}/default/impact`}>
                     <p className="cursor-help text-xs text-fg-subtle">Gepinnt (bleiben)</p>
                   </Tooltip>
                   <p className="text-2xl font-bold tabular-nums text-fg-subtle">{impact.data.nodes_pinned}</p>
@@ -360,6 +366,7 @@ function DefaultFlipDialog({
 
 interface PinDialogProps {
   open: boolean;
+  target: ManifestTarget;
   hubId: string;
   nodeId: string;
   currentPin: string | null;
@@ -367,12 +374,12 @@ interface PinDialogProps {
   onClose: () => void;
 }
 
-function PinDialog({ open, hubId, nodeId, currentPin, availableVersions, onClose }: PinDialogProps) {
+function PinDialog({ open, target, hubId, nodeId, currentPin, availableVersions, onClose }: PinDialogProps) {
   const [version, setVersion] = useState(currentPin || availableVersions[0] || "");
   const queryClient = useQueryClient();
 
   const setPin = useMutation({
-    mutationFn: () => api.octoboss.setCoreOverride({ node_id: nodeId, version, hub_id: hubId }),
+    mutationFn: () => api.octoboss.setManifestOverride(target, { node_id: nodeId, version, hub_id: hubId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["octoboss", "manifest-inventory"] });
       onClose();
@@ -380,7 +387,7 @@ function PinDialog({ open, hubId, nodeId, currentPin, availableVersions, onClose
   });
 
   const unpin = useMutation({
-    mutationFn: () => api.octoboss.deleteCoreOverride({ node_id: nodeId, hub_id: hubId }),
+    mutationFn: () => api.octoboss.deleteManifestOverride(target, { node_id: nodeId, hub_id: hubId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["octoboss", "manifest-inventory"] });
       onClose();
@@ -465,6 +472,7 @@ function PinDialog({ open, hubId, nodeId, currentPin, availableVersions, onClose
 
 interface VersionsPanelProps {
   title: string;
+  target: ManifestTarget;
   hubId: string;
   currentDefault: string;
   versions: Array<{ version: string; sha256?: string; size_bytes?: number }>;
@@ -475,6 +483,7 @@ interface VersionsPanelProps {
 
 function VersionsPanel({
   title,
+  target,
   hubId,
   currentDefault,
   versions,
@@ -579,6 +588,7 @@ function VersionsPanel({
 
       <DefaultFlipDialog
         open={!!flipTarget}
+        target={target}
         hubId={hubId}
         targetVersion={flipTarget || ""}
         currentDefault={currentDefault}
@@ -593,6 +603,7 @@ function VersionsPanel({
 
 interface OverridesTableProps {
   title: string;
+  target: ManifestTarget;
   hubId: string;
   overrides: OverrideEntry[];
   availableVersions: string[];
@@ -603,6 +614,7 @@ interface OverridesTableProps {
 
 function OverridesTable({
   title,
+  target,
   hubId,
   overrides,
   availableVersions,
@@ -700,6 +712,7 @@ function OverridesTable({
 
       <PinDialog
         open={!!pinDialog}
+        target={target}
         hubId={hubId}
         nodeId={pinDialog?.nodeId || ""}
         currentPin={pinDialog?.current ?? null}
@@ -820,6 +833,7 @@ export function ClusterIntentSection({ inventory, hubId }: { inventory: HubInven
       {/* Core */}
       <VersionsPanel
         title="Core-Versionen"
+        target="core"
         hubId={hubId}
         currentDefault={inventory.core.default}
         versions={inventory.core.versions}
@@ -829,6 +843,7 @@ export function ClusterIntentSection({ inventory, hubId }: { inventory: HubInven
 
       <OverridesTable
         title="Core: Node-Pinning"
+        target="core"
         hubId={hubId}
         overrides={inventory.core.overrides}
         availableVersions={coreVersions}
@@ -836,9 +851,12 @@ export function ClusterIntentSection({ inventory, hubId }: { inventory: HubInven
         supportsAdmin={inventory.core.supports_versions_api}
       />
 
-      {/* Bootstrapper (heute disabled bis CR durch) */}
+      {/* Bootstrapper — seit OctoBoss-CR 2026-05-23 freigeschaltet.
+          supports_versions_api=true ⇒ Admin-Aktionen aktiv; alte Hubs ohne
+          die Versions-API liefern weiterhin false ⇒ Buttons disabled + CR-Hinweis. */}
       <VersionsPanel
         title="Bootstrapper-Versionen"
+        target="bootstrapper"
         hubId={hubId}
         currentDefault={inventory.bootstrapper.default}
         versions={inventory.bootstrapper.versions}
@@ -849,6 +867,7 @@ export function ClusterIntentSection({ inventory, hubId }: { inventory: HubInven
 
       <OverridesTable
         title="Bootstrapper: Node-Pinning"
+        target="bootstrapper"
         hubId={hubId}
         overrides={inventory.bootstrapper.overrides}
         availableVersions={inventory.bootstrapper.versions.map((v) => v.version)}

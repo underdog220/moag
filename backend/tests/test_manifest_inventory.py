@@ -222,6 +222,73 @@ async def test_gather_hub_inventory_glueck_pfad(monkeypatch: Any) -> None:
 
 
 @pytest.mark.asyncio
+async def test_gather_hub_inventory_bootstrapper_versions_api(monkeypatch: Any) -> None:
+    """Neuer Pfad: /api/v1/seti/bootstrapper/versions liefert versions+overrides.
+
+    supports_versions_api=True, cr_pending entfaellt, overrides werden gemappt.
+    """
+    _patch_async_client(monkeypatch, {
+        "/api/v1/seti/core/versions": {
+            "versions": ["0.3.9"],
+            "default": "0.3.9",
+            "overrides": {},
+            "asset_inventory_versions": [],
+        },
+        "/api/v1/seti/bootstrapper/versions": {
+            "versions": ["0.3.8-rc4", "0.3.9-rc5"],
+            "default": "0.3.9-rc5",
+            "overrides": {"22222222-2222-2222-2222-222222222222": "0.3.8-rc4"},
+            "asset_inventory_versions": [],
+        },
+        "/seti/distribute/info": {
+            "bootstrapper_version": "0.3.9-rc5",
+            "binaries": {"bootstrapper": {"available": True, "sha256": "d" * 64, "size": 679000}},
+        },
+        "/seti/nodes": {"nodes": []},
+    })
+
+    inv = await gather_hub_inventory("http://mock-hub:18765")
+    boot = inv["bootstrapper"]
+    assert boot["supports_versions_api"] is True
+    assert "cr_pending" not in boot
+    assert boot["default"] == "0.3.9-rc5"
+    assert len(boot["versions"]) == 2
+    assert {v["version"] for v in boot["versions"]} == {"0.3.8-rc4", "0.3.9-rc5"}
+    assert boot["overrides"] == [
+        {"node_id": "22222222-2222-2222-2222-222222222222", "version": "0.3.8-rc4"},
+    ]
+    # SHA/size best-effort aus /distribute/info nachgeladen
+    assert boot["sha256"] == "d" * 64
+    assert boot["size_bytes"] == 679000
+
+
+@pytest.mark.asyncio
+async def test_gather_hub_inventory_bootstrapper_versions_404_legacy_fallback(monkeypatch: Any) -> None:
+    """Alter Hub ohne /bootstrapper/versions → Legacy /seti/distribute/info."""
+    _patch_async_client(monkeypatch, {
+        "/api/v1/seti/core/versions": {
+            "versions": ["0.3.9"], "default": "0.3.9", "overrides": {}, "asset_inventory_versions": [],
+        },
+        "/api/v1/seti/bootstrapper/versions": None,  # 404 → Fallback
+        "/seti/distribute/info": {
+            "bootstrapper_version": "0.3.9-rc5",
+            "bootstrapper_sha256": "e" * 64,
+            "bootstrapper_size_bytes": 1234,
+            "binaries": {"bootstrapper": {"available": True}},
+        },
+        "/seti/nodes": {"nodes": []},
+    })
+
+    inv = await gather_hub_inventory("http://mock-hub:18765")
+    boot = inv["bootstrapper"]
+    assert boot["supports_versions_api"] is False
+    assert boot["cr_pending"] == "2026-05-23-bootstrapper-admin-api"
+    assert boot["default"] == "0.3.9-rc5"
+    assert boot["overrides"] == []
+    assert boot["sha256"] == "e" * 64
+
+
+@pytest.mark.asyncio
 async def test_gather_hub_inventory_core_versions_404_fallback(monkeypatch: Any) -> None:
     """Wenn /core/versions 404, Fallback auf /core/desired (nur default)."""
     _patch_async_client(monkeypatch, {
