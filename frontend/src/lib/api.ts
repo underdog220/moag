@@ -31,6 +31,7 @@ import type {
   AuditResponse,
   SmokeResponse,
   OverviewResponse,
+  AlertsResponse,
   ActionsResponse,
   ActionTriggerResponse,
   Upload,
@@ -333,6 +334,20 @@ export const api = {
   /** GET /api/v1/overview — Status aller 8 Sub-Systeme (Cockpit-Startseite). */
   getOverview: (): Promise<OverviewResponse> =>
     request<OverviewResponse>("/v1/overview"),
+
+  // ─── Alert-Center ──────────────────────────────────────────────────────────
+
+  /** GET /api/v1/alerts — aktive Alerts (critical + warning) mit Ack-Status. */
+  getAlerts: (): Promise<AlertsResponse> =>
+    request<AlertsResponse>("/v1/alerts"),
+
+  /** POST /api/v1/alerts/{key}/ack — Alert quittieren. */
+  ackAlert: (key: string): Promise<{ ok: boolean; alert_key: string; acknowledged: boolean }> =>
+    request(`/v1/alerts/${encodeURIComponent(key)}/ack`, { method: "POST" }),
+
+  /** POST /api/v1/alerts/{key}/unack — Quittierung aufheben. */
+  unackAlert: (key: string): Promise<{ ok: boolean; alert_key: string; acknowledged: boolean }> =>
+    request(`/v1/alerts/${encodeURIComponent(key)}/unack`, { method: "POST" }),
 
   // ─── Aktionen-API ────────────────────────────────────────────────────────────
 

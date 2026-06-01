@@ -269,11 +269,11 @@ export function TopBar(_props: TopBarProps) {
         {/* Alert-Counter */}
         {health.alert_count > 0 && (
           <Link
-            to="/"
+            to="/alerts"
             className="relative rounded border border-status-error/40 bg-status-error/10
                        px-3 py-2 text-xs text-status-error min-h-[44px] flex items-center
                        sm:min-h-0 sm:px-2 sm:py-1 hover:bg-status-error/20"
-            title={`${health.alert_count} aktive Alerts`}
+            title={`${health.alert_count} aktive Alerts — zum Alert-Center`}
             data-testid="alert-counter"
           >
             {health.alert_count} Alert{health.alert_count !== 1 ? "s" : ""}

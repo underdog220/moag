@@ -30,6 +30,13 @@ describe("TopBar", () => {
     expect(screen.getByTestId("overall-score")).toBeInTheDocument();
   });
 
+  it("Alert-Counter verlinkt auf das Alert-Center (/alerts)", () => {
+    render(<TopBar />, { wrapper });
+    // placeholderData (mockHealth) liefert alert_count=2 -> Counter sichtbar
+    const counter = screen.getByTestId("alert-counter");
+    expect(counter).toHaveAttribute("href", "/alerts");
+  });
+
   it("zeigt Versions-Badge aus /api/health (#2)", async () => {
     // fetch mocken: /api/health liefert Version, aggregator faellt auf Mock zurueck.
     const mockFetch = vi.fn(async (url: RequestInfo | URL) => {

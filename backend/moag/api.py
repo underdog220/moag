@@ -43,6 +43,7 @@ from fastapi.staticfiles import StaticFiles
 from .events import EventBus
 from .hub_client import HubClient
 from .job_store import JobStore, default_db_path
+from .alert_ack_store import AlertAckStore, default_ack_db_path
 from .models import (
     EdgeLogEntry,
     EdgeLogResponse,
@@ -131,6 +132,7 @@ def _safe_filename(name: str) -> str:
 def create_app(
     settings_store: SettingsStore | None = None,
     job_store: JobStore | None = None,
+    alert_ack_store: AlertAckStore | None = None,
     event_bus: EventBus | None = None,
     hub_client: HubClient | None = None,
     *,
@@ -144,6 +146,7 @@ def create_app(
     """
     settings_store = settings_store or SettingsStore(default_settings_path())
     job_store = job_store or JobStore(default_db_path())
+    alert_ack_store = alert_ack_store or AlertAckStore(default_ack_db_path())
     event_bus = event_bus or EventBus()
     hub_client = hub_client or HubClient(event_bus=event_bus)
 
@@ -210,6 +213,10 @@ def create_app(
                 pass
             try:
                 job_store.close()
+            except Exception:  # pragma: no cover
+                pass
+            try:
+                alert_ack_store.close()
             except Exception:  # pragma: no cover
                 pass
 
@@ -321,13 +328,16 @@ def create_app(
             "fetched_at": datetime.now(timezone.utc).isoformat(),
         }
 
-    # ── Aggregator ─────────────────────────────────────────────────────────
+    # ── Aggregator + Alerts (gemeinsame Status-Sammlung) ────────────────────
 
-    @app.get("/api/v1/aggregator/health")
-    async def get_aggregator_health() -> dict:
-        """Ruft alle Adapter auf und liefert Gruppen- + Gesamt-Score."""
+    async def _collect_statuses() -> "list[SystemStatus]":
+        """Ruft alle 7 Adapter parallel auf und liefert eine SystemStatus-Liste.
+
+        Gemeinsame Quelle fuer /aggregator/health und /alerts — ein kaputter
+        Adapter (Exception) wird zu einem ok=False-SystemStatus, bricht die
+        anderen nicht ab.
+        """
         from moag.schemas import SystemStatus
-        from moag.aggregator import compute_health
         from moag.adapters import (
             oberon as _oberon,
             octoboss as _octoboss,
@@ -370,6 +380,14 @@ def create_app(
                 ))
             else:
                 statuses.append(res)
+        return statuses
+
+    @app.get("/api/v1/aggregator/health")
+    async def get_aggregator_health() -> dict:
+        """Ruft alle Adapter auf und liefert Gruppen- + Gesamt-Score."""
+        from moag.aggregator import compute_health
+
+        statuses = await _collect_statuses()
 
         # compute_health liefert das interne Schema (groups als Dict ki_backbone/infra/..,
         # systems als string-Liste). Das Frontend (TopBar.tsx) erwartet aber:
@@ -407,6 +425,61 @@ def create_app(
             "groups": groups_array,
             "computed_at": raw["computed_at"],
         }
+
+    # ── Alert-Center ────────────────────────────────────────────────────────
+
+    async def _build_alerts() -> list:
+        """Sammelt Status, leitet Alerts ab und markiert quittierte (acked).
+
+        Prune nebenbei: Acks fuer nicht mehr aktive Alerts werden entfernt,
+        damit die Ack-Tabelle nicht unbegrenzt waechst.
+        """
+        from moag.alerts import derive_alerts
+
+        statuses = await _collect_statuses()
+        alerts = derive_alerts(statuses)
+        keys = [a.key for a in alerts]
+        alert_ack_store.prune(keys)
+        acked = alert_ack_store.acked_at(keys)
+        for a in alerts:
+            ts = acked.get(a.key)
+            if ts is not None:
+                a.acknowledged = True
+                a.acknowledged_at = ts
+        return alerts
+
+    @app.get("/api/v1/alerts")
+    async def get_alerts() -> dict:
+        """Aktive Alerts (critical + warning) aus allen Adaptern, mit Ack-Status.
+
+        critical_count bleibt deckungsgleich mit aggregator/health.alert_count
+        (beides == Anzahl Systeme mit ok=False).
+        """
+        alerts = await _build_alerts()
+        return {
+            "alerts": [a.model_dump(mode="json") for a in alerts],
+            "critical_count": sum(1 for a in alerts if a.severity == "critical"),
+            "warning_count": sum(1 for a in alerts if a.severity == "warning"),
+            "acknowledged_count": sum(1 for a in alerts if a.acknowledged),
+            "unacknowledged_count": sum(1 for a in alerts if not a.acknowledged),
+            "computed_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    @app.post("/api/v1/alerts/{alert_key}/ack")
+    async def ack_alert(alert_key: str) -> dict:
+        """Quittiert einen aktuell aktiven Alert. 404 wenn der Alert nicht (mehr) aktiv ist."""
+        alerts = await _build_alerts()
+        target = next((a for a in alerts if a.key == alert_key), None)
+        if target is None:
+            raise HTTPException(status_code=404, detail="Alert nicht (mehr) aktiv")
+        alert_ack_store.ack(target.key, target.system_id, target.severity, target.summary)
+        return {"ok": True, "alert_key": target.key, "acknowledged": True}
+
+    @app.post("/api/v1/alerts/{alert_key}/unack")
+    async def unack_alert(alert_key: str) -> dict:
+        """Hebt die Quittierung eines Alerts auf (idempotent)."""
+        removed = alert_ack_store.unack(alert_key)
+        return {"ok": True, "alert_key": alert_key, "acknowledged": False, "was_acked": removed}
 
     # ── Aktionen-API ───────────────────────────────────────────────────────
 

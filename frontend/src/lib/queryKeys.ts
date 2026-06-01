@@ -54,6 +54,7 @@ export const qk = {
   aggregator: {
     health: ["aggregator", "health"] as const,
   },
+  alerts: ["alerts"] as const,
 
   // MOAG-Aktionen-API
   actions: ["actions"] as const,

@@ -24,6 +24,35 @@ export interface OverviewResponse {
   systems: SystemStatus[];
 }
 
+// ─── Alert-Center (/api/v1/alerts) ───────────────────────────────────────────
+
+export type AlertSeverity = "critical" | "warning";
+
+/** Ein einzelner aktiver Alert (abgeleitet aus SystemStatus). */
+export interface Alert {
+  key: string;
+  system_id: string;
+  system_name: string;
+  group: SystemGroup;
+  severity: AlertSeverity;
+  summary: string;
+  error: string | null;
+  score: number;
+  fetched_at: string; // ISO-8601
+  acknowledged: boolean;
+  acknowledged_at: string | null;
+}
+
+/** Antwort des /api/v1/alerts Endpoints. */
+export interface AlertsResponse {
+  alerts: Alert[];
+  critical_count: number;
+  warning_count: number;
+  acknowledged_count: number;
+  unacknowledged_count: number;
+  computed_at: string;
+}
+
 // ─── OCRexpert-abgeleitete Typen (aus OCRexpert-GUI-Prototyp) ─────────────────
 
 export type HubId = "vdr" | "nas" | "test" | "nas-test" | string;

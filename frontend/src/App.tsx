@@ -8,6 +8,7 @@ import { useUiStore } from "./lib/store";
 
 // Top-Level-Features
 import Overview from "./features/overview";
+import AlertCenter from "./features/alerts";
 import AktionenFeature from "./features/aktionen";
 import UploadHubPage from "./features/upload";
 import OberonFeature from "./features/oberon";
@@ -42,6 +43,9 @@ export function App() {
       <Route element={<Layout />}>
         {/* Startseite: Cockpit-Übersicht mit 8 Karten */}
         <Route path="/" element={<Overview />} />
+
+        {/* Alert-Center: aktive Alerts (critical + warning), quittierbar */}
+        <Route path="/alerts" element={<AlertCenter />} />
 
         {/* Aktionen: zweite Top-Achse — alle ausführbaren Operationen */}
         <Route path="/aktionen" element={<AktionenFeature />} />
