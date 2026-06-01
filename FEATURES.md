@@ -25,6 +25,11 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 
 #### Node-Konsolenkarten (`/octoboss/nodes`)
 - **Was:** Mission-Control-Karten pro Node statt Tabelle — Callsign-Header + Status-LED + Mode, Segment-Bargraphs (GPU/CPU-Last, grün→gold→terrakotta), RAM-frei, Heartbeat-Puls, **GPU-Runtime-Badge** (zeigt „Runtime offline", wenn `gpu_runtime_ready=false` — erklärt fehlende Last-Telemetrie).
+- **Klickbar:** Gesamte Karte ist `<Link>` zum Node-Detail (nicht nur der Name), focus-visible-Outline für Tastatur.
+
+#### Ultrawide-Layout
+- **Was:** Globaler `max-w-[2200px] mx-auto`-Cap im Layout (Content zentriert; TopBar/NavBar bleiben voll breit/sticky) gegen Extrem-Strecken auf 21:9/32:9. Custom-Breakpoint `3xl:1920px` → Karten-Grids skalieren auf mehr Spalten statt breiter zu werden.
+- **Code:** `frontend/src/components/Layout.tsx`, `frontend/tailwind.config.js`
 - **Code:** `frontend/src/features/octoboss/pages/Nodes.tsx`; Backend `NodeHardware` (+`gpu_present`/`gpu_runtime_ready`/Temps) in `models.py`/`hub_client.py`
 - **Datenquelle:** `GET /api/v1/octoboss/nodes` (Polling 10s)
 
