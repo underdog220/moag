@@ -21,12 +21,14 @@ Follow-Ups aus Release-Report v0.2.3 (siehe `MASSNAHMEN.md` 2026-05-24):
 - OCRexpert-Service auf VDR:17810 offline — Service-Status klären
 - ocrexpert.process-Aktion: Body-Schema-Drift gegen `/api/v1/process` (HTTP 422 — wartet auf Phase 1.5b File-Upload-UI; ist im Upload-Hub via `ocr.standard` jetzt abgebildet)
 - ocrexpert.shadow.batch: Body-Schema `{source_path, shadow_path}` — Live HTTP 403 path_not_allowed bis `OCREXPERT_SHADOW_ALLOWED_ROOTS` konfiguriert ist
-- qnapbackup: Status-Endpoint-CR einreichen (CR #3, Phase 5)
+- ~~qnapbackup: Status-Endpoint-CR einreichen (CR #3, Phase 5)~~ — **erledigt 2026-06-01.** Endpoint `GET /api/v1/status` existierte bereits auf VDR:9000; nur MOAG-Adapter (war Stub) implementiert. Card zeigt jetzt echten Status (live: score 65, Replica-Lag-Warnung).
 - Panopticor: Status+Actions-API-CR einreichen (CR #4, Phase 6)
 - ~~Bug 4 Deploy-Skript-Idempotenz~~ — behoben (2026-05-24, `scripts/deploy-vdr.ps1` vergleicht jetzt lokale + remote Image-SHA via `docker inspect --format '{{.Id}}'`, drei reine Hilfsfunktionen + 8 isolierte Logik-Tests in `tests/test-image-sha-compare.ps1`).
 - **Browser-Verifikation v0.2.2 ausstehend:** `/octoboss/benchmarks` + `/oberon/contract` im Browser oeffnen, PageBadges + UI-Render bestaetigen. Roman gibt Bescheid bei Crash.
 
 ## Letzte Änderung
+2026-06-01 — **qnapbackup eingebunden (CR #3):** Adapter (war Stub) ruft jetzt qnapbackups fertigen `GET /api/v1/status` (VDR:9000) ab → Card zeigt echten Status statt „kein Status". `qnapbackup_base_url`-Setting (ENV `MOAG_QNAPBACKUP_BASE_URL`, Default greift). Live: score 65 + Replica-Lag-Warnung. 488 Backend-Tests grün. **Noch nicht gepusht/deployed.**
+
 2026-06-01 — **Node-Detail-Seite neu (Panel-Grid "Alles über den Knoten"):** Identität (inkl. MAC + Core-Version), Hardware-Bargraphs, GPU/KI-Diagnose (compute_device/gpu_fallback/vision), Ollama mit **scrollbarer Modell-Liste**, **scrollbare Modul-Liste** (Version/Status/Port/PID/min-core), Capabilities, Lifecycle, Node-Alerts. Wurzel des „—"-Problems: Type las falsche Feldnamen (`models`/`modules`/`engines` statt `installed_models`/`installed_modules_detail`/`ocr_engines`) — nur `types.ts` korrigiert, kein Backend-Change (Proxy 1:1). Bootstrapper-Version nicht pro-Node verfügbar (ehrlich gelabelt). 482 FE grün, tsc 0, Build grün. **Noch nicht gepusht/deployed.**
 
 2026-06-01 — **Ultrawide-Layout + Node-Karten voll klickbar:** Globaler `max-w-[2200px]`-Cap im Layout (zentriert, TopBar/NavBar voll breit) gegen Strecken auf Ultrawide; Custom-Breakpoint `3xl:1920px`, Node-Grid bis 4 Spalten. Node-Konsolenkarten komplett als `<Link>` klickbar (nicht nur der Name), focus-visible-Outline. tsc 0, 479 FE grün, Build grün. **Noch nicht gepusht/deployed.**

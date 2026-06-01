@@ -143,8 +143,11 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 - **Adapter:** 3-Phasen-Probe (health → engine/status → findings), Score 50/30/20
 - **Aktion integriert:** `custos.rules.run`
 
-#### Stubs (`/nasdominator` Container-Tab existiert, `/qnapbackup/*` · `/panopticor/*`)
-- qnapbackup: Stub-Card, wartet auf CR #3 (`requests/open/2026-05-16-moag-status-endpoint.md`)
+#### qnapbackup-Adapter (aktiv seit 2026-06-01)
+- **Was:** ruft qnapbackups `GET /api/v1/status` (VDR:9000, ADR-008) ab → echter Score + Metriken (shares_ok/total, free_space, last_backup_*, replica-lag, errors_24h) in der Cockpit-Card.
+- **Code:** `backend/moag/adapters/qnapbackup.py`; Setting `qnapbackup_base_url` (ENV `MOAG_QNAPBACKUP_BASE_URL`).
+
+#### Stubs (`/panopticor/*`)
 - panopticor: Stub-Card, wartet auf CR #4 (`requests/open/2026-05-16-moag-status-api.md`)
 
 ### Backend-Architektur
