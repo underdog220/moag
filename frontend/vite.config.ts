@@ -14,8 +14,12 @@ function getGitHash(): string {
   }
 }
 
-const BUILD_HASH = getGitHash();
-const BUILD_TS = new Date().toISOString();
+// Build-Identitaet: ENV hat Vorrang (im Docker-Build via --build-arg
+// VITE_BUILD_HASH/VITE_BUILD_TS gesetzt — Dockerfile-Builder-Stage), git nur als
+// lokaler Fallback. Wichtig: der node-slim-Builder-Container hat KEIN git und kein
+// .git im Context, getGitHash() liefert dort "dev" — daher muss die ENV greifen.
+const BUILD_HASH = process.env.VITE_BUILD_HASH || getGitHash();
+const BUILD_TS = process.env.VITE_BUILD_TS || new Date().toISOString();
 
 // Dev-Proxy-Ziel: MOAG-Backend (Port 17900)
 const BACKEND_URL = process.env.VITE_BACKEND_URL || "http://127.0.0.1:17900";
