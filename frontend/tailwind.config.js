@@ -10,6 +10,10 @@ export default {
   darkMode: "class",
   theme: {
     extend: {
+      // Ultrawide-Breakpoint (ueber Tailwind-Default 2xl=1536px hinaus)
+      screens: {
+        "3xl": "1920px",
+      },
       colors: {
         bg: {
           DEFAULT: c("--c-bg"),

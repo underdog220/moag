@@ -137,20 +137,22 @@ function NodeCard({ node }: { node: OctoBossNodeDetail }) {
   const rtHint = hw?.gpu_runtime_ready === false ? "RT offline" : undefined;
 
   return (
-    <div
-      className="rounded-lg border border-brand/25 bg-bg-panel p-3 font-mono shadow-sm
-                 hover:border-brand/40 transition-colors"
+    // Gesamte Karte ist der Link zum Node-Detail (nicht nur der Name).
+    // Innere Elemente sind nur span/div (Tooltips) -> kein verschachteltes <a>.
+    <Link
+      to={node.node_id}
+      className="group block rounded-lg border border-brand/25 bg-bg-panel p-3 font-mono shadow-sm
+                 hover:border-brand/50 hover:bg-bg-elevated/40
+                 focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand
+                 transition-colors"
       data-testid={`node-card-${node.node_id}`}
+      title={`Node-Detail für ${node.hostname}`}
     >
       {/* Header: Callsign + Status-LED + Mode */}
       <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2">
-        <Link
-          to={node.node_id}
-          className="truncate text-sm font-bold uppercase tracking-wide text-brand hover:underline"
-          title={`Node-Detail für ${node.hostname}`}
-        >
+        <span className="truncate text-sm font-bold uppercase tracking-wide text-brand group-hover:underline">
           {node.hostname}
-        </Link>
+        </span>
         <div className="flex shrink-0 items-center gap-1.5 text-xxs">
           <Tooltip title={node.connected ? "verbunden" : "getrennt"} source="/api/v1/octoboss/nodes">
             <span
@@ -201,7 +203,7 @@ function NodeCard({ node }: { node: OctoBossNodeDetail }) {
         </Tooltip>
         <GpuRuntimeBadge present={hw?.gpu_present} ready={hw?.gpu_runtime_ready} />
       </div>
-    </div>
+    </Link>
   );
 }
 
@@ -236,7 +238,7 @@ export function NodesPage() {
       )}
 
       {nodes.length > 0 && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4">
           {nodes.map((node) => (
             <NodeCard key={node.node_id} node={node} />
           ))}
