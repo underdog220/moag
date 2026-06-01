@@ -1,7 +1,15 @@
 # PROJEKT_STATUS — MOAG (Mother of All GUIs)
 
 ## Aktueller Stand
-**v0.2.3 released — auf VDR live + auf `origin/main` gepusht (HEAD `5270a1f`).** Manifest-Health-Karte zur Cluster-Intent-Steuerzentrale ausgebaut: `ClusterIntentSection` pro Hub-Card mit Versions-Panel (Core + Bootstrapper), Override-Tabelle (Pin/Unpin pro Node), Modul-Drift-Anzeige. Default-Tausch hart blockiert bis Panopticor-Pretest GREEN. Bootstrapper-Steuerung seit 2026-06-01 aktiv (OctoBoss-CR `2026-05-23-bootstrapper-admin-api` durch, symmetrisch zur Core-Sektion). Versions-Badge in der TopBar aus `/api/health`. Deploy-Skript vergleicht Image-SHA (Bug-4-Fix), propagiert Build-Identitaet (`VITE_BUILD_*`) + `MOAG_OCTOBOSS_ADMIN_TOKEN`. Dockerfile installiert moag selbst per `pip install --no-deps .` + `.dockerignore` schliesst `**/*.egg-info` aus (Bug-5-Fix). Regression-Test `test_health_version_matches_pyproject` verhindert Bug-5-Wiederkehr strukturell. 41/41 in test_api.py grün, 14/14 PS1-Logik-Tests, Live-Smoke 5/5 PASS, manifest/health beide Branches green. Versions-Konsistenz pyproject ↔ egg-info ↔ Container ↔ /api/health durchgaengig 0.2.3.
+**v0.2.3 — alles auf `origin/main` gepusht (HEAD `2cd6bb3`, Tagesabschluss 2026-06-01).** Großer UI/Feature-Tag aufgesetzt auf der Cluster-Intent-Basis:
+- **Backlog #5 komplett:** `/alerts` (Alert-Center mit Severity + persistentem Acknowledge), `/inspector` (Adapter-Roh-Status + Copy), `/openapi` (OpenAPI-Browser MOAG + Sub-Systeme), `/ocr-upload` (echter multipart-Upload an OCRexpert).
+- **Amber-„For All Mankind"-Theme** als 3. umschaltbares Theme (CSS-Variablen-Refactor, WCAG-AA+), Cycle-Toggle in der TopBar.
+- **Mission-Control-UI ausgerollt:** Node-Liste (Konsolenkarten, GPU-Runtime-Badge), Node-Detail (Panel-Grid „alles über den Knoten": Module-/Modell-Listen, Core-Version, GPU/KI-Diagnose), Übersicht (reichere System-Karten), alle 8 Oberon-Sub-Seiten (Panels/Badges/Bargraphs).
+- **Ultrawide:** globaler `max-w-[2200px]`-Cap + `3xl`-Breakpoint; Karten klickbar.
+- **qnapbackup eingebunden** (Adapter ruft `/api/v1/status` VDR:9000 — Card zeigt echten Status).
+- **Deploy-Härtung:** Build-Identität (`VITE_BUILD_*` + `MOAG_BUILD` → `/api/health.build`), `MOAG_OCTOBOSS_ADMIN_TOKEN`/`MOAG_ALERTS_DB`/`MOAG_QNAPBACKUP_BASE_URL`-ENV.
+
+**Tests:** 488 Backend + 482 Frontend grün, tsc 0, Build grün. **Deploy des aktuellen Stands (qnapbackup + Übersicht + Oberon) an Roman übergeben — Live-Bestätigung ausstehend.** Letzter bestätigter Live-Stand: Amber-Theme + Node-Karten (Screenshots).
 
 ## Version
 v0.2.3 (Phase 1–8 + Upload-Hub Y + Manifest-Health + Bench-Dashboard + Phase H + Cluster-Intent) — live auf VDR
@@ -23,6 +31,9 @@ Follow-Ups aus Release-Report v0.2.3 (siehe `MASSNAHMEN.md` 2026-05-24):
 - ocrexpert.shadow.batch: Body-Schema `{source_path, shadow_path}` — Live HTTP 403 path_not_allowed bis `OCREXPERT_SHADOW_ALLOWED_ROOTS` konfiguriert ist
 - ~~qnapbackup: Status-Endpoint-CR einreichen (CR #3, Phase 5)~~ — **erledigt 2026-06-01.** Endpoint `GET /api/v1/status` existierte bereits auf VDR:9000; nur MOAG-Adapter (war Stub) implementiert. Card zeigt jetzt echten Status (live: score 65, Replica-Lag-Warnung).
 - Panopticor: Status+Actions-API-CR einreichen (CR #4, Phase 6)
+- **OctoBoss-Admin-Token fest verdrahten** (offen): `MOAG_OCTOBOSS_ADMIN_TOKEN` fehlt in `secrets.local.env` → muss beim Deploy als `-OctobossAdminToken` gegeben werden. Wert = `OCTOBOSS_AUTH_TOKEN` auf dem Hub; Roman muss ihn liefern oder SSH-Lesen freigeben, dann in `secrets.local.env` eintragen.
+- **MAC-Adresse leer** (offen): SonOfSETI `_get_primary_mac()` (Heartbeat) liefert meist leer → Node-Detail zeigt „—". Kein MOAG-Bug; OctoBoss/SonOfSETI-CR (Wake-on-LAN). Noch nicht angelegt.
+- **Tech-Debt UI-Stil-Helfer:** `Panel`/`KV`/`Chip`/`SegBar`/`MiniBar` mehrfach lokal dupliziert (Nodes, NodeDetail, SystemCard, `_oberon_ui.tsx`) — bewusst beim Parallelbau, später nach `components/` zentralisieren.
 - ~~Bug 4 Deploy-Skript-Idempotenz~~ — behoben (2026-05-24, `scripts/deploy-vdr.ps1` vergleicht jetzt lokale + remote Image-SHA via `docker inspect --format '{{.Id}}'`, drei reine Hilfsfunktionen + 8 isolierte Logik-Tests in `tests/test-image-sha-compare.ps1`).
 - **Browser-Verifikation v0.2.2 ausstehend:** `/octoboss/benchmarks` + `/oberon/contract` im Browser oeffnen, PageBadges + UI-Render bestaetigen. Roman gibt Bescheid bei Crash.
 
