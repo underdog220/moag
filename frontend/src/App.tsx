@@ -9,6 +9,9 @@ import { useUiStore } from "./lib/store";
 // Top-Level-Features
 import Overview from "./features/overview";
 import AlertCenter from "./features/alerts";
+import InspectorPage from "./features/inspector";
+import OpenApiBrowser from "./features/openapi";
+import OcrUploadPage from "./features/ocr-upload";
 import AktionenFeature from "./features/aktionen";
 import UploadHubPage from "./features/upload";
 import OberonFeature from "./features/oberon";
@@ -46,6 +49,15 @@ export function App() {
 
         {/* Alert-Center: aktive Alerts (critical + warning), quittierbar */}
         <Route path="/alerts" element={<AlertCenter />} />
+
+        {/* Adapter-Status-Inspector: rohe SystemStatus-Detailansicht (Debug) */}
+        <Route path="/inspector" element={<InspectorPage />} />
+
+        {/* OpenAPI-Browser: Specs von MOAG + Sub-Systemen browsen */}
+        <Route path="/openapi" element={<OpenApiBrowser />} />
+
+        {/* OCR-Upload: echter multipart-Datei-Upload an OCRexpert */}
+        <Route path="/ocr-upload" element={<OcrUploadPage />} />
 
         {/* Aktionen: zweite Top-Achse — alle ausführbaren Operationen */}
         <Route path="/aktionen" element={<AktionenFeature />} />

@@ -13,6 +13,9 @@ const SYSTEM_NAV: { to: string; label: string; group: string }[] = [
   { to: "/qnapbackup",   label: "qnapbackup",   group: "Infra" },
   { to: "/custos",       label: "Custos",       group: "C&T" },
   { to: "/panopticor",   label: "Panopticor",   group: "C&T" },
+  { to: "/ocr-upload",   label: "OCR-Upload",   group: "Tool" },
+  { to: "/inspector",    label: "Inspector",    group: "Tool" },
+  { to: "/openapi",      label: "API-Browser",  group: "Tool" },
   { to: "/settings",     label: "Settings",     group: "" },
 ];
 
