@@ -53,6 +53,12 @@ param(
 
     # OctoBoss
     [string]$OctobossHubs     = "",
+    # Admin-Token fuer Cluster-Intent-Steuerung (Default-Tausch / Node-Pinning,
+    # Core + Bootstrapper). Optional: ohne Token bleibt der Admin-Pfad in MOAG
+    # disabled, der Rest laeuft. ACHTUNG: ist das Token gesetzt, kann MOAG
+    # Default-Tausch ausloesen -> Re-Deploys sind dann Cutover-relevant
+    # (Panopticor-Pretest-Pflicht laut PROJEKT_STATUS Follow-Up #1).
+    [string]$OctobossAdminToken = "",
 
     # Custos
     [string]$CustosBaseUrl    = "",
@@ -176,10 +182,20 @@ if (-not $SmokeOnly) {
         Write-Host "[BUILD] Baue Docker-Image $ImageTag ..."
         Write-Host "[BUILD] Build-Context: $RepoRoot"
         $dockerfilePath = Join-Path $RepoRoot "docker\Dockerfile"
+        # Build-Identitaet fuer PageBadge (#3): kurzer Git-Hash + UTC-Timestamp.
+        # Werden als --build-arg an die Frontend-Build-Stage gereicht; Vite backt
+        # sie als VITE_BUILD_HASH / VITE_BUILD_TS ins Bundle (frontend/src/lib/env.ts).
+        $buildHash = ((git -C $RepoRoot rev-parse --short HEAD 2>$null) | Out-String).Trim()
+        if (-not $buildHash) { $buildHash = "unknown" }
+        $buildTs = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+        Write-Host "[BUILD] Build-Identitaet: hash=$buildHash ts=$buildTs"
         # Wechsel in Repo-Root fuer korrekten Build-Context
         Push-Location $RepoRoot
         try {
-            docker build -t $ImageTag -f $dockerfilePath .
+            docker build -t $ImageTag `
+                --build-arg VITE_BUILD_HASH=$buildHash `
+                --build-arg VITE_BUILD_TS=$buildTs `
+                -f $dockerfilePath .
             if ($LASTEXITCODE -ne 0) {
                 throw "[BUILD] docker build fehlgeschlagen (Exit-Code $LASTEXITCODE) - Abbruch"
             }
@@ -281,6 +297,7 @@ if (-not $SmokeOnly) {
                 "MOAG_NASDOMINATOR_USER"      { if (-not $script:NasDomUser)       { $script:NasDomUser       = $val } }
                 "MOAG_NASDOMINATOR_PASSWORD"  { if (-not $script:NasDomPassword)   { $script:NasDomPassword   = $val } }
                 "MOAG_OCTOBOSS_HUBS"          { if (-not $script:OctobossHubs)     { $script:OctobossHubs     = $val } }
+                "MOAG_OCTOBOSS_ADMIN_TOKEN"   { if (-not $script:OctobossAdminToken) { $script:OctobossAdminToken = $val } }
                 "MOAG_CUSTOS_BASE_URL"        { if (-not $script:CustosBaseUrl)    { $script:CustosBaseUrl    = $val } }
             }
         }
@@ -325,6 +342,7 @@ MOAG_NASDOMINATOR_BASE_URL=$NasDomBaseUrl
 MOAG_NASDOMINATOR_USER=$NasDomUser
 MOAG_NASDOMINATOR_PASSWORD=$NasDomPassword
 MOAG_OCTOBOSS_HUBS=$OctobossHubs
+MOAG_OCTOBOSS_ADMIN_TOKEN=$OctobossAdminToken
 MOAG_CUSTOS_BASE_URL=$CustosBaseUrl
 MOAG_DB_CACHE_PATH=$VolumeMountPath/db.json
 MOAG_JOBS_DB=$VolumeMountPath/jobs.db

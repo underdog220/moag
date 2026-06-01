@@ -21,6 +21,15 @@ export interface AggregatorHealth {
   groups: GroupHealth[];
 }
 
+// Build-/Versions-Info aus /api/health (Follow-Up #2: Version im UI sichtbar machen).
+export interface HealthInfo {
+  status: string;
+  version: string;
+  build: string;
+  build_ts: string;
+  pipeline_ready: boolean;
+}
+
 // ─── Mini-Balken (10 Segmente) ────────────────────────────────────────────────
 
 function ScoreBar({ score }: { score: number }) {
@@ -155,6 +164,21 @@ export function TopBar(_props: TopBarProps) {
 
   const health = data ?? mockHealth();
 
+  // Versions-/Build-Info (#2): /api/health pollen — aendert sich nur bei Deploy,
+  // daher seltenes Intervall. Bei Fehler kein Badge (kein Mock — Version waere
+  // sonst irrefuehrend).
+  const { data: healthInfo, dataUpdatedAt: healthUpdatedAt } = useQuery<HealthInfo>({
+    queryKey: ["api", "health"],
+    queryFn: async () => {
+      const res = await fetch("/api/health");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return (await res.json()) as HealthInfo;
+    },
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+    retry: 1,
+  });
+
   const scoreColor =
     health.overall_score >= 70
       ? "text-status-ok"
@@ -178,6 +202,28 @@ export function TopBar(_props: TopBarProps) {
           <span className="inline-block h-6 w-6 rounded bg-gradient-to-br from-brand to-status-ok" />
           <span>MOAG</span>
         </Link>
+
+        {/* Versions-Badge (#2): Backend-Version aus /api/health, immer sichtbar.
+            ADR-004 Tooltip: Erklaerung + Datenquelle + Build-Identitaet + Poll-Intervall. */}
+        {healthInfo?.version && (
+          <span
+            data-testid="version-badge"
+            className="rounded border border-white/10 bg-bg-panel px-1.5 py-0.5
+                       font-mono text-xxs text-fg-muted"
+            title={
+              `MOAG-Backend-Version ${healthInfo.version}` +
+              `\nBuild: ${healthInfo.build}` +
+              (healthInfo.build_ts ? `  (${healthInfo.build_ts})` : "") +
+              `\nQuelle: GET /api/health` +
+              `\nAktualisierung: alle 60s` +
+              (healthUpdatedAt
+                ? `  (zuletzt ${new Date(healthUpdatedAt).toLocaleTimeString("de-DE")})`
+                : "")
+            }
+          >
+            v{healthInfo.version}
+          </span>
+        )}
 
         {mockMode && (
           <span

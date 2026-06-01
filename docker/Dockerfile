@@ -28,6 +28,15 @@ WORKDIR /build/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 
+# Build-Identitaet (#3): von deploy-vdr.ps1 als --build-arg gereicht. Vite liest
+# VITE_-praefixierte ENV-Variablen zur Build-Zeit (frontend/src/lib/env.ts) und
+# backt sie ins Bundle -> PageBadge zeigt echten Commit-Hash + Build-Timestamp.
+# Default "dev"/leer => env.ts faellt auf "dev" bzw. Laufzeit-Timestamp zurueck.
+ARG VITE_BUILD_HASH=dev
+ARG VITE_BUILD_TS=
+ENV VITE_BUILD_HASH=$VITE_BUILD_HASH \
+    VITE_BUILD_TS=$VITE_BUILD_TS
+
 # Quellcode kopieren und Produktions-Build ausloesen
 COPY frontend/ ./
 RUN npm run build
