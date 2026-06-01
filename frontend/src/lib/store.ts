@@ -4,7 +4,19 @@
 import { create } from "zustand";
 import { isMockMode, setMockMode as persistMock } from "./env";
 
-export type Theme = "dark" | "light";
+export type Theme = "dark" | "light" | "amber";
+
+const THEMES: Theme[] = ["dark", "light", "amber"];
+
+/** Setzt die Theme-Klasse am <html>. Single-Source fuer DOM-Sync. */
+export function applyTheme(t: Theme): void {
+  if (typeof document === "undefined") return;
+  const el = document.documentElement;
+  el.classList.remove("theme-dark", "theme-light", "theme-amber");
+  el.classList.add(`theme-${t}`);
+  // .dark fuer Tailwind darkMode:"class" — dark UND amber sind dunkle Themes.
+  el.classList.toggle("dark", t !== "light");
+}
 
 interface UiState {
   theme: Theme;
@@ -23,7 +35,7 @@ const initialTheme: Theme = (() => {
   if (typeof window === "undefined") return "dark";
   try {
     const ls = window.localStorage?.getItem("moag.theme");
-    if (ls === "light" || ls === "dark") return ls;
+    if (ls === "light" || ls === "dark" || ls === "amber") return ls;
   } catch {
     // ignore
   }
@@ -39,12 +51,12 @@ export const useUiStore = create<UiState>((set, get) => ({
     } catch {
       // ignore
     }
-    if (typeof document !== "undefined") {
-      document.documentElement.classList.toggle("dark", t === "dark");
-    }
+    applyTheme(t);
   },
   toggleTheme: () => {
-    const next: Theme = get().theme === "dark" ? "light" : "dark";
+    // Zyklus: dark -> light -> amber -> dark
+    const cur = get().theme;
+    const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
     get().setTheme(next);
   },
 

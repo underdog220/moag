@@ -23,13 +23,18 @@ class HubConfig(BaseModel):
 
 
 class NodeHardware(BaseModel):
-    """Hardware-Metriken eines Cluster-Nodes."""
+    """Hardware-Metriken eines Cluster-Nodes (Quelle: OctoBoss /seti/nodes)."""
     gpu_name: Optional[str] = None
     gpu_load_percent: Optional[float] = None
     cpu_load_percent: Optional[float] = None
     cpu_model: Optional[str] = None
     ram_free_gb: Optional[float] = None
     vram_free_gb: Optional[float] = None
+    # Temperaturen (optional je Plattform) + GPU-Health (hw-monitor >= 1.2)
+    gpu_temp_c: Optional[float] = None
+    cpu_temp_c: Optional[float] = None
+    gpu_present: Optional[bool] = None
+    gpu_runtime_ready: Optional[bool] = None
 
 
 class ModuleInfo(BaseModel):

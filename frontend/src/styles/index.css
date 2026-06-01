@@ -2,11 +2,68 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Globale Basis */
-:root {
+/* ─── Theme-Variablen (RGB-Tripel, ohne rgb()) ─────────────────────────────────
+   Umgeschaltet ueber eine Klasse am <html>: .theme-dark | .theme-light | .theme-amber
+   (gesetzt vom UI-Store / App.tsx). Default = dark. */
+
+:root,
+.theme-dark {
   color-scheme: dark;
+  --c-bg: 15 23 42;            /* #0f172a */
+  --c-bg-elevated: 30 41 59;  /* #1e293b */
+  --c-bg-subtle: 26 36 54;    /* #1a2436 */
+  --c-bg-panel: 23 32 51;     /* #172033 */
+  --c-fg: 226 232 240;        /* #e2e8f0 */
+  --c-fg-muted: 203 213 225;  /* #cbd5e1 */
+  --c-fg-subtle: 148 163 184; /* #94a3b8 */
+  --c-brand: 59 130 246;      /* #3b82f6 */
+  --c-brand-hover: 37 99 235; /* #2563eb */
+  --c-ok: 34 197 94;          /* #22c55e */
+  --c-warn: 234 179 8;        /* #eab308 */
+  --c-error: 239 68 68;       /* #ef4444 */
+  --c-info: 59 130 246;
+  --c-neutral: 100 116 139;
 }
 
+.theme-light {
+  color-scheme: light;
+  --c-bg: 248 250 252;        /* #f8fafc */
+  --c-bg-elevated: 255 255 255;
+  --c-bg-subtle: 241 245 249; /* #f1f5f9 */
+  --c-bg-panel: 255 255 255;
+  --c-fg: 15 23 42;           /* #0f172a */
+  --c-fg-muted: 51 65 85;     /* #334155 */
+  --c-fg-subtle: 100 116 139; /* #64748b */
+  --c-brand: 37 99 235;       /* #2563eb */
+  --c-brand-hover: 29 78 216; /* #1d4ed8 */
+  --c-ok: 22 163 74;          /* #16a34a */
+  --c-warn: 202 138 4;        /* #ca8a04 */
+  --c-error: 220 38 38;       /* #dc2626 */
+  --c-info: 37 99 235;
+  --c-neutral: 100 116 139;
+}
+
+/* Amber / Braun — "For All Mankind" Mission-Control. Bernstein-Akzent auf warmem
+   Dunkel; Creme-Vordergrund fuer hohen Kontrast (fg auf bg ~13:1, AAA). */
+.theme-amber {
+  color-scheme: dark;
+  --c-bg: 26 20 16;           /* #1a1410 warmes Dunkelbraun */
+  --c-bg-elevated: 42 32 24;  /* #2a2018 */
+  --c-bg-subtle: 34 26 18;    /* #221a12 */
+  --c-bg-panel: 36 27 18;     /* #241b12 */
+  --c-fg: 240 226 204;        /* #f0e2cc Creme */
+  --c-fg-muted: 212 191 153;  /* #d4bf99 Beige */
+  --c-fg-subtle: 168 144 102; /* #a89066 Khaki */
+  --c-brand: 224 154 62;      /* #e09a3e Bernstein */
+  --c-brand-hover: 200 132 44;/* #c8842c */
+  --c-ok: 111 174 79;         /* #6fae4f warmes Gruen */
+  --c-warn: 230 181 60;       /* #e6b53c Gold */
+  --c-error: 215 90 58;       /* #d75a3a Terrakotta */
+  --c-info: 224 154 62;
+  --c-neutral: 168 144 102;
+}
+
+/* Globale Basis */
 html,
 body,
 #root {
@@ -16,29 +73,23 @@ body,
 
 body {
   font-family: theme("fontFamily.sans");
-  font-size: 16px; /* explizit — Tailwind-Default, aber Browser-Override-sicher */
+  font-size: 16px;
   background-color: theme("colors.bg.DEFAULT");
   color: theme("colors.fg.DEFAULT");
 }
 
-/* Scrollbar im Dark-Theme dezent */
+/* Scrollbar — folgt dem Theme ueber die fg-subtle-Variable */
 *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 *::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgb(var(--c-fg-subtle) / 0.04);
 }
 *::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
+  background: rgb(var(--c-fg-subtle) / 0.3);
   border-radius: 6px;
 }
 *::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.4);
-}
-
-/* Light-Mode-Override (Toggle) */
-html:not(.dark) body {
-  background-color: #f8fafc;
-  color: #0f172a;
+  background: rgb(var(--c-fg-subtle) / 0.5);
 }

@@ -4,7 +4,7 @@
 import { useEffect } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
-import { useUiStore } from "./lib/store";
+import { useUiStore, applyTheme } from "./lib/store";
 
 // Top-Level-Features
 import Overview from "./features/overview";
@@ -35,10 +35,9 @@ function NotFound() {
 export function App() {
   const theme = useUiStore((s) => s.theme);
 
-  // Theme-Klasse auf <html> synchronisieren
+  // Theme-Klasse auf <html> synchronisieren (dark / light / amber)
   useEffect(() => {
-    if (typeof document === "undefined") return;
-    document.documentElement.classList.toggle("dark", theme === "dark");
+    applyTheme(theme);
   }, [theme]);
 
   return (

@@ -1,35 +1,40 @@
 /** @type {import('tailwindcss').Config} */
+// Theme-Farben kommen aus CSS-Variablen (src/styles/index.css), damit mehrere
+// Themes (dark / light / amber) ueber eine Klasse am <html> umschaltbar sind.
+// RGB-Tripel-Pattern `rgb(var(--c-x) / <alpha-value>)` erhaelt Tailwind-Alpha
+// (z.B. bg-status-error/10).
+const c = (v) => `rgb(var(${v}) / <alpha-value>)`;
+
 export default {
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   darkMode: "class",
   theme: {
     extend: {
       colors: {
-        // Eigene Theme-Palette: dunkel-blau-grau, Status-Akzente
         bg: {
-          DEFAULT: "#0f172a", // dark default
-          elevated: "#1e293b",
-          subtle: "#1a2436",
-          panel: "#172033",
+          DEFAULT: c("--c-bg"),
+          elevated: c("--c-bg-elevated"),
+          subtle: c("--c-bg-subtle"),
+          panel: c("--c-bg-panel"),
         },
         fg: {
-          DEFAULT: "#e2e8f0",
-          muted: "#cbd5e1",   // angehoben: slate-300 statt slate-400 (war #94a3b8)
-          subtle: "#94a3b8",  // angehoben: slate-400 statt slate-500 (war #64748b)
+          DEFAULT: c("--c-fg"),
+          muted: c("--c-fg-muted"),
+          subtle: c("--c-fg-subtle"),
         },
         brand: {
-          DEFAULT: "#3b82f6",
-          hover: "#2563eb",
+          DEFAULT: c("--c-brand"),
+          hover: c("--c-brand-hover"),
         },
         status: {
-          ok: "#22c55e",      // grün
-          warn: "#eab308",    // gelb
-          error: "#ef4444",   // rot
-          info: "#3b82f6",
-          neutral: "#64748b",
+          ok: c("--c-ok"),
+          warn: c("--c-warn"),
+          error: c("--c-error"),
+          info: c("--c-info"),
+          neutral: c("--c-neutral"),
         },
         accent: {
-          DEFAULT: "#3b82f6",
+          DEFAULT: c("--c-brand"),
         },
       },
       fontFamily: {

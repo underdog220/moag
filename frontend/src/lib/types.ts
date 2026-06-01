@@ -77,6 +77,11 @@ export interface NodeHardware {
   ram_free_gb: number | null;
   vram_free_gb: number | null;
   cpu_model: string | null;
+  // Temperaturen (optional) + GPU-Health (hw-monitor >= 1.2)
+  gpu_temp_c?: number | null;
+  cpu_temp_c?: number | null;
+  gpu_present?: boolean | null;
+  gpu_runtime_ready?: boolean | null;
 }
 
 export interface ModuleInfo {
@@ -646,6 +651,10 @@ export interface OctoBossNodeDetail {
     cpu_model: string | null;
     ram_free_gb: number | null;
     vram_free_gb: number | null;
+    gpu_temp_c?: number | null;
+    cpu_temp_c?: number | null;
+    gpu_present?: boolean | null;
+    gpu_runtime_ready?: boolean | null;
     [key: string]: unknown;
   } | null;
   ollama: {

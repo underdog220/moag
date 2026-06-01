@@ -186,6 +186,10 @@ class HubClient:
                     cpu_model=hw_raw.get("cpu_model"),
                     ram_free_gb=hw_raw.get("ram_free_gb"),
                     vram_free_gb=hw_raw.get("vram_free_gb"),
+                    gpu_temp_c=hw_raw.get("gpu_temp_c"),
+                    cpu_temp_c=hw_raw.get("cpu_temp_c"),
+                    gpu_present=hw_raw.get("gpu_present"),
+                    gpu_runtime_ready=hw_raw.get("gpu_runtime_ready"),
                 )
                 modules = []
                 for m in (n.get("modules") or []):

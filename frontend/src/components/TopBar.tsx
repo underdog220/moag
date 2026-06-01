@@ -283,13 +283,16 @@ export function TopBar(_props: TopBarProps) {
         <button
           type="button"
           onClick={toggleTheme}
-          aria-label={theme === "dark" ? "Light-Mode aktivieren" : "Dark-Mode aktivieren"}
-          title={theme === "dark" ? "Light-Mode" : "Dark-Mode"}
+          aria-label="Theme wechseln (Dunkel / Hell / Amber)"
+          title={`Theme: ${
+            theme === "dark" ? "Dunkel" : theme === "light" ? "Hell" : "Amber"
+          } — Klick für nächstes (Dunkel → Hell → Amber)`}
+          data-testid="theme-toggle"
           className="rounded border border-white/10 bg-bg-panel px-3 py-2 text-xs text-fg
-                     min-h-[44px] sm:min-h-0 sm:px-2 sm:py-1
+                     min-h-[44px] sm:min-h-0 sm:px-2 sm:py-1 tabular-nums
                      hover:bg-bg-subtle hover:border-white/20"
         >
-          {theme === "dark" ? "Hell" : "Dunkel"}
+          {theme === "dark" ? "◐ Dunkel" : theme === "light" ? "☀ Hell" : "▦ Amber"}
         </button>
 
         <Link

@@ -1,6 +1,11 @@
-// OctoBoss Nodes — Node-Liste mit Hardware-Telemetrie.
+// OctoBoss Nodes — Mission-Control-Konsolenkarten mit Hardware-Telemetrie.
 // Sub-Route: /octoboss/nodes
-// Datenquelle: GET /api/v1/octoboss/nodes
+// Datenquelle: GET /api/v1/octoboss/nodes (Polling 10s)
+//
+// Darstellung im "For All Mankind"-Konsolenstil: pro Node eine Karte mit
+// Segment-Bargraphs (GPU/CPU-Last), RAM-frei, Status-LED und einem
+// GPU-Runtime-Badge — letzteres macht sichtbar, WARUM Last-Telemetrie fehlt
+// (gpu_runtime_ready=false => kein gpu_load/vram messbar).
 
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -10,28 +15,194 @@ import { PageBadge } from "../../../components/PageBadge";
 import { LoadingSpinner } from "../../../components/LoadingSpinner";
 import type { OctoBossNodeDetail } from "../../../lib/types";
 
-function pct(v: number | null | undefined): string {
-  if (v == null) return "—";
-  return `${v.toFixed(1)} %`;
-}
-
-function gb(v: number | null | undefined): string {
-  if (v == null) return "—";
-  return `${v.toFixed(1)} GB`;
-}
-
 function relTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
-    const diff = Date.now() - new Date(iso).getTime();
-    const s = Math.floor(diff / 1000);
-    if (s < 60) return `vor ${s}s`;
+    const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (s < 60) return `${s}s`;
     const m = Math.floor(s / 60);
-    if (m < 60) return `vor ${m}min`;
-    return `vor ${Math.floor(m / 60)}h`;
+    if (m < 60) return `${m}min`;
+    return `${Math.floor(m / 60)}h`;
   } catch {
     return iso;
   }
+}
+
+// ─── Segment-Bargraph (LED-Stil) für Prozent-Lasten ──────────────────────────
+
+function loadColor(v: number): string {
+  return v > 90 ? "bg-status-error" : v > 70 ? "bg-status-warn" : "bg-status-ok";
+}
+
+function SegBar({ value }: { value: number | null | undefined }) {
+  const segs = 12;
+  const filled = value == null ? 0 : Math.round((Math.min(Math.max(value, 0), 100) / 100) * segs);
+  const color = value == null ? "" : loadColor(value);
+  return (
+    <span className="inline-flex gap-0.5" aria-hidden="true">
+      {Array.from({ length: segs }).map((_, i) => (
+        <span
+          key={i}
+          className={`h-3 w-1 rounded-[1px] ${i < filled ? color : "bg-fg-subtle/15"}`}
+        />
+      ))}
+    </span>
+  );
+}
+
+// ─── Metrik-Zeile (GPU/CPU-Last) ─────────────────────────────────────────────
+
+function MetricRow({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: number | null | undefined;
+  hint?: string;
+}) {
+  const txt =
+    value == null
+      ? "text-fg-subtle"
+      : value > 90
+        ? "text-status-error"
+        : value > 70
+          ? "text-status-warn"
+          : "text-status-ok";
+  return (
+    <Tooltip
+      title={`${label}-Auslastung: ${value == null ? "keine Telemetrie" : value.toFixed(1) + " %"}${
+        hint ? " (" + hint + ")" : ""
+      }`}
+      source="/api/v1/octoboss/nodes"
+      thresholds="<70% ok · 70-90% warn · >90% krit"
+    >
+      <div className="flex items-center gap-2">
+        <span className="w-8 shrink-0 text-fg-subtle">{label}</span>
+        <SegBar value={value} />
+        <span className={`ml-auto tabular-nums ${txt}`}>
+          {value == null ? "n/a" : `${value.toFixed(0)}%`}
+        </span>
+        {hint && <span className="text-xxs text-fg-subtle">{hint}</span>}
+      </div>
+    </Tooltip>
+  );
+}
+
+// ─── GPU-Runtime-Badge ───────────────────────────────────────────────────────
+
+function GpuRuntimeBadge({
+  present,
+  ready,
+}: {
+  present: boolean | null | undefined;
+  ready: boolean | null | undefined;
+}) {
+  let label: string;
+  let cls: string;
+  let title: string;
+  if (ready === true) {
+    label = "GPU bereit";
+    cls = "border-status-ok/40 text-status-ok";
+    title = "GPU-Runtime (CUDA/ROCm) ansprechbar — Last-Telemetrie verfügbar.";
+  } else if (present === false) {
+    label = "CPU-only";
+    cls = "border-fg-subtle/30 text-fg-subtle";
+    title = "Keine dedizierte GPU erkannt (gpu_present=false).";
+  } else if (ready === false) {
+    label = "Runtime offline";
+    cls = "border-status-warn/40 text-status-warn";
+    title =
+      "GPU vorhanden, aber Runtime (CUDA/ROCm) nicht ansprechbar — darum keine GPU-Last/VRAM-Telemetrie.";
+  } else {
+    label = "RT unbekannt";
+    cls = "border-fg-subtle/20 text-fg-subtle";
+    title = "GPU-Runtime-Status nicht gemeldet (hw-monitor < 1.2 oder kein Feld).";
+  }
+  return (
+    <span
+      className={`rounded border px-1.5 py-0.5 text-xxs font-semibold uppercase ${cls}`}
+      title={`${title} Quelle: /api/v1/octoboss/nodes`}
+    >
+      {label}
+    </span>
+  );
+}
+
+// ─── Node-Konsolenkarte ──────────────────────────────────────────────────────
+
+function NodeCard({ node }: { node: OctoBossNodeDetail }) {
+  const hw = node.hardware;
+  const ollama = node.ollama?.running ?? false;
+  const rtHint = hw?.gpu_runtime_ready === false ? "RT offline" : undefined;
+
+  return (
+    <div
+      className="rounded-lg border border-brand/25 bg-bg-panel p-3 font-mono shadow-sm
+                 hover:border-brand/40 transition-colors"
+      data-testid={`node-card-${node.node_id}`}
+    >
+      {/* Header: Callsign + Status-LED + Mode */}
+      <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2">
+        <Link
+          to={node.node_id}
+          className="truncate text-sm font-bold uppercase tracking-wide text-brand hover:underline"
+          title={`Node-Detail für ${node.hostname}`}
+        >
+          {node.hostname}
+        </Link>
+        <div className="flex shrink-0 items-center gap-1.5 text-xxs">
+          <Tooltip title={node.connected ? "verbunden" : "getrennt"} source="/api/v1/octoboss/nodes">
+            <span
+              className={`inline-block h-2 w-2 rounded-full ${
+                node.connected ? "bg-status-ok" : "bg-status-error"
+              }`}
+            />
+          </Tooltip>
+          <span className="uppercase text-fg-muted">{node.mode ?? "—"}</span>
+        </div>
+      </div>
+
+      {/* GPU-Name + Heartbeat */}
+      <div className="flex items-center justify-between gap-2 pt-2 text-xxs text-fg-subtle">
+        <span className="truncate" title={hw?.gpu_name ?? "keine GPU"}>
+          {hw?.gpu_name ?? "keine GPU"}
+        </span>
+        <Tooltip
+          title={node.last_heartbeat ?? "kein Heartbeat"}
+          source="/api/v1/octoboss/nodes"
+          updatedAt="alle 10s"
+        >
+          <span className="shrink-0 text-status-ok">♥ {relTime(node.last_heartbeat)}</span>
+        </Tooltip>
+      </div>
+
+      {/* Last-Bargraphs */}
+      <div className="mt-2 space-y-1 text-xs">
+        <MetricRow label="GPU" value={hw?.gpu_load_percent} hint={rtHint} />
+        <MetricRow label="CPU" value={hw?.cpu_load_percent} />
+        <Tooltip title={`Freier RAM: ${hw?.ram_free_gb != null ? hw.ram_free_gb.toFixed(1) + " GB" : "—"}`} source="/api/v1/octoboss/nodes">
+          <div className="flex items-center gap-2">
+            <span className="w-8 shrink-0 text-fg-subtle">RAM</span>
+            <span className="text-fg-muted">frei</span>
+            <span className="ml-auto tabular-nums font-semibold text-fg">
+              {hw?.ram_free_gb != null ? `${hw.ram_free_gb.toFixed(1)} GB` : "—"}
+            </span>
+          </div>
+        </Tooltip>
+      </div>
+
+      {/* Footer: Ollama + GPU-Runtime */}
+      <div className="mt-2 flex items-center justify-between gap-2 border-t border-white/10 pt-2 text-xxs">
+        <Tooltip title={ollama ? "Ollama-Dienst läuft" : "Ollama nicht aktiv"} source="/api/v1/octoboss/nodes">
+          <span className={ollama ? "text-status-ok" : "text-fg-subtle"}>
+            OLLAMA {ollama ? "✓" : "—"}
+          </span>
+        </Tooltip>
+        <GpuRuntimeBadge present={hw?.gpu_present} ready={hw?.gpu_runtime_ready} />
+      </div>
+    </div>
+  );
 }
 
 export function NodesPage() {
@@ -50,7 +221,7 @@ export function NodesPage() {
   })();
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" data-testid="nodes-page">
       <h2 className="text-lg font-semibold text-fg">Nodes</h2>
 
       {isLoading && <LoadingSpinner />}
@@ -65,129 +236,10 @@ export function NodesPage() {
       )}
 
       {nodes.length > 0 && (
-        <div className="overflow-x-auto rounded border border-white/10">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-white/10 bg-bg-panel text-left text-xs text-fg-muted">
-                <th className="px-3 py-2">
-                  <Tooltip title="Hostname der Node" source="/api/v1/octoboss/nodes">Hostname</Tooltip>
-                </th>
-                <th className="px-3 py-2">
-                  <Tooltip title="Verbindungsstatus zum Hub" source="/api/v1/octoboss/nodes">Connected</Tooltip>
-                </th>
-                <th className="px-3 py-2">
-                  <Tooltip title="Betriebsmodus (IDLE/ACTIVE/OFFLINE)" source="/api/v1/octoboss/nodes">Mode</Tooltip>
-                </th>
-                <th className="px-3 py-2">
-                  <Tooltip title="GPU-Modellname" source="/api/v1/octoboss/nodes">GPU</Tooltip>
-                </th>
-                <th className="px-3 py-2">
-                  <Tooltip title="GPU-Auslastung in %" source="/api/v1/octoboss/nodes" thresholds="<70% ok · 70-90% warn · >90% krit">GPU-Load</Tooltip>
-                </th>
-                <th className="px-3 py-2">
-                  <Tooltip title="CPU-Auslastung in %" source="/api/v1/octoboss/nodes" thresholds="<70% ok · 70-90% warn · >90% krit">CPU-Load</Tooltip>
-                </th>
-                <th className="px-3 py-2">
-                  <Tooltip title="Freier Arbeitsspeicher in GB" source="/api/v1/octoboss/nodes">RAM-Free</Tooltip>
-                </th>
-                <th className="px-3 py-2">
-                  <Tooltip title="Ollama-Dienst läuft auf der Node" source="/api/v1/octoboss/nodes">Ollama</Tooltip>
-                </th>
-                <th className="px-3 py-2">
-                  <Tooltip title="Letzter Heartbeat (relativ)" source="/api/v1/octoboss/nodes" updatedAt="alle 10s">Heartbeat</Tooltip>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {nodes.map((node) => {
-                const hw = node.hardware;
-                const ollamaRunning = node.ollama?.running ?? false;
-                const nodeId = node.node_id;
-                return (
-                  <tr
-                    key={nodeId}
-                    className="border-b border-white/5 hover:bg-bg-elevated/40 transition-colors"
-                  >
-                    <td className="px-3 py-2 font-medium text-fg">
-                      <Link
-                        to={nodeId}
-                        className="text-brand hover:underline"
-                        title={`Node-Detail für ${node.hostname}`}
-                      >
-                        {node.hostname}
-                      </Link>
-                    </td>
-                    <td className="px-3 py-2">
-                      <Tooltip
-                        title={node.connected ? "Node ist verbunden" : "Node getrennt"}
-                        source="/api/v1/octoboss/nodes"
-                      >
-                        <span className={node.connected ? "text-status-ok" : "text-status-error"}>
-                          {node.connected ? "✓" : "✗"}
-                        </span>
-                      </Tooltip>
-                    </td>
-                    <td className="px-3 py-2 text-fg-muted">{node.mode ?? "—"}</td>
-                    <td className="px-3 py-2 text-fg-muted text-xs">{hw?.gpu_name ?? "—"}</td>
-                    <td className="px-3 py-2">
-                      <Tooltip
-                        title={`GPU-Auslastung: ${pct(hw?.gpu_load_percent)}`}
-                        source="/api/v1/octoboss/nodes"
-                        thresholds="<70% ok · 70-90% warn · >90% krit"
-                      >
-                        <span className={
-                          hw?.gpu_load_percent == null ? "text-fg-subtle" :
-                          hw.gpu_load_percent > 90 ? "text-status-error" :
-                          hw.gpu_load_percent > 70 ? "text-status-warn" : "text-status-ok"
-                        }>
-                          {pct(hw?.gpu_load_percent)}
-                        </span>
-                      </Tooltip>
-                    </td>
-                    <td className="px-3 py-2">
-                      <Tooltip
-                        title={`CPU-Auslastung: ${pct(hw?.cpu_load_percent)}`}
-                        source="/api/v1/octoboss/nodes"
-                        thresholds="<70% ok · 70-90% warn · >90% krit"
-                      >
-                        <span className={
-                          hw?.cpu_load_percent == null ? "text-fg-subtle" :
-                          hw.cpu_load_percent > 90 ? "text-status-error" :
-                          hw.cpu_load_percent > 70 ? "text-status-warn" : "text-status-ok"
-                        }>
-                          {pct(hw?.cpu_load_percent)}
-                        </span>
-                      </Tooltip>
-                    </td>
-                    <td className="px-3 py-2 text-fg-muted">
-                      <Tooltip title={`Freier RAM: ${gb(hw?.ram_free_gb)}`} source="/api/v1/octoboss/nodes">
-                        {gb(hw?.ram_free_gb)}
-                      </Tooltip>
-                    </td>
-                    <td className="px-3 py-2">
-                      <Tooltip
-                        title={ollamaRunning ? "Ollama-Dienst läuft" : "Ollama nicht aktiv"}
-                        source="/api/v1/octoboss/nodes"
-                      >
-                        <span className={ollamaRunning ? "text-status-ok" : "text-fg-subtle"}>
-                          {ollamaRunning ? "✓" : "—"}
-                        </span>
-                      </Tooltip>
-                    </td>
-                    <td className="px-3 py-2 text-fg-subtle text-xs">
-                      <Tooltip
-                        title={node.last_heartbeat ?? "kein Heartbeat"}
-                        source="/api/v1/octoboss/nodes"
-                        updatedAt="alle 10s aktualisiert"
-                      >
-                        {relTime(node.last_heartbeat)}
-                      </Tooltip>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {nodes.map((node) => (
+            <NodeCard key={node.node_id} node={node} />
+          ))}
         </div>
       )}
 
