@@ -27,6 +27,11 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 - **Was:** Mission-Control-Karten pro Node statt Tabelle — Callsign-Header + Status-LED + Mode, Segment-Bargraphs (GPU/CPU-Last, grün→gold→terrakotta), RAM-frei, Heartbeat-Puls, **GPU-Runtime-Badge** (zeigt „Runtime offline", wenn `gpu_runtime_ready=false` — erklärt fehlende Last-Telemetrie).
 - **Klickbar:** Gesamte Karte ist `<Link>` zum Node-Detail (nicht nur der Name), focus-visible-Outline für Tastatur.
 
+#### Node-Detail-Übersicht (`/octoboss/nodes/:id`)
+- **Was:** Große „Alles-über-den-Knoten"-Seite im Panel-Grid: Header (Status/Mode/Pool/Power/Vision-Chips), **Identität** (Node-ID, IP, MAC, Plattform, **Core-Version**=`agent_version`; Bootstrapper „nur Cluster-weit"), **Hardware** (Bargraphs + Temps + VRAM), **GPU/KI-Diagnose** (`compute_device`, `gpu_fallback_detected`, `vision_capable`), **Ollama** + scrollbare Modell-Liste (Vision-Marker), **Module** scrollbare Liste (`installed_modules_detail`: Version/Status/Port/PID/min-core/installiert-seit), Capabilities-Chips, Lifecycle, Node-Alerts.
+- **Datenquelle:** `GET /api/v1/octoboss/nodes/{id}` (1:1-Hub-Proxy, Polling 10s) — **kein** Backend-Mapping (Type liest jetzt die echten Hub-Felder).
+- **Code:** `frontend/src/features/octoboss/pages/NodeDetail.tsx`, Typen `OctoBossNodeDetail`/`OctoBossModuleDetail`
+
 #### Ultrawide-Layout
 - **Was:** Globaler `max-w-[2200px] mx-auto`-Cap im Layout (Content zentriert; TopBar/NavBar bleiben voll breit/sticky) gegen Extrem-Strecken auf 21:9/32:9. Custom-Breakpoint `3xl:1920px` → Karten-Grids skalieren auf mehr Spalten statt breiter zu werden.
 - **Code:** `frontend/src/components/Layout.tsx`, `frontend/tailwind.config.js`
