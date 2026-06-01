@@ -18,6 +18,15 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 - **Datenquelle:** `GET /api/v1/aggregator/health` (Polling 10s, Placeholder-Fallback)
 - **Mobile:** schrumpft auf `MOAG · {score}%`
 
+#### Alert-Center `/alerts`
+- **Was:** Zentrale Ansicht aller aktiven Alerts, gruppiert nach Severity (kritisch zuerst). Je Alert: System-Name + Drilldown-Link, Gruppe, Summary, Fehlertext, Score, „seit", Quittier-Button.
+- **Severity:** `critical` = System nicht erreichbar (ok=false) · `warning` = erreichbar aber Score < 50. `critical_count` deckungsgleich mit `aggregator/health.alert_count`.
+- **Acknowledge:** Alerts quittierbar (persistiert in SQLite `alert_acks`); Quittierung erlischt automatisch, wenn sich der Alert-Zustand ändert (Key aus `system_id+severity+summary`). „Wieder öffnen" hebt auf.
+- **Zugang:** Alert-Counter in der TopBar verlinkt hierher (vorher → `/`).
+- **Code:** `frontend/src/features/alerts/{AlertCenter,index}.tsx`; Backend `backend/moag/{alerts.py, alert_ack_store.py}` + Endpoints in `api.py`
+- **Datenquelle:** `GET /api/v1/alerts` (Polling 15s) · `POST /api/v1/alerts/{key}/ack` · `POST .../unack`
+- **Persistenz:** `MOAG_ALERTS_DB` (Default `~/.moag/alerts.db`, im Deploy auf das Volume gelegt)
+
 #### NavBar zweistufig (Achsen-Navigation)
 - **Was:** Top-Achsen `[Übersicht] [Aktionen]` + sekundäre System-Links (nur unter Übersicht)
 - **Code:** `frontend/src/components/NavBar.tsx`
