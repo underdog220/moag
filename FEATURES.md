@@ -13,10 +13,20 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 - **Datenquelle:** `GET /api/v1/overview`
 
 #### TopBar (sticky, alle Routen)
-- **Was:** MOAG-Logo · Gesamt-Health-Score + Mini-Balken · 3 Gruppen-Indikatoren (Hover-Popover) · Alert-Counter · Theme-Toggle · Settings
+- **Was:** MOAG-Logo · Versions-Badge (`/api/health`) · Gesamt-Health-Score + Mini-Balken · 3 Gruppen-Indikatoren (Hover-Popover) · Alert-Counter (→ `/alerts`) · **Theme-Toggle (Cycle Dunkel→Hell→Amber)** · Settings
 - **Code:** `frontend/src/components/TopBar.tsx`
 - **Datenquelle:** `GET /api/v1/aggregator/health` (Polling 10s, Placeholder-Fallback)
 - **Mobile:** schrumpft auf `MOAG · {score}%`
+
+#### Theme-System (3 Themes, umschaltbar)
+- **Was:** Dunkel (Default) · Hell · **Amber/Braun** („For All Mankind" Mission-Control: Bernstein `#e09a3e` auf warmem Dunkel `#1a1410`, Creme-fg). CSS-Variablen-basiert (`rgb(var(--c-x) / <alpha>)`), Umschaltung über `.theme-*`-Klasse am `<html>`, persistiert in localStorage.
+- **Kontraste:** WCAG-AA+ (fg/bg ~13:1 AAA, brand ~8:1, Status ≥4.5:1).
+- **Code:** `frontend/tailwind.config.js`, `src/styles/index.css`, `src/lib/store.ts` (`applyTheme`)
+
+#### Node-Konsolenkarten (`/octoboss/nodes`)
+- **Was:** Mission-Control-Karten pro Node statt Tabelle — Callsign-Header + Status-LED + Mode, Segment-Bargraphs (GPU/CPU-Last, grün→gold→terrakotta), RAM-frei, Heartbeat-Puls, **GPU-Runtime-Badge** (zeigt „Runtime offline", wenn `gpu_runtime_ready=false` — erklärt fehlende Last-Telemetrie).
+- **Code:** `frontend/src/features/octoboss/pages/Nodes.tsx`; Backend `NodeHardware` (+`gpu_present`/`gpu_runtime_ready`/Temps) in `models.py`/`hub_client.py`
+- **Datenquelle:** `GET /api/v1/octoboss/nodes` (Polling 10s)
 
 #### Alert-Center `/alerts`
 - **Was:** Zentrale Ansicht aller aktiven Alerts, gruppiert nach Severity (kritisch zuerst). Je Alert: System-Name + Drilldown-Link, Gruppe, Summary, Fehlertext, Score, „seit", Quittier-Button.
