@@ -174,6 +174,15 @@ if (-not $ImageTag) {
     Write-Host "[VERSION] ImageTag per Parameter vorgegeben: $ImageTag"
 }
 
+# ---- 0b. Build-Identitaet bestimmen ----------------------------------------
+# Einmal ermitteln, damit Build-Stufe (--build-arg VITE_BUILD_*) UND das env-File
+# (MOAG_BUILD -> /api/health.build) denselben Git-Hash nutzen. Auch bei -SkipBuild
+# verfuegbar, weil ausserhalb des Build-Blocks.
+$buildHash = ((git -C $RepoRoot rev-parse --short HEAD 2>$null) | Out-String).Trim()
+if (-not $buildHash) { $buildHash = "unknown" }
+$buildTs = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+Write-Host "[VERSION] Build-Identitaet: hash=$buildHash ts=$buildTs"
+
 # ---- 1. Build-Stufe --------------------------------------------------------
 if (-not $SmokeOnly) {
     if ($SkipBuild) {
@@ -182,13 +191,8 @@ if (-not $SmokeOnly) {
         Write-Host "[BUILD] Baue Docker-Image $ImageTag ..."
         Write-Host "[BUILD] Build-Context: $RepoRoot"
         $dockerfilePath = Join-Path $RepoRoot "docker\Dockerfile"
-        # Build-Identitaet fuer PageBadge (#3): kurzer Git-Hash + UTC-Timestamp.
-        # Werden als --build-arg an die Frontend-Build-Stage gereicht; Vite backt
-        # sie als VITE_BUILD_HASH / VITE_BUILD_TS ins Bundle (frontend/src/lib/env.ts).
-        $buildHash = ((git -C $RepoRoot rev-parse --short HEAD 2>$null) | Out-String).Trim()
-        if (-not $buildHash) { $buildHash = "unknown" }
-        $buildTs = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-        Write-Host "[BUILD] Build-Identitaet: hash=$buildHash ts=$buildTs"
+        # Build-Identitaet ($buildHash/$buildTs) wurde oben (Sektion 0b) ermittelt;
+        # hier als --build-arg an die Frontend-Build-Stage (Vite -> VITE_BUILD_*).
         # Wechsel in Repo-Root fuer korrekten Build-Context
         Push-Location $RepoRoot
         try {
@@ -335,6 +339,7 @@ if (-not $SmokeOnly) {
 MOAG_HOST=0.0.0.0
 MOAG_PORT=17900
 MOAG_PIPELINE_LOG_ENABLED=false
+MOAG_BUILD=$buildHash
 MOAG_OBERON_BASE_URL=$OberonBaseUrl
 MOAG_OBERON_TOKEN=$OberonToken
 MOAG_OCREXPERT_BASE_URL=$OcrexpertBaseUrl
