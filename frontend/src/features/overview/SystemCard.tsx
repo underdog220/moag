@@ -124,6 +124,7 @@ function MetricsBlock({
           title={`${humanKey(key)}: ${formatMetricValue(val)}`}
           source="/api/v1/overview"
           updatedAt={`vor ${relTime(fetchedAt)}`}
+          block
         >
           <div className="flex items-center justify-between gap-2 text-xs">
             <span className="truncate text-fg-subtle capitalize">{humanKey(key)}</span>

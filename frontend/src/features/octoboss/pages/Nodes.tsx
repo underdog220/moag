@@ -103,6 +103,7 @@ function MetricRow({
       } · ${srcLabel}`}
       source="/api/v1/octoboss/nodes"
       thresholds="<70% ok · 70-90% warn · >90% krit"
+      block
     >
       <div className="flex items-center gap-2">
         <span className="w-8 shrink-0 text-fg-subtle">{label}</span>
@@ -206,30 +207,45 @@ function NodeCard({ node }: { node: OctoBossNodeDetail }) {
         </Tooltip>
       </div>
 
-      {/* Last-Bargraphs */}
-      <div className="mt-2 space-y-1 text-xs">
-        <MetricRow label="GPU" value={hw?.gpu_load_percent} hint={rtHint}
-          hwSource={hw?.hardware_source} hwAt={hw?.hardware_at} />
-        <MetricRow label="CPU" value={hw?.cpu_load_percent}
-          hwSource={hw?.hardware_source} hwAt={hw?.hardware_at} />
-        <Tooltip title={`Freier RAM: ${hw?.ram_free_gb != null ? hw.ram_free_gb.toFixed(1) + " GB" : "—"}`} source="/api/v1/octoboss/nodes">
-          <div className="flex items-center gap-2">
-            <span className="w-8 shrink-0 text-fg-subtle">RAM</span>
-            <span className="text-fg-muted">frei</span>
-            <span className="ml-auto tabular-nums font-semibold text-fg">
-              {hw?.ram_free_gb != null ? `${hw.ram_free_gb.toFixed(1)} GB` : "—"}
-            </span>
-          </div>
-        </Tooltip>
-        <Tooltip title={`Freier Video-RAM (GPU-Speicher): ${hw?.vram_free_gb != null ? hw.vram_free_gb.toFixed(1) + " GB" : "—"}`} source="/api/v1/octoboss/nodes">
-          <div className="flex items-center gap-2">
-            <span className="w-8 shrink-0 text-fg-subtle">VRAM</span>
-            <span className="text-fg-muted">frei</span>
-            <span className="ml-auto tabular-nums font-semibold text-fg">
-              {hw?.vram_free_gb != null ? `${hw.vram_free_gb.toFixed(1)} GB` : "—"}
-            </span>
-          </div>
-        </Tooltip>
+      {/* Last-Bargraphs: 2-Spalten-Grid — GPU+VRAM links, CPU+RAM rechts */}
+      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+        {/* Linke Spalte: GPU-Last + VRAM frei */}
+        <div className="flex flex-col gap-1 min-w-0">
+          <MetricRow label="GPU" value={hw?.gpu_load_percent} hint={rtHint}
+            hwSource={hw?.hardware_source} hwAt={hw?.hardware_at} />
+          <Tooltip
+            title={`Freier Video-RAM (GPU-Speicher): ${hw?.vram_free_gb != null ? hw.vram_free_gb.toFixed(1) + " GB" : "—"}`}
+            source="/api/v1/octoboss/nodes"
+            block
+          >
+            <div className="flex items-center gap-1">
+              <span className="w-8 shrink-0 text-fg-subtle">VRAM</span>
+              <span className="text-fg-muted text-xxs">frei</span>
+              <span className="ml-auto tabular-nums font-semibold text-fg">
+                {hw?.vram_free_gb != null ? `${hw.vram_free_gb.toFixed(1)} GB` : "—"}
+              </span>
+            </div>
+          </Tooltip>
+        </div>
+
+        {/* Rechte Spalte: CPU-Last + RAM frei */}
+        <div className="flex flex-col gap-1 min-w-0">
+          <MetricRow label="CPU" value={hw?.cpu_load_percent}
+            hwSource={hw?.hardware_source} hwAt={hw?.hardware_at} />
+          <Tooltip
+            title={`Freier System-RAM: ${hw?.ram_free_gb != null ? hw.ram_free_gb.toFixed(1) + " GB" : "—"}`}
+            source="/api/v1/octoboss/nodes"
+            block
+          >
+            <div className="flex items-center gap-1">
+              <span className="w-8 shrink-0 text-fg-subtle">RAM</span>
+              <span className="text-fg-muted text-xxs">frei</span>
+              <span className="ml-auto tabular-nums font-semibold text-fg">
+                {hw?.ram_free_gb != null ? `${hw.ram_free_gb.toFixed(1)} GB` : "—"}
+              </span>
+            </div>
+          </Tooltip>
+        </div>
       </div>
 
       {/* Footer: Ollama + GPU-Runtime */}

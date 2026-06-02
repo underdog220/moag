@@ -135,6 +135,7 @@ function LoadRow({
       title={`${label}-Auslastung: ${value == null ? "keine Telemetrie" : value.toFixed(1) + " %"} · ${srcLabel}`}
       source="/api/v1/octoboss/nodes/{id}"
       thresholds="<70% ok · 70-90% warn · >90% krit"
+      block
     >
       <div className="flex items-center gap-2 py-1 text-sm">
         <span className="w-12 shrink-0 text-xs text-fg-muted">{label}</span>

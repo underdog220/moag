@@ -38,6 +38,8 @@ Follow-Ups aus Release-Report v0.2.3 (siehe `MASSNAHMEN.md` 2026-05-24):
 - **Browser-Verifikation v0.2.2 ausstehend:** `/octoboss/benchmarks` + `/oberon/contract` im Browser oeffnen, PageBadges + UI-Render bestaetigen. Roman gibt Bescheid bei Crash.
 
 ## Letzte Änderung
+2026-06-02 — **Tooltip-block-Fix + Node-Karten-2-Spalten-Layout:** `Tooltip.tsx` um optionales `block`-Prop erweitert (Wrapper `relative block w-full` statt `inline-block`). `SystemCard.tsx` MetricsBlock-Tooltips mit `block` — behebt verklebte Metriken auf der Übersicht. `Nodes.tsx` auf `grid-cols-2`-Layout umgebaut (GPU+VRAM links, CPU+RAM rechts). `NodeDetail.tsx` LoadRow mit `block`. 484 FE-Tests grün, tsc 0, Build grün. Noch nicht gepusht/deployed.
+
 2026-06-02 — **hardware_direct-Priorisierung:** OctoBoss liefert `hardware_direct` (HwDirectPullPoller, echte Lasten) neben `hardware` (Heartbeat, gpu_load/cpu_load=null). Adapter-Map-Weg: `hub_client._map_nodes()` + `adapters/octoboss.py` priorisieren `hardware_direct`, Fallback auf `hardware`. `NodeHardware` + TS-Typ um `hardware_source`/`hardware_at` erweitert. Nodes.tsx + NodeDetail.tsx zeigen Quell-Tooltip (ADR-004). 492 BE + 482 FE Tests grün, tsc 0. Noch nicht deployed/gepusht.
 
 2026-06-01 — **Amber-Mission-Control-Stil auf Übersicht + Oberon ausgerollt (2 Subagents parallel):** Startseite (`SystemCard` mit Status-LED/Score-Bargraph/Metriken-Tooltips, ganz klickbar; Gruppen-ok/total-Pills) + alle 8 Oberon-Sub-Seiten (Panels/Badges/Bargraphs/Chips via neue lokale `_oberon_ui.tsx`). Konsistent mit den Node-Ansichten. tsc 0, 482 FE grün, Build grün. Tech-Debt: Stil-Helfer mehrfach lokal dupliziert (später nach `components/` zentralisieren). **Noch nicht gepusht/deployed.**

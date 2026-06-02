@@ -20,6 +20,13 @@ export interface TooltipProps extends TooltipContent {
   children: ReactNode;
   /** Positionierung: "bottom" (default) oder "top" */
   position?: "bottom" | "top";
+  /**
+   * block=true: Wrapper-span wird zu "relative block w-full".
+   * Noetig wenn das Kind ein Block-Element ist (z.B. flex justify-between-Zeile),
+   * damit mehrere solcher Tooltips untereinander statt nebeneinander fließen.
+   * Default: false (inline-block — fuer Badges, Werte, Icons).
+   */
+  block?: boolean;
 }
 
 export function Tooltip({
@@ -29,6 +36,7 @@ export function Tooltip({
   thresholds,
   children,
   position = "bottom",
+  block = false,
 }: TooltipProps) {
   const [visible, setVisible] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -70,7 +78,7 @@ export function Tooltip({
 
   return (
     <span
-      className="relative inline-block"
+      className={block ? "relative block w-full" : "relative inline-block"}
       onMouseEnter={show}
       onMouseLeave={hide}
       onFocus={show}

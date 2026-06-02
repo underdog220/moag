@@ -42,6 +42,29 @@ describe("Tooltip", () => {
     expect(screen.queryByTestId("tooltip-card")).not.toBeInTheDocument();
   });
 
+  it("verwendet 'relative block w-full' wenn block=true gesetzt ist", () => {
+    render(
+      <Tooltip title="Block-Test" block>
+        <div>Block-Inhalt</div>
+      </Tooltip>
+    );
+    const wrapper = screen.getByText("Block-Inhalt").parentElement!;
+    expect(wrapper.className).toContain("block");
+    expect(wrapper.className).toContain("w-full");
+    expect(wrapper.className).not.toContain("inline-block");
+  });
+
+  it("verwendet 'relative inline-block' wenn block nicht gesetzt ist (default)", () => {
+    render(
+      <Tooltip title="Inline-Test">
+        <span>Inline-Inhalt</span>
+      </Tooltip>
+    );
+    const wrapper = screen.getByText("Inline-Inhalt").parentElement!;
+    expect(wrapper.className).toContain("inline-block");
+    expect(wrapper.className).not.toContain("w-full");
+  });
+
   describe("Long-Press (Mobile)", () => {
     beforeEach(() => {
       vi.useFakeTimers();
