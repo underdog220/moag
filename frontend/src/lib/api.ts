@@ -38,6 +38,8 @@ import type {
   UploadResult,
   UploadListResponse,
   HwHistoryResponse,
+  QnapBackupStatus,
+  QnapBackupRecentResponse,
 } from "./types";
 
 const API_BASE = "/api";
@@ -759,6 +761,19 @@ export const api = {
     /** GET /api/v1/nasdominator/containers — Container-Liste */
     getContainers: () =>
       request<import("./types").NasDomContainersResponse>("/v1/nasdominator/containers"),
+  },
+
+  // ─── qnapbackup-Drilldown-API (/api/v1/qnapbackup/*) ────────────────────────
+
+  qnapbackup: {
+    /** GET /api/v1/qnapbackup/status — Backup-Status (Score, Summary, Metriken). */
+    getStatus: (): Promise<QnapBackupStatus> =>
+      request<QnapBackupStatus>("/v1/qnapbackup/status"),
+
+    /** GET /api/v1/qnapbackup/backups/recent?limit= — Liste der letzten Backups.
+     *  limit: 1..100, Default 20. */
+    getBackupsRecent: (limit = 20): Promise<QnapBackupRecentResponse> =>
+      request<QnapBackupRecentResponse>(`/v1/qnapbackup/backups/recent?limit=${limit}`),
   },
 
   // ─── OCRexpert-Drilldown-API (/api/v1/ocrexpert/*) ───────────────────────────

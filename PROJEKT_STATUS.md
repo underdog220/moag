@@ -11,8 +11,10 @@
 
 **Tests:** 488 Backend + 482 Frontend grün, tsc 0, Build grün. **Deploy des aktuellen Stands (qnapbackup + Übersicht + Oberon) an Roman übergeben — Live-Bestätigung ausstehend.** Letzter bestätigter Live-Stand: Amber-Theme + Node-Karten (Screenshots).
 
+**Letzte Änderung:** 2026-06-02 — qnapbackup-Drilldown-Seite + Proxy-Router (v0.2.9, lokal, nicht gepusht).
+
 ## Version
-v0.2.8 (lokal; v0.2.7 live auf VDR). Seit v0.2.3: hardware_direct-Sichtbarkeit, qnapbackup-Card, Tooltip-block-Layout, DSGVO-Audit-Fix, GPU/CPU-Last-Historie.
+v0.2.9 (lokal; v0.2.7 live auf VDR). Seit v0.2.3: hardware_direct-Sichtbarkeit, qnapbackup-Card + Drilldown, Tooltip-block-Layout, DSGVO-Audit-Fix, GPU/CPU-Last-Historie.
 
 ## Nächste geplante Stufe
 Follow-Ups aus Release-Report v0.2.3 (siehe `MASSNAHMEN.md` 2026-05-24):

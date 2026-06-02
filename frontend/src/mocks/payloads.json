@@ -1290,5 +1290,82 @@
     "artifact_url": null,
     "artifact_mime": null,
     "error": null
+  },
+
+  "GET /api/v1/qnapbackup/status": {
+    "ok": true,
+    "score": 82,
+    "summary": "Letztes Backup vor 4h, alle Freigaben OK, Replica-Lag 12s",
+    "metrics": {
+      "last_backup_at": "2026-06-02T04:00:00Z",
+      "last_backup_duration_seconds": 3720,
+      "last_backup_size_bytes": 8589934592,
+      "shares_total": 5,
+      "shares_ok": 5,
+      "shares_failed": 0,
+      "replica_oberon_postgres_ok": true,
+      "replica_oberon_postgres_lag_seconds": 12,
+      "free_space_bytes": 2199023255552,
+      "free_space_percent": 68.5,
+      "errors_24h": 0,
+      "latency_ms": 42
+    },
+    "fetched_at": "2026-06-02T08:00:00Z",
+    "error": null
+  },
+
+  "GET /api/v1/qnapbackup/backups/recent": {
+    "items": [
+      {
+        "id": "bak-2026-06-02-001",
+        "started_at": "2026-06-02T04:00:00Z",
+        "finished_at": "2026-06-02T05:02:00Z",
+        "duration_seconds": 3720,
+        "shares": ["Dokumente", "Fotos", "Backups", "Daten", "Archiv"],
+        "bytes_transferred": 8589934592,
+        "status": "success",
+        "warnings": []
+      },
+      {
+        "id": "bak-2026-06-01-001",
+        "started_at": "2026-06-01T04:00:00Z",
+        "finished_at": "2026-06-01T05:05:30Z",
+        "duration_seconds": 3930,
+        "shares": ["Dokumente", "Fotos", "Backups", "Daten", "Archiv"],
+        "bytes_transferred": 7516192768,
+        "status": "success",
+        "warnings": []
+      },
+      {
+        "id": "bak-2026-05-31-001",
+        "started_at": "2026-05-31T04:00:00Z",
+        "finished_at": "2026-05-31T04:58:00Z",
+        "duration_seconds": 3480,
+        "shares": ["Dokumente", "Fotos", "Backups", "Daten", "Archiv"],
+        "bytes_transferred": 6442450944,
+        "status": "partial",
+        "warnings": ["Archiv: 2 Dateien übersprungen (Zugriff verweigert)"]
+      },
+      {
+        "id": "bak-2026-05-30-001",
+        "started_at": "2026-05-30T04:00:00Z",
+        "finished_at": "2026-05-30T05:10:00Z",
+        "duration_seconds": 4200,
+        "shares": ["Dokumente", "Fotos", "Backups", "Daten", "Archiv"],
+        "bytes_transferred": 9663676416,
+        "status": "success",
+        "warnings": []
+      },
+      {
+        "id": "bak-2026-05-29-001",
+        "started_at": "2026-05-29T04:00:00Z",
+        "finished_at": null,
+        "duration_seconds": null,
+        "shares": ["Dokumente", "Fotos"],
+        "bytes_transferred": null,
+        "status": "failed",
+        "warnings": ["Verbindungsfehler zum Ziel-NAS"]
+      }
+    ]
   }
 }

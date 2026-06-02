@@ -156,6 +156,15 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 - **Was:** ruft qnapbackups `GET /api/v1/status` (VDR:9000, ADR-008) ab → echter Score + Metriken (shares_ok/total, free_space, last_backup_*, replica-lag, errors_24h) in der Cockpit-Card.
 - **Code:** `backend/moag/adapters/qnapbackup.py`; Setting `qnapbackup_base_url` (ENV `MOAG_QNAPBACKUP_BASE_URL`).
 
+#### qnapbackup-Drilldown-Seite `/qnapbackup` (aktiv seit 2026-06-02)
+- **Was:** Echte Drilldown-Seite ersetzt den alten Stub. Zeigt Status-Panel (Score, Summary, Status-LED, alle Metriken mit Einheiten und Tooltips) + Backup-Historie-Tabelle (letzte 20 Backups: Start/Dauer/Bytes/Status/Freigaben-Count, ADR-004 Tooltips durchgehend).
+- **Web-UI-Button:** korrekter Link `http://192.168.200.71:9000` (vorheriger Stub hatte :5000).
+- **Backend:** `backend/moag/routes_qnapbackup.py` — `build_qnapbackup_router()` mit `GET /status` + `GET /backups/recent?limit=` (1..100, Default 20). Proxy-Pattern analog `routes_octoboss.py`, Pipeline-Logging via `plog.step`, 502/504 Fehlerbehandlung.
+- **Frontend:** `frontend/src/features/qnapbackup/index.tsx` (Polling 15s), Typen `QnapBackupStatus`/`QnapBackupRecentItem`/`QnapBackupRecentResponse` in `types.ts`, API-Namespace `api.qnapbackup.*` in `api.ts`.
+- **Mock-Modus:** `payloads.json` mit `GET /api/v1/qnapbackup/status` + `GET /api/v1/qnapbackup/backups/recent` (5 Einträge inkl. partial/failed).
+- **Tests:** `test_routes_qnapbackup.py` (10 BE-Tests) + `qnapbackup.test.tsx` (7 FE-Tests).
+- **Code:** `backend/moag/routes_qnapbackup.py`, `frontend/src/features/qnapbackup/index.tsx`.
+
 #### Stubs (`/panopticor/*`)
 - panopticor: Stub-Card, wartet auf CR #4 (`requests/open/2026-05-16-moag-status-api.md`)
 

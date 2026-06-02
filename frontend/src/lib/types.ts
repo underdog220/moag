@@ -987,3 +987,50 @@ export interface HwHistoryResponse {
   count: number;
   samples: HwHistorySample[];
 }
+
+// ─── qnapbackup-API-Typen (Endpoints unter /api/v1/qnapbackup/*) ─────────────
+// Quelle: backend/moag/routes_qnapbackup.py (Proxy auf qnapbackup Flask-API :9000)
+
+/** Metriken aus GET /api/v1/qnapbackup/status */
+export interface QnapBackupMetrics {
+  last_backup_at: string | null;          // ISO-8601
+  last_backup_duration_seconds: number | null;
+  last_backup_size_bytes: number | null;
+  shares_total: number | null;
+  shares_ok: number | null;
+  shares_failed: number | null;
+  replica_oberon_postgres_ok: boolean | null;
+  replica_oberon_postgres_lag_seconds: number | null;
+  free_space_bytes: number | null;
+  free_space_percent: number | null;
+  errors_24h: number | null;
+  latency_ms?: number | null;
+  [key: string]: unknown;
+}
+
+/** Antwort von GET /api/v1/qnapbackup/status */
+export interface QnapBackupStatus {
+  ok: boolean;
+  score: number;         // 0..100
+  summary: string;
+  metrics: QnapBackupMetrics;
+  fetched_at: string;    // ISO-8601
+  error?: string | null;
+}
+
+/** Ein Backup-Eintrag aus GET /api/v1/qnapbackup/backups/recent */
+export interface QnapBackupRecentItem {
+  id: string;
+  started_at: string;         // ISO-8601
+  finished_at: string | null; // ISO-8601
+  duration_seconds: number | null;
+  shares: string[];
+  bytes_transferred: number | null;
+  status: string;             // "success" | "failed" | "partial" | ...
+  warnings: string[];
+}
+
+/** Antwort von GET /api/v1/qnapbackup/backups/recent */
+export interface QnapBackupRecentResponse {
+  items: QnapBackupRecentItem[];
+}
