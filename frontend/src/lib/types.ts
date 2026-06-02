@@ -1024,7 +1024,7 @@ export interface QnapBackupRecentItem {
   started_at: string;         // ISO-8601
   finished_at: string | null; // ISO-8601
   duration_seconds: number | null;
-  shares: string[];
+  share: string;              // echte API: EIN Share pro Eintrag (Singular), z.B. "homes"
   bytes_transferred: number | null;
   status: string;             // "success" | "failed" | "partial" | ...
   warnings: string[];

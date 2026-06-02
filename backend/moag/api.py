@@ -211,13 +211,16 @@ def create_app(
 
             interval_s = 10
             while True:
+                # Erst warten, dann sammeln: kein Hub-Call direkt im Startup,
+                # damit kurzlebige Apps (Tests) beim sofortigen Shutdown nicht
+                # auf einem laufenden Hub-Call blockieren.
+                await asyncio.sleep(interval_s)
                 try:
                     await collect_hw_samples(settings_store, HW_HISTORY)
                 except asyncio.CancelledError:
                     raise
                 except Exception as e:  # pragma: no cover - Hub ggf. nicht erreichbar
                     logger.debug("hw-history-Poll fehlgeschlagen: %s", e)
-                await asyncio.sleep(interval_s)
 
         hw_history_task = asyncio.create_task(_hw_history_loop())
 
@@ -226,8 +229,10 @@ def create_app(
         finally:
             hw_history_task.cancel()
             try:
-                await hw_history_task
-            except (asyncio.CancelledError, Exception):  # pragma: no cover
+                # Begrenztes Warten: der Shutdown darf nie auf einem laufenden
+                # Hub-Call festhaengen.
+                await asyncio.wait_for(hw_history_task, timeout=2.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError, Exception):  # pragma: no cover
                 pass
             settings_store.remove_listener(on_settings_changed)
             uninstall_pipeline_hooks()

@@ -288,11 +288,11 @@ function BackupRow({ item, updatedAt }: { item: QnapBackupRecentItem; updatedAt:
       </td>
       <td className="py-2 px-3 text-xs text-fg-muted">
         <Tooltip
-          title={`Gesicherte Freigaben: ${item.shares.join(", ") || "keine"}`}
+          title={`Gesicherte Freigabe: ${item.share || "—"}`}
           source="/api/v1/qnapbackup/backups/recent"
           updatedAt={updatedAt}
         >
-          <span>{item.shares.length}</span>
+          <span className="font-mono">{item.share || "—"}</span>
         </Tooltip>
       </td>
     </tr>
@@ -315,7 +315,7 @@ function BackupsPanel({ items, updatedAt }: { items: QnapBackupRecentItem[]; upd
                 <th className="py-1 px-3">Dauer</th>
                 <th className="py-1 px-3">Übertragen</th>
                 <th className="py-1 px-3">Status</th>
-                <th className="py-1 px-3">Freigaben</th>
+                <th className="py-1 px-3">Freigabe</th>
               </tr>
             </thead>
             <tbody>

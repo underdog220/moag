@@ -1321,7 +1321,7 @@
         "started_at": "2026-06-02T04:00:00Z",
         "finished_at": "2026-06-02T05:02:00Z",
         "duration_seconds": 3720,
-        "shares": ["Dokumente", "Fotos", "Backups", "Daten", "Archiv"],
+        "share": "Dokumente",
         "bytes_transferred": 8589934592,
         "status": "success",
         "warnings": []
@@ -1331,7 +1331,7 @@
         "started_at": "2026-06-01T04:00:00Z",
         "finished_at": "2026-06-01T05:05:30Z",
         "duration_seconds": 3930,
-        "shares": ["Dokumente", "Fotos", "Backups", "Daten", "Archiv"],
+        "share": "Fotos",
         "bytes_transferred": 7516192768,
         "status": "success",
         "warnings": []
@@ -1341,7 +1341,7 @@
         "started_at": "2026-05-31T04:00:00Z",
         "finished_at": "2026-05-31T04:58:00Z",
         "duration_seconds": 3480,
-        "shares": ["Dokumente", "Fotos", "Backups", "Daten", "Archiv"],
+        "share": "Archiv",
         "bytes_transferred": 6442450944,
         "status": "partial",
         "warnings": ["Archiv: 2 Dateien übersprungen (Zugriff verweigert)"]
@@ -1351,7 +1351,7 @@
         "started_at": "2026-05-30T04:00:00Z",
         "finished_at": "2026-05-30T05:10:00Z",
         "duration_seconds": 4200,
-        "shares": ["Dokumente", "Fotos", "Backups", "Daten", "Archiv"],
+        "share": "Daten",
         "bytes_transferred": 9663676416,
         "status": "success",
         "warnings": []
@@ -1361,7 +1361,7 @@
         "started_at": "2026-05-29T04:00:00Z",
         "finished_at": null,
         "duration_seconds": null,
-        "shares": ["Dokumente", "Fotos"],
+        "share": "Backups",
         "bytes_transferred": null,
         "status": "failed",
         "warnings": ["Verbindungsfehler zum Ziel-NAS"]

@@ -360,6 +360,13 @@ def test_health_pipeline_ready_with_pipeline_enabled(tmp_path: Path, monkeypatch
         )
     monkeypatch.setattr(hub_client, "_poll_hub", fake_poll_hub)
 
+    # Hardware-History-Poller wegpatchen — kein echter Hub-Call im Test (sonst
+    # blockiert der Lifespan-Poller beim Shutdown auf dem realen OctoBoss-Hub).
+    from moag import routes_octoboss as _rocto
+    async def _fake_collect(*a, **kw):
+        return 0
+    monkeypatch.setattr(_rocto, "collect_hw_samples", _fake_collect)
+
     app = create_app(
         settings_store=settings_store, job_store=job_store,
         event_bus=event_bus, hub_client=hub_client,
