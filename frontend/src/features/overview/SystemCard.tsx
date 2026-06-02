@@ -82,22 +82,57 @@ const LED_LABELS: Record<LedState, string> = {
 
 // ─── Metrik-Formatierung ───────────────────────────────────────────────────────
 
-function formatMetricValue(val: string | number | boolean | null): string {
+// Bytes binär-präfixiert (B/KB/MB/GB/TB).
+function fmtBytes(n: number): string {
+  const abs = Math.abs(n);
+  if (abs >= 1024 ** 4) return `${(n / 1024 ** 4).toFixed(1)} TB`;
+  if (abs >= 1024 ** 3) return `${(n / 1024 ** 3).toFixed(1)} GB`;
+  if (abs >= 1024 ** 2) return `${(n / 1024 ** 2).toFixed(1)} MB`;
+  if (abs >= 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${n} B`;
+}
+
+// Dauer in Sekunden lesbar (s/min/h/d).
+function fmtDuration(totalSec: number): string {
+  const s = Math.abs(totalSec);
+  if (s < 60) return `${Math.round(s)}s`;
+  if (s < 3600) return `${Math.round(s / 60)}min`;
+  if (s < 86_400) return `${(s / 3600).toFixed(1)}h`;
+  return `${(s / 86_400).toFixed(1)}d`;
+}
+
+// Einheiten-bewusste Metrik-Formatierung: die Einheit kommt aus dem Key-Suffix,
+// NICHT aus der Zahlengröße. (Früher wurde jeder Integer >= 1000 als
+// Millisekunden interpretiert → free_space_bytes erschien als "…s".)
+function formatMetricValue(key: string, val: string | number | boolean | null): string {
   if (val === null || val === undefined) return "—";
   if (typeof val === "boolean") return val ? "ja" : "nein";
+  const k = key.toLowerCase();
   if (typeof val === "number") {
-    // Millisekunden: ab 1000 als Sekunden
-    if (Math.abs(val) >= 1000 && Number.isInteger(val)) return `${(val / 1000).toFixed(1)}s`;
-    // Prozent-ähnliche Werte (0..100 ganze Zahl)
-    if (Number.isInteger(val) && val >= 0 && val <= 100) return String(val);
-    if (!Number.isInteger(val)) return val.toFixed(1);
-    return String(val);
+    if (k.endsWith("_bytes")) return fmtBytes(val);
+    if (k.endsWith("_seconds") || k.endsWith("_sec")) return fmtDuration(val);
+    if (k.endsWith("_ms") || k.endsWith("_millis"))
+      return Math.abs(val) >= 1000 ? `${(val / 1000).toFixed(1)}s` : `${val} ms`;
+    if (k.endsWith("_percent") || k.endsWith("_pct")) return `${val} %`;
+    // Zähler/IDs: roh anzeigen, keine Einheiten-Heuristik
+    if (k.includes("count") || k.startsWith("errors") || k.startsWith("shares")) return String(val);
+    // Fallback: Nachkommastellen kürzen, sonst roh
+    return Number.isInteger(val) ? String(val) : val.toFixed(1);
+  }
+  // String: ISO-Zeitstempel relativ darstellen
+  if (typeof val === "string" && (k.endsWith("_at") || k.endsWith("_time"))) {
+    const t = Date.parse(val);
+    if (!Number.isNaN(t)) return `vor ${relTime(val)}`;
   }
   return String(val);
 }
 
+// Einheiten-Suffix aus dem Label entfernen (steht schon im formatierten Wert).
 function humanKey(key: string): string {
-  return key.replace(/_/g, " ");
+  return key
+    .replace(/_(bytes|seconds|sec|ms|millis|percent|pct|at|time)$/i, "")
+    .replace(/_/g, " ")
+    .trim();
 }
 
 // ─── Metriken-Block ────────────────────────────────────────────────────────────
@@ -121,7 +156,7 @@ function MetricsBlock({
       {entries.map(([key, val]) => (
         <Tooltip
           key={key}
-          title={`${humanKey(key)}: ${formatMetricValue(val)}`}
+          title={`${humanKey(key)}: ${formatMetricValue(key, val)}`}
           source="/api/v1/overview"
           updatedAt={`vor ${relTime(fetchedAt)}`}
           block
@@ -137,7 +172,7 @@ function MetricsBlock({
                   : "text-fg-muted"
               }`}
             >
-              {formatMetricValue(val)}
+              {formatMetricValue(key, val)}
             </span>
           </div>
         </Tooltip>

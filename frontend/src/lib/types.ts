@@ -970,3 +970,20 @@ export interface UploadListResponse {
   limit: number;
   offset: number;
 }
+
+/** Ein Hardware-Lastsample (timestamp-getrieben). Lasten in %, frei in GB; null = keine Telemetrie. */
+export interface HwHistorySample {
+  at: string; // echter Messzeitpunkt (ISO-8601), NICHT gleichabständig
+  gpu: number | null;
+  cpu: number | null;
+  ram_free_gb: number | null;
+  vram_free_gb: number | null;
+}
+
+/** Antwort von GET /api/v1/octoboss/nodes/{id}/history. */
+export interface HwHistoryResponse {
+  node_id: string;
+  since_s: number;
+  count: number;
+  samples: HwHistorySample[];
+}

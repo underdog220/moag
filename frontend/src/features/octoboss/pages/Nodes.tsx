@@ -11,9 +11,10 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../../../lib/api";
 import { Tooltip } from "../../../components/Tooltip";
+import { Sparkline } from "../../../components/Sparkline";
 import { PageBadge } from "../../../components/PageBadge";
 import { LoadingSpinner } from "../../../components/LoadingSpinner";
-import type { OctoBossNodeDetail } from "../../../lib/types";
+import type { OctoBossNodeDetail, HwHistorySample } from "../../../lib/types";
 
 function relTime(iso: string | null | undefined): string {
   if (!iso) return "—";
@@ -80,12 +81,16 @@ function MetricRow({
   hint,
   hwSource,
   hwAt,
+  samples,
+  field,
 }: {
   label: string;
   value: number | null | undefined;
   hint?: string;
   hwSource?: "direct" | "heartbeat" | null;
   hwAt?: string | null;
+  samples?: HwHistorySample[];
+  field?: "gpu" | "cpu";
 }) {
   const txt =
     value == null
@@ -96,12 +101,20 @@ function MetricRow({
           ? "text-status-warn"
           : "text-status-ok";
   const srcLabel = hwSourceLabel(hwSource, hwAt);
+  const spark =
+    field && samples && samples.length > 0 ? (
+      <div>
+        <p className="mb-0.5 text-xxs text-fg-subtle">Verlauf (~30 min)</p>
+        <Sparkline samples={samples} field={field} />
+      </div>
+    ) : undefined;
   return (
     <Tooltip
       title={`${label}-Auslastung: ${value == null ? "keine Telemetrie" : value.toFixed(1) + " %"}${
         hint ? " (" + hint + ")" : ""
       } · ${srcLabel}`}
-      source="/api/v1/octoboss/nodes"
+      extra={spark}
+      source="/api/v1/octoboss/nodes/{id}/history"
       thresholds="<70% ok · 70-90% warn · >90% krit"
       block
     >
@@ -164,6 +177,16 @@ function NodeCard({ node }: { node: OctoBossNodeDetail }) {
   const ollama = node.ollama?.running ?? false;
   const rtHint = hw?.gpu_runtime_ready === false ? "RT offline" : undefined;
 
+  // Kurzer Verlauf (~30 min) für die Hover-Sparkline. Eigene Query je Karte;
+  // bei wenigen Nodes unkritisch. Datenquelle: MOAG-interner Ring-Buffer.
+  const { data: hist } = useQuery({
+    queryKey: ["octoboss", "node-history", node.node_id, 1800],
+    queryFn: () => api.octoboss.getNodeHistory(node.node_id, 1800),
+    refetchInterval: 30_000,
+    staleTime: 25_000,
+  });
+  const samples = hist?.samples ?? [];
+
   return (
     // Gesamte Karte ist der Link zum Node-Detail (nicht nur der Name).
     // Innere Elemente sind nur span/div (Tooltips) -> kein verschachteltes <a>.
@@ -212,7 +235,8 @@ function NodeCard({ node }: { node: OctoBossNodeDetail }) {
         {/* Linke Spalte: GPU-Last + VRAM frei */}
         <div className="flex flex-col gap-1 min-w-0">
           <MetricRow label="GPU" value={hw?.gpu_load_percent} hint={rtHint}
-            hwSource={hw?.hardware_source} hwAt={hw?.hardware_at} />
+            hwSource={hw?.hardware_source} hwAt={hw?.hardware_at}
+            samples={samples} field="gpu" />
           <Tooltip
             title={`Freier Video-RAM (GPU-Speicher): ${hw?.vram_free_gb != null ? hw.vram_free_gb.toFixed(1) + " GB" : "—"}`}
             source="/api/v1/octoboss/nodes"
@@ -231,7 +255,8 @@ function NodeCard({ node }: { node: OctoBossNodeDetail }) {
         {/* Rechte Spalte: CPU-Last + RAM frei */}
         <div className="flex flex-col gap-1 min-w-0">
           <MetricRow label="CPU" value={hw?.cpu_load_percent}
-            hwSource={hw?.hardware_source} hwAt={hw?.hardware_at} />
+            hwSource={hw?.hardware_source} hwAt={hw?.hardware_at}
+            samples={samples} field="cpu" />
           <Tooltip
             title={`Freier System-RAM: ${hw?.ram_free_gb != null ? hw.ram_free_gb.toFixed(1) + " GB" : "—"}`}
             source="/api/v1/octoboss/nodes"

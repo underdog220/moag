@@ -169,6 +169,28 @@ def _enrich_node_hardware(node: dict) -> dict:
     return node
 
 
+async def collect_hw_samples(settings_store: SettingsStore, store: Any) -> int:
+    """Zieht /seti/nodes, reichert an und schreibt neue Samples in den Store.
+
+    Wird vom Hintergrund-Poller (api.py-Lifespan) periodisch aufgerufen — entkoppelt
+    von Frontend-Requests, damit auch ohne offenes Cockpit gesammelt wird. Dedup
+    nach hardware_at passiert im Store, der MOAG-Poll-Takt ist daher egal.
+    Rückgabe: Anzahl tatsächlich neu gespeicherter Samples.
+    """
+    hub_url, token = _resolve_hub(settings_store)
+    data = await _proxy_get(hub_url, "/seti/nodes", token)
+    nodes = data.get("nodes") if isinstance(data, dict) else data
+    if not isinstance(nodes, list):
+        return 0
+    saved = 0
+    for raw in nodes:
+        node = _enrich_node_hardware(raw)
+        nid = node.get("node_id") or node.get("id")
+        if nid and store.record(nid, node.get("hardware") or {}):
+            saved += 1
+    return saved
+
+
 def build_octoboss_router(settings_store: SettingsStore) -> APIRouter:
     """Erstellt den FastAPI-Router fuer alle OctoBoss-Proxy-Routen."""
     router = APIRouter(prefix="/api/v1/octoboss", tags=["octoboss"])
@@ -193,6 +215,27 @@ def build_octoboss_router(settings_store: SettingsStore) -> APIRouter:
         hub_url, token = _resolve_hub(settings_store)
         node = await _proxy_get(hub_url, f"/seti/nodes/{node_id}", token)
         return _enrich_node_hardware(node)
+
+    @router.get("/nodes/{node_id}/history")
+    async def get_node_history(
+        node_id: str,
+        since_s: int = Query(7200, ge=60, le=86400, description="Zeitfenster in Sekunden"),
+    ) -> dict:
+        """GPU/CPU/RAM/VRAM-Verlauf einer Node aus dem MOAG-internen Ring-Buffer.
+
+        Samples sind timestamp-getrieben (Feld `at` = echter Messzeitpunkt), die
+        Abstände können variieren — das Frontend rendert auf echter Zeitachse.
+        Datenquelle: MOAG-Hintergrund-Poller (kein zusätzlicher Hub-Call hier).
+        """
+        from .hw_history import HW_HISTORY
+
+        samples = HW_HISTORY.series(node_id, since_s=since_s)
+        return {
+            "node_id": node_id,
+            "since_s": since_s,
+            "count": len(samples),
+            "samples": samples,
+        }
 
     @router.get("/overview")
     async def get_overview() -> Any:

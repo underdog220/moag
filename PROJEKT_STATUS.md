@@ -12,7 +12,7 @@
 **Tests:** 488 Backend + 482 Frontend grün, tsc 0, Build grün. **Deploy des aktuellen Stands (qnapbackup + Übersicht + Oberon) an Roman übergeben — Live-Bestätigung ausstehend.** Letzter bestätigter Live-Stand: Amber-Theme + Node-Karten (Screenshots).
 
 ## Version
-v0.2.3 (Phase 1–8 + Upload-Hub Y + Manifest-Health + Bench-Dashboard + Phase H + Cluster-Intent) — live auf VDR
+v0.2.8 (lokal; v0.2.7 live auf VDR). Seit v0.2.3: hardware_direct-Sichtbarkeit, qnapbackup-Card, Tooltip-block-Layout, DSGVO-Audit-Fix, GPU/CPU-Last-Historie.
 
 ## Nächste geplante Stufe
 Follow-Ups aus Release-Report v0.2.3 (siehe `MASSNAHMEN.md` 2026-05-24):
@@ -31,6 +31,7 @@ Follow-Ups aus Release-Report v0.2.3 (siehe `MASSNAHMEN.md` 2026-05-24):
 - ocrexpert.shadow.batch: Body-Schema `{source_path, shadow_path}` — Live HTTP 403 path_not_allowed bis `OCREXPERT_SHADOW_ALLOWED_ROOTS` konfiguriert ist
 - ~~qnapbackup: Status-Endpoint-CR einreichen (CR #3, Phase 5)~~ — **erledigt 2026-06-01.** Endpoint `GET /api/v1/status` existierte bereits auf VDR:9000; nur MOAG-Adapter (war Stub) implementiert. Card zeigt jetzt echten Status (live: score 65, Replica-Lag-Warnung).
 - Panopticor: Status+Actions-API-CR einreichen (CR #4, Phase 6)
+- **MOAG_OBERON_TOKEN auf VDR setzen** (offen): Ohne Token läuft der Oberon-Proxy im Stub-Modus → DSGVO-Audit/Cockpit immer leer. Wert = `mein-sicheres-token` (gegen Oberon NAS:17900 verifiziert HTTP 200, `secrets.local.env:3`). Beim Deploy als `-OberonToken` bzw. ENV `MOAG_OBERON_TOKEN` mitgeben. Roman-Seite (Service-Touch VDR).
 - **OctoBoss-Admin-Token fest verdrahten** (offen): `MOAG_OCTOBOSS_ADMIN_TOKEN` fehlt in `secrets.local.env` → muss beim Deploy als `-OctobossAdminToken` gegeben werden. Wert = `OCTOBOSS_AUTH_TOKEN` auf dem Hub; Roman muss ihn liefern oder SSH-Lesen freigeben, dann in `secrets.local.env` eintragen.
 - **MAC-Adresse leer** (offen): SonOfSETI `_get_primary_mac()` (Heartbeat) liefert meist leer → Node-Detail zeigt „—". Kein MOAG-Bug; OctoBoss/SonOfSETI-CR (Wake-on-LAN). Noch nicht angelegt.
 - **Tech-Debt UI-Stil-Helfer:** `Panel`/`KV`/`Chip`/`SegBar`/`MiniBar` mehrfach lokal dupliziert (Nodes, NodeDetail, SystemCard, `_oberon_ui.tsx`) — bewusst beim Parallelbau, später nach `components/` zentralisieren.
@@ -38,6 +39,10 @@ Follow-Ups aus Release-Report v0.2.3 (siehe `MASSNAHMEN.md` 2026-05-24):
 - **Browser-Verifikation v0.2.2 ausstehend:** `/octoboss/benchmarks` + `/oberon/contract` im Browser oeffnen, PageBadges + UI-Render bestaetigen. Roman gibt Bescheid bei Crash.
 
 ## Letzte Änderung
+2026-06-02 — **Feature: GPU/CPU-Auslastungs-Historie (v0.2.8) — timestamp-getrieben, heartbeat-ready:** Neuer MOAG-interner Ring-Buffer (`hw_history.py`, Singleton `HW_HISTORY`) + entkoppelter Hintergrund-Poller im Lifespan (sammelt auch ohne offenes Cockpit). Endpoint `GET /api/v1/octoboss/nodes/{id}/history?since_s=`. Frontend: `components/Sparkline.tsx` (Mini-Sparkline im GPU/CPU-Hover via neuem `Tooltip.extra`-Slot + großes `LoadHistoryChart` als volle-Breite-Panel auf der Node-Detail-Seite). **Kernprinzip (Roman-Vorgabe):** Dedup nach echtem Messzeitpunkt (`hardware_at`), Retention nach Zeit (2h), Rendering auf echter Zeitachse — bleibt nach Umstellung auf lastabhängige Heartbeats ohne Code-Änderung korrekt. +8 BE-Tests (`test_hw_history.py`) + 5 FE (`Sparkline.test.tsx`); 489 FE + Store grün, tsc 0, Build grün. **Im selben Tag: Metrik-Formatter einheiten-bewusst** (`SystemCard.formatMetricValue` per Key-Suffix `_bytes`/`_seconds`/`_percent`/`_at` statt Größen-Heuristik) — behebt `free_space_bytes`→„9127892934.7s". qnapbackup ist korrekt integriert; roter Status war echt (Replica-Lag ~4,2d, qnapbackup-Betriebsthema). **Noch nicht gepusht/deployed.**
+
+2026-06-02 — **Fix: DSGVO-Audit zeigte leer (Default-`since` 30 Tage):** `routes_oberon.py::get_audit` setzt ohne expliziten `since` jetzt einen Cursor `now-30d` (Oberon-Maximum), statt Oberons 24h-Default zu erben. Roman meldete leeren DSGVO-Audit; Diagnose ergab: (a) MOAG-UI ruft Audit ohne `since` → nur letzte 24h sichtbar, (b) seit 31.05. kein DSGVO-Proxy-Traffic → 24h-Fenster leer, obwohl Oberon 500+ Events der letzten 30 Tage hat (per curl bestätigt). Aktiver Pfad ist `routes_oberon.py` (`/api/v1/oberon/audit`), nicht `routes_cockpit.py`. +2 Tests, 21/21 in test_routes_oberon.py grün. **Restpunkt Romans Seite:** `MOAG_OBERON_TOKEN=mein-sicheres-token` auf VDR setzen (sonst Stub-Modus → leer). Noch nicht gepusht/deployed.
+
 2026-06-02 — **Tooltip-block-Fix + Node-Karten-2-Spalten-Layout:** `Tooltip.tsx` um optionales `block`-Prop erweitert (Wrapper `relative block w-full` statt `inline-block`). `SystemCard.tsx` MetricsBlock-Tooltips mit `block` — behebt verklebte Metriken auf der Übersicht. `Nodes.tsx` auf `grid-cols-2`-Layout umgebaut (GPU+VRAM links, CPU+RAM rechts). `NodeDetail.tsx` LoadRow mit `block`. 484 FE-Tests grün, tsc 0, Build grün. Noch nicht gepusht/deployed.
 
 2026-06-02 — **hardware_direct-Priorisierung:** OctoBoss liefert `hardware_direct` (HwDirectPullPoller, echte Lasten) neben `hardware` (Heartbeat, gpu_load/cpu_load=null). Adapter-Map-Weg: `hub_client._map_nodes()` + `adapters/octoboss.py` priorisieren `hardware_direct`, Fallback auf `hardware`. `NodeHardware` + TS-Typ um `hardware_source`/`hardware_at` erweitert. Nodes.tsx + NodeDetail.tsx zeigen Quell-Tooltip (ADR-004). 492 BE + 482 FE Tests grün, tsc 0. Noch nicht deployed/gepusht.

@@ -37,6 +37,7 @@ import type {
   Upload,
   UploadResult,
   UploadListResponse,
+  HwHistoryResponse,
 } from "./types";
 
 const API_BASE = "/api";
@@ -532,6 +533,13 @@ export const api = {
     /** GET /api/v1/octoboss/nodes/{node_id} — Node-Detail. */
     getNode: (nodeId: string): Promise<unknown> =>
       request<unknown>(`/v1/octoboss/nodes/${encodeURIComponent(nodeId)}`),
+
+    /** GET /api/v1/octoboss/nodes/{node_id}/history — GPU/CPU/RAM/VRAM-Verlauf
+     * (timestamp-getrieben). since_s = Zeitfenster in Sekunden. */
+    getNodeHistory: (nodeId: string, sinceS = 7200): Promise<HwHistoryResponse> =>
+      request<HwHistoryResponse>(
+        `/v1/octoboss/nodes/${encodeURIComponent(nodeId)}/history?since_s=${sinceS}`,
+      ),
 
     /** GET /api/v1/octoboss/overview — Capability-Summary. */
     getOverview: (): Promise<unknown> =>

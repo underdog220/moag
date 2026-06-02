@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../../../lib/api";
 import { Tooltip } from "../../../components/Tooltip";
+import { LoadHistoryChart } from "../../../components/Sparkline";
 import { PageBadge } from "../../../components/PageBadge";
 import { LoadingSpinner } from "../../../components/LoadingSpinner";
 import type { OctoBossNodeDetail, OctoBossModuleDetail } from "../../../lib/types";
@@ -170,6 +171,16 @@ export function NodeDetailPage() {
     refetchInterval: 10_000,
   });
 
+  // Längerer Verlauf (~2h) für das Auslastungs-Chart. Datenquelle:
+  // MOAG-interner Ring-Buffer (timestamp-getrieben, echte Zeitachse).
+  const { data: history } = useQuery({
+    queryKey: ["octoboss", "node-history", node_id, 7200],
+    queryFn: () => api.octoboss.getNodeHistory(node_id!, 7200),
+    enabled: !!node_id,
+    refetchInterval: 15_000,
+  });
+  const histSamples = history?.samples ?? [];
+
   const node = data as OctoBossNodeDetail | null;
   const hw = node?.hardware;
   const ollama = node?.ollama;
@@ -254,6 +265,26 @@ export function NodeDetailPage() {
               <KV label="GPU-Temp" value={hw?.gpu_temp_c != null ? `${hw.gpu_temp_c.toFixed(0)} °C` : "—"} />
               <KV label="CPU-Temp" value={hw?.cpu_temp_c != null ? `${hw.cpu_temp_c.toFixed(0)} °C` : "—"} />
               <KV label="CPU-Modell" value={hw?.cpu_model ?? "—"} mono />
+            </Panel>
+
+            {/* Auslastungsverlauf — volle Breite */}
+            <Panel title="Auslastungsverlauf" className="lg:col-span-2 3xl:col-span-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xxs text-fg-subtle">
+                  GPU/CPU-Last über die letzte Zeit · echte Zeitachse (variable Abstände)
+                </span>
+                <Tooltip
+                  title="GPU- und CPU-Auslastung im Zeitverlauf. Datenpunkte tragen ihren echten Messzeitpunkt — die Abstände können variieren (heute fester Poll, künftig lastabhängige Heartbeats)."
+                  source="/api/v1/octoboss/nodes/{id}/history"
+                  updatedAt="alle 15s"
+                  thresholds="0–100 % · GPU blau · CPU violett"
+                >
+                  <span className="cursor-help text-xxs text-fg-subtle">ⓘ</span>
+                </Tooltip>
+              </div>
+              <div className="mt-2">
+                <LoadHistoryChart samples={histSamples} />
+              </div>
             </Panel>
 
             {/* GPU / KI-Status */}

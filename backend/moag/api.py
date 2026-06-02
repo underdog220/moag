@@ -202,9 +202,33 @@ def create_app(
 
         push_edge_log("INFO", "gui", "MOAG gestartet")
 
+        # Hardware-Lasthistorie: entkoppelter Hintergrund-Poller. Sammelt
+        # GPU/CPU/RAM/VRAM-Samples auch ohne offenes Cockpit; Dedup nach
+        # hardware_at passiert im Store (timestamp-getrieben, heartbeat-ready).
+        async def _hw_history_loop() -> None:
+            from moag.hw_history import HW_HISTORY
+            from moag.routes_octoboss import collect_hw_samples
+
+            interval_s = 10
+            while True:
+                try:
+                    await collect_hw_samples(settings_store, HW_HISTORY)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as e:  # pragma: no cover - Hub ggf. nicht erreichbar
+                    logger.debug("hw-history-Poll fehlgeschlagen: %s", e)
+                await asyncio.sleep(interval_s)
+
+        hw_history_task = asyncio.create_task(_hw_history_loop())
+
         try:
             yield
         finally:
+            hw_history_task.cancel()
+            try:
+                await hw_history_task
+            except (asyncio.CancelledError, Exception):  # pragma: no cover
+                pass
             settings_store.remove_listener(on_settings_changed)
             uninstall_pipeline_hooks()
             try:

@@ -33,6 +33,14 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 - **Datenquelle:** `GET /api/v1/octoboss/nodes/{id}` (1:1-Hub-Proxy, Polling 10s) — **kein** Backend-Mapping (Type liest jetzt die echten Hub-Felder).
 - **Code:** `frontend/src/features/octoboss/pages/NodeDetail.tsx`, Typen `OctoBossNodeDetail`/`OctoBossModuleDetail`
 
+#### GPU/CPU-Auslastungs-Historie (Hover-Sparkline + Detail-Chart, seit 2026-06-02)
+- **Was:** Lastverlauf pro Node. (1) **Hover-Sparkline:** in der Node-Karte zeigt der GPU- und CPU-Tooltip eine Mini-Linie der letzten ~30 min. (2) **Detail-Chart:** auf `/octoboss/nodes/:id` ein volle-Breite-Panel „Auslastungsverlauf" (GPU+CPU als zwei Linien, y-Gitter 0–100, Start/Ende-Zeit-Labels, Legende mit aktuellen Werten, ~2 h).
+- **Kernprinzip (timestamp-getrieben, heartbeat-ready):** Jeder Datenpunkt trägt seinen echten Messzeitpunkt (`hardware_at`). Dedup strikt nach diesem Timestamp (derselbe Messpunkt nie doppelt, egal wie oft gepollt wird), Retention nach ZEIT (Default 2 h, nicht Anzahl), Rendering auf ECHTER Zeitachse (x = Zeit, null-Werte unterbrechen die Linie). Bleibt nach Umstellung von festem Poll auf lastabhängig getaktete Heartbeats ohne Code-Änderung korrekt.
+- **Sammlung:** entkoppelter Backend-Hintergrund-Poller (`api.py`-Lifespan, alle 10 s) → sammelt auch ohne offenes Cockpit. In-memory (überlebt keinen Container-Neustart; Persistenz = eigene Phase).
+- **Code:** Backend `backend/moag/hw_history.py` (`HwHistoryStore`/`HW_HISTORY`), `routes_octoboss.py` (`collect_hw_samples` + `GET /nodes/{id}/history`); Frontend `frontend/src/components/Sparkline.tsx` (`Sparkline`/`LoadHistoryChart`), `Tooltip.tsx` (`extra`-Slot), Einbau in `Nodes.tsx` + `NodeDetail.tsx`.
+- **Datenquelle:** `GET /api/v1/octoboss/nodes/{id}/history?since_s=` (MOAG-interner Ring-Buffer, kein zusätzlicher Hub-Call beim Abruf).
+- **Hinweis:** AMD-Nodes (WhiteStar) zeigen GPU-Last als Lücke (n/a), bis der AMD-GPU-Pfad steht — die Linie bricht dort sauber ab.
+
 #### Ultrawide-Layout
 - **Was:** Globaler `max-w-[2200px] mx-auto`-Cap im Layout (Content zentriert; TopBar/NavBar bleiben voll breit/sticky) gegen Extrem-Strecken auf 21:9/32:9. Custom-Breakpoint `3xl:1920px` → Karten-Grids skalieren auf mehr Spalten statt breiter zu werden.
 - **Code:** `frontend/src/components/Layout.tsx`, `frontend/tailwind.config.js`

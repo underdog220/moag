@@ -18,6 +18,8 @@ export interface TooltipContent {
 
 export interface TooltipProps extends TooltipContent {
   children: ReactNode;
+  /** Optionaler Rich-Content (z.B. Sparkline), wird unter dem title gerendert. */
+  extra?: ReactNode;
   /** Positionierung: "bottom" (default) oder "top" */
   position?: "bottom" | "top";
   /**
@@ -35,6 +37,7 @@ export function Tooltip({
   updatedAt,
   thresholds,
   children,
+  extra,
   position = "bottom",
   block = false,
 }: TooltipProps) {
@@ -99,6 +102,8 @@ export function Tooltip({
           data-testid="tooltip-card"
         >
           <p className="font-semibold text-fg">{title}</p>
+
+          {extra && <div className="mt-1.5">{extra}</div>}
 
           {(source || updatedAt || thresholds) && (
             <div className="mt-1.5 space-y-0.5 border-t border-white/10 pt-1.5">
