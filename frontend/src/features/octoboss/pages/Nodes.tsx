@@ -221,6 +221,15 @@ function NodeCard({ node }: { node: OctoBossNodeDetail }) {
             </span>
           </div>
         </Tooltip>
+        <Tooltip title={`Freier Video-RAM (GPU-Speicher): ${hw?.vram_free_gb != null ? hw.vram_free_gb.toFixed(1) + " GB" : "—"}`} source="/api/v1/octoboss/nodes">
+          <div className="flex items-center gap-2">
+            <span className="w-8 shrink-0 text-fg-subtle">VRAM</span>
+            <span className="text-fg-muted">frei</span>
+            <span className="ml-auto tabular-nums font-semibold text-fg">
+              {hw?.vram_free_gb != null ? `${hw.vram_free_gb.toFixed(1)} GB` : "—"}
+            </span>
+          </div>
+        </Tooltip>
       </div>
 
       {/* Footer: Ollama + GPU-Runtime */}

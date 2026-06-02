@@ -4,6 +4,8 @@ Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
 
 ## 2026-06-02
 
+- [2026-06-02] [v0.2.6] **VRAM-Anzeige in der Node-Karten-Übersicht.** Nodes.tsx zeigte nur RAM frei; VRAM-Zeile (vram_free_gb) analog ergänzt (Tooltip "Freier Video-RAM (GPU-Speicher)", ADR-004). NodeDetail-Seite hatte RAM+VRAM bereits (Z.251-252). Damit RAM + VRAM in beiden Ansichten. Hinweis: WhiteStar (AMD) zeigt VRAM/GPU n/a bis AMD-GPU-Pfad (LibreHardwareMonitor + wmi-Paket) wiederhergestellt ist — siehe Recherche-Befund.
+
 - [2026-06-02] [v0.2.5] **Fix: hardware_direct-Anreicherung am richtigen Pfad (Proxy statt _map_nodes).** v0.2.4 mappte `hub_client._map_nodes` (ClusterNode-Pfad), aber Nodes.tsx zieht `GET /api/v1/octoboss/nodes` = 1:1-Proxy (`routes_octoboss.py` `_proxy_get("/seti/nodes")`) → bekam weiter `hardware.gpu_load_percent=null` + kein `hardware_source`. Fix: neue `_enrich_node_hardware(node)` reichert im Proxy den `hardware`-Block mit `hardware_direct` an (echte Lasten gewinnen, gpu_name/cpu_model bleiben) + setzt `hardware_source`/`hardware_at`; auf `/nodes` (Liste) + `/nodes/{id}` (Detail) angewandt. 4 neue Unit-Tests (test_enrich_node_hardware.py) + 15/15 routes_octoboss grün. Live-verifiziert nach Deploy. Lehre: Frontend-Datenquelle prüfen (welcher Endpoint), bevor man den Map-Pfad härtet.
 
 - [2026-06-02] [v0.2.4] **Deploy v0.2.4 auf VDR — hardware_direct-Sichtbarkeit live.** Version-Bump (v0.2.3 lief bereits auf VDR ohne die hardware_direct-Änderung) + Push + `scripts/deploy-vdr.ps1`. Bringt die echte GPU/CPU-Last-Anzeige (dc1541a) live. Push + Deploy: Roman-Freigabe.
