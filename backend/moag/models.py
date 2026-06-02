@@ -23,7 +23,12 @@ class HubConfig(BaseModel):
 
 
 class NodeHardware(BaseModel):
-    """Hardware-Metriken eines Cluster-Nodes (Quelle: OctoBoss /seti/nodes)."""
+    """Hardware-Metriken eines Cluster-Nodes (Quelle: OctoBoss /seti/nodes).
+
+    Die effektiven Werte werden im Adapter aus hardware_direct (bevorzugt)
+    bzw. hardware (Fallback) gemappt. Das Frontend braucht keine eigene
+    Fallback-Logik.
+    """
     gpu_name: Optional[str] = None
     gpu_load_percent: Optional[float] = None
     cpu_load_percent: Optional[float] = None
@@ -35,6 +40,9 @@ class NodeHardware(BaseModel):
     cpu_temp_c: Optional[float] = None
     gpu_present: Optional[bool] = None
     gpu_runtime_ready: Optional[bool] = None
+    # Quell-Metadaten — "direct" = HwDirectPullPoller, "heartbeat" = Heartbeat-Wert
+    hardware_source: Optional[str] = None   # "direct" | "heartbeat" | None
+    hardware_at: Optional[str] = None       # ISO-Zeitstempel des Direkt-Pulls
 
 
 class ModuleInfo(BaseModel):

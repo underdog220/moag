@@ -78,7 +78,11 @@ async def get_status(
                         ollama = n.get("ollama") or {}
                         if ollama.get("running"):
                             nodes_ollama_running += 1
-                        hw = n.get("hardware") or {}
+                        # hardware_direct bevorzugen (HwDirectPullPoller liefert echte Werte);
+                        # Fallback auf hardware (Heartbeat, gpu_load/cpu_load dort null).
+                        hw_direct = n.get("hardware_direct") or {}
+                        hw_hb = n.get("hardware") or {}
+                        hw = hw_direct if hw_direct else hw_hb
                         # Hardware-Telemetrie "kommt an" wenn mindestens 1 Feld populiert ist
                         if hw.get("gpu_name") or hw.get("gpu_load_percent") is not None \
                                 or hw.get("cpu_load_percent") is not None \

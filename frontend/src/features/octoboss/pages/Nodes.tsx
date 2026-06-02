@@ -50,16 +50,42 @@ function SegBar({ value }: { value: number | null | undefined }) {
   );
 }
 
+// ─── Hilfsfunktion: Quell-Label für Tooltip ──────────────────────────────────
+
+function hwSourceLabel(
+  source: "direct" | "heartbeat" | null | undefined,
+  at: string | null | undefined,
+): string {
+  if (source === "direct") {
+    if (at) {
+      try {
+        const s = Math.floor((Date.now() - new Date(at).getTime()) / 1000);
+        const age = s < 60 ? `${s}s` : `${Math.floor(s / 60)}min`;
+        return `Direkt-Pull (vor ${age})`;
+      } catch {
+        return "Direkt-Pull";
+      }
+    }
+    return "Direkt-Pull";
+  }
+  if (source === "heartbeat") return "Heartbeat (Lasten ggf. null)";
+  return "Quelle unbekannt";
+}
+
 // ─── Metrik-Zeile (GPU/CPU-Last) ─────────────────────────────────────────────
 
 function MetricRow({
   label,
   value,
   hint,
+  hwSource,
+  hwAt,
 }: {
   label: string;
   value: number | null | undefined;
   hint?: string;
+  hwSource?: "direct" | "heartbeat" | null;
+  hwAt?: string | null;
 }) {
   const txt =
     value == null
@@ -69,11 +95,12 @@ function MetricRow({
         : value > 70
           ? "text-status-warn"
           : "text-status-ok";
+  const srcLabel = hwSourceLabel(hwSource, hwAt);
   return (
     <Tooltip
       title={`${label}-Auslastung: ${value == null ? "keine Telemetrie" : value.toFixed(1) + " %"}${
         hint ? " (" + hint + ")" : ""
-      }`}
+      } · ${srcLabel}`}
       source="/api/v1/octoboss/nodes"
       thresholds="<70% ok · 70-90% warn · >90% krit"
     >
@@ -181,8 +208,10 @@ function NodeCard({ node }: { node: OctoBossNodeDetail }) {
 
       {/* Last-Bargraphs */}
       <div className="mt-2 space-y-1 text-xs">
-        <MetricRow label="GPU" value={hw?.gpu_load_percent} hint={rtHint} />
-        <MetricRow label="CPU" value={hw?.cpu_load_percent} />
+        <MetricRow label="GPU" value={hw?.gpu_load_percent} hint={rtHint}
+          hwSource={hw?.hardware_source} hwAt={hw?.hardware_at} />
+        <MetricRow label="CPU" value={hw?.cpu_load_percent}
+          hwSource={hw?.hardware_source} hwAt={hw?.hardware_at} />
         <Tooltip title={`Freier RAM: ${hw?.ram_free_gb != null ? hw.ram_free_gb.toFixed(1) + " GB" : "—"}`} source="/api/v1/octoboss/nodes">
           <div className="flex items-center gap-2">
             <span className="w-8 shrink-0 text-fg-subtle">RAM</span>

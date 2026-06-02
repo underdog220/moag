@@ -178,7 +178,18 @@ class HubClient:
             if not isinstance(n, dict):
                 continue
             try:
-                hw_raw = n.get("hardware") or {}
+                # hardware_direct (HwDirectPullPoller) hat echte Lastwerte;
+                # hardware (Heartbeat) liefert gpu_load/cpu_load als null — bekannter Bug.
+                # Fallback-Logik einmalig hier, nicht im Frontend.
+                hw_direct = n.get("hardware_direct") or {}
+                hw_hb = n.get("hardware") or {}
+                # Effektiver Rohwert: hardware_direct bevorzugt, Fallback hardware
+                hw_raw: dict = hw_direct if hw_direct else hw_hb
+                # Quell-Flag: "direct" wenn hardware_direct existiert und nicht leer
+                hw_source: Optional[str] = (
+                    "direct" if hw_direct else ("heartbeat" if hw_hb else None)
+                )
+                hw_at: Optional[str] = n.get("hardware_direct_at")
                 hw = NodeHardware(
                     gpu_name=hw_raw.get("gpu_name"),
                     gpu_load_percent=hw_raw.get("gpu_load_percent"),
@@ -190,6 +201,8 @@ class HubClient:
                     cpu_temp_c=hw_raw.get("cpu_temp_c"),
                     gpu_present=hw_raw.get("gpu_present"),
                     gpu_runtime_ready=hw_raw.get("gpu_runtime_ready"),
+                    hardware_source=hw_source,
+                    hardware_at=hw_at,
                 )
                 modules = []
                 for m in (n.get("modules") or []):

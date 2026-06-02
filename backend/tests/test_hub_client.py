@@ -74,6 +74,8 @@ async def test_poll_reachable_hub(monkeypatch: MonkeyPatch):
     assert len(nodes) == 2
     assert nodes[0].hostname == "WorkRyzen"
     assert nodes[0].hardware.gpu_load_percent == 22
+    # hardware_source sollte "heartbeat" sein (kein hardware_direct in diesem Payload)
+    assert nodes[0].hardware.hardware_source == "heartbeat"
 
 
 @pytest.mark.asyncio
@@ -225,3 +227,72 @@ async def test_configure_replaces_hubs():
     # Neuer Hub statt 'a' -> alter Cache muss raus
     client.configure([HubConfig(id="b", name="B", url="http://b")], "b")
     assert "a" not in client._status_cache  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
+async def test_hardware_direct_gewinnt_im_map_nodes(monkeypatch: MonkeyPatch):
+    """hardware_direct wird bevorzugt: effektive Lasten aus hardware_direct, nicht aus hardware."""
+    nodes_payload = {"nodes": [
+        {
+            "node_id": "n1", "hostname": "WorkRyzen", "connected": True,
+            "last_heartbeat": "2026-06-02T10:00:00Z",
+            # Heartbeat liefert null (bekannter Bug)
+            "hardware": {"gpu_name": "RTX 4070", "gpu_load_percent": None, "cpu_load_percent": None, "ram_free_gb": 24.0},
+            # Direkt-Pull liefert echte Werte
+            "hardware_direct": {"gpu_name": "RTX 4070", "gpu_load_percent": 33, "cpu_load_percent": 15, "ram_free_gb": 24.0},
+            "hardware_direct_at": "2026-06-02T10:00:02Z",
+            "engines": [], "modules": [],
+        },
+    ]}
+    transport = _make_mock_transport({
+        "http://hub-d/health":       (200, ""),
+        "http://hub-d/seti/nodes":   (200, nodes_payload),
+    })
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: real_client(transport=transport, **kw))
+
+    client = HubClient(timeout=1.0, poll_interval=60.0)
+    client.configure([HubConfig(id="d", name="D", url="http://hub-d")], "d")
+    await client.poll_once()
+    nodes = client.get_nodes()
+
+    assert len(nodes) == 1
+    hw = nodes[0].hardware
+    # Effektive Werte kommen aus hardware_direct
+    assert hw.gpu_load_percent == 33
+    assert hw.cpu_load_percent == 15
+    # Quell-Flag muss "direct" sein
+    assert hw.hardware_source == "direct"
+    assert hw.hardware_at == "2026-06-02T10:00:02Z"
+
+
+@pytest.mark.asyncio
+async def test_hardware_fallback_wenn_kein_hardware_direct(monkeypatch: MonkeyPatch):
+    """Wenn hardware_direct fehlt, wird hardware als Fallback genutzt + source='heartbeat'."""
+    nodes_payload = {"nodes": [
+        {
+            "node_id": "n2", "hostname": "WhiteStar", "connected": True,
+            "last_heartbeat": "2026-06-02T10:00:00Z",
+            # Nur hardware vorhanden
+            "hardware": {"gpu_name": "AMD Radeon", "gpu_load_percent": None, "cpu_load_percent": 5, "ram_free_gb": 14.0},
+            "engines": [], "modules": [],
+        },
+    ]}
+    transport = _make_mock_transport({
+        "http://hub-e/health":       (200, ""),
+        "http://hub-e/seti/nodes":   (200, nodes_payload),
+    })
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: real_client(transport=transport, **kw))
+
+    client = HubClient(timeout=1.0, poll_interval=60.0)
+    client.configure([HubConfig(id="e", name="E", url="http://hub-e")], "e")
+    await client.poll_once()
+    nodes = client.get_nodes()
+
+    hw = nodes[0].hardware
+    # Fallback auf hardware
+    assert hw.cpu_load_percent == 5
+    assert hw.gpu_load_percent is None   # Heartbeat-Bug bleibt erhalten
+    assert hw.hardware_source == "heartbeat"
+    assert hw.hardware_at is None

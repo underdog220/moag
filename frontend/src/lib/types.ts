@@ -82,6 +82,9 @@ export interface NodeHardware {
   cpu_temp_c?: number | null;
   gpu_present?: boolean | null;
   gpu_runtime_ready?: boolean | null;
+  // Quell-Metadaten: "direct" = HwDirectPullPoller, "heartbeat" = Heartbeat-Wert
+  hardware_source?: "direct" | "heartbeat" | null;
+  hardware_at?: string | null; // ISO-Zeitstempel des Direkt-Pulls
 }
 
 export interface ModuleInfo {
@@ -672,19 +675,7 @@ export interface OctoBossNodeDetail {
   gpu_fallback_detected?: boolean | null;
   has_hardware?: boolean | null;
   capabilities?: string[];
-  hardware: {
-    gpu_name: string | null;
-    gpu_load_percent: number | null;
-    cpu_load_percent: number | null;
-    cpu_model: string | null;
-    ram_free_gb: number | null;
-    vram_free_gb: number | null;
-    gpu_temp_c?: number | null;
-    cpu_temp_c?: number | null;
-    gpu_present?: boolean | null;
-    gpu_runtime_ready?: boolean | null;
-    [key: string]: unknown;
-  } | null;
+  hardware: NodeHardware | null;
   ollama: {
     running: boolean;
     installed_models?: string[];     // echte Hub-Feld (NICHT "models")

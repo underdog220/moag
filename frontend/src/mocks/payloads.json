@@ -60,12 +60,22 @@
         "last_heartbeat": "2026-05-06T10:31:36Z",
         "hardware": {
           "gpu_name": "NVIDIA GeForce RTX 4070 Ti",
+          "gpu_load_percent": null,
+          "cpu_load_percent": null,
+          "ram_free_gb": 24.2,
+          "vram_free_gb": 11.8,
+          "cpu_model": "AMD Ryzen 9"
+        },
+        "hardware_direct": {
+          "gpu_name": "NVIDIA GeForce RTX 4070 Ti",
           "gpu_load_percent": 22,
           "cpu_load_percent": 14,
           "ram_free_gb": 24.2,
           "vram_free_gb": 11.8,
           "cpu_model": "AMD Ryzen 9"
         },
+        "hardware_direct_at": "2026-05-06T10:31:38Z",
+        "hardware_direct_source": "hw_direct_poller",
         "engines": ["tesseract", "easyocr", "paddleocr", "surya"],
         "modules": [
           {"name": "ocr-multi", "version": "1.0.3"},
@@ -82,12 +92,22 @@
         "last_heartbeat": "2026-05-06T10:31:52Z",
         "hardware": {
           "gpu_name": "NVIDIA RTX 2060 SUPER",
+          "gpu_load_percent": null,
+          "cpu_load_percent": null,
+          "ram_free_gb": 12.5,
+          "vram_free_gb": 4.2,
+          "cpu_model": "AMD Ryzen 7"
+        },
+        "hardware_direct": {
+          "gpu_name": "NVIDIA RTX 2060 SUPER",
           "gpu_load_percent": 71,
           "cpu_load_percent": 38,
           "ram_free_gb": 12.5,
           "vram_free_gb": 4.2,
           "cpu_model": "AMD Ryzen 7"
         },
+        "hardware_direct_at": "2026-05-06T10:31:54Z",
+        "hardware_direct_source": "hw_direct_poller",
         "engines": ["tesseract", "easyocr", "paddleocr", "surya"],
         "modules": [
           {"name": "ocr-multi", "version": "1.0.3"},
@@ -110,6 +130,9 @@
           "vram_free_gb": null,
           "cpu_model": "AMD Ryzen"
         },
+        "hardware_direct": null,
+        "hardware_direct_at": null,
+        "hardware_direct_source": null,
         "engines": [],
         "modules": [
           {"name": "ocr-multi", "version": "1.0.3"},

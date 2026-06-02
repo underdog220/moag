@@ -53,12 +53,17 @@ async def test_reachable_with_perfect_nodes(monkeypatch):
         {
             "node_id": "n1", "hostname": "A", "connected": True, "mode": "IDLE",
             "ollama": {"running": True},
-            "hardware": {"gpu_name": "RTX 4070", "gpu_load_percent": 12, "cpu_load_percent": 5, "ram_free_gb": 16.0},
+            # hardware_direct hat echte Lasten; hardware simuliert Heartbeat-Bug (null)
+            "hardware": {"gpu_name": "RTX 4070", "gpu_load_percent": None, "cpu_load_percent": None, "ram_free_gb": 16.0},
+            "hardware_direct": {"gpu_name": "RTX 4070", "gpu_load_percent": 12, "cpu_load_percent": 5, "ram_free_gb": 16.0},
+            "hardware_direct_at": "2026-06-02T10:00:00Z",
         },
         {
             "node_id": "n2", "hostname": "B", "connected": True, "mode": "ACTIVE",
             "ollama": {"running": True},
-            "hardware": {"gpu_name": "RTX 3060", "gpu_load_percent": 22, "cpu_load_percent": 8, "ram_free_gb": 12.0},
+            "hardware": {"gpu_name": "RTX 3060", "gpu_load_percent": None, "cpu_load_percent": None, "ram_free_gb": 12.0},
+            "hardware_direct": {"gpu_name": "RTX 3060", "gpu_load_percent": 22, "cpu_load_percent": 8, "ram_free_gb": 12.0},
+            "hardware_direct_at": "2026-06-02T10:00:01Z",
         },
     ]}
 
@@ -89,6 +94,7 @@ async def test_reachable_connected_but_no_compute(monkeypatch):
         {
             "node_id": "n1", "hostname": "A", "connected": True, "mode": "IDLE",
             "ollama": {"running": False},
+            # Kein hardware_direct, hardware hat auch keine populierten Felder
             "hardware": {"gpu_name": "", "gpu_load_percent": None, "cpu_load_percent": None, "ram_free_gb": None},
         },
         {
@@ -117,3 +123,63 @@ async def test_reachable_connected_but_no_compute(monkeypatch):
     assert status.metrics.get("nodes_ollama_running") == 0
     assert status.metrics.get("nodes_hardware_present") == 0
     assert "0/2 Ollama" in status.summary
+
+
+@pytest.mark.asyncio
+async def test_hardware_direct_gewinnt_gegen_heartbeat(monkeypatch):
+    """hardware_direct wird bevorzugt wenn vorhanden; hardware (Heartbeat, null-Lasten) ignoriert."""
+    nodes_payload = {"nodes": [
+        {
+            "node_id": "n1", "hostname": "A", "connected": True, "mode": "IDLE",
+            "ollama": {"running": True},
+            # Heartbeat: gpu_load null (bekannter Bug)
+            "hardware": {"gpu_name": "RTX 4070", "gpu_load_percent": None, "cpu_load_percent": None, "ram_free_gb": 20.0},
+            # Direkt-Pull: echte Werte
+            "hardware_direct": {"gpu_name": "RTX 4070", "gpu_load_percent": 42, "cpu_load_percent": 18, "ram_free_gb": 20.0},
+            "hardware_direct_at": "2026-06-02T10:00:05Z",
+        },
+    ]}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if "/health" in str(req.url):
+            return httpx.Response(200, json={"status": "ok"})
+        if "/seti/nodes" in str(req.url):
+            return httpx.Response(200, json=nodes_payload)
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: real_client(transport=transport, **kw))
+
+    status = await octoboss.get_status(base_url="http://127.0.0.1:8765")
+    # hardware_direct hat gpu_load_percent=42 -> hardware_present=1 -> Score 100
+    assert status.metrics.get("nodes_hardware_present") == 1
+    assert status.score == 100
+
+
+@pytest.mark.asyncio
+async def test_hardware_direct_fehlt_fallback_auf_hardware(monkeypatch):
+    """Wenn hardware_direct fehlt, wird hardware als Fallback genutzt."""
+    nodes_payload = {"nodes": [
+        {
+            "node_id": "n1", "hostname": "B", "connected": True, "mode": "IDLE",
+            "ollama": {"running": True},
+            # Nur hardware (kein hardware_direct) — ram_free_gb reicht um hardware_present=1
+            "hardware": {"gpu_name": "RTX 3060", "gpu_load_percent": None, "cpu_load_percent": None, "ram_free_gb": 8.0},
+        },
+    ]}
+
+    def handler(req: httpx.Request) -> httpx.Response:
+        if "/health" in str(req.url):
+            return httpx.Response(200, json={"status": "ok"})
+        if "/seti/nodes" in str(req.url):
+            return httpx.Response(200, json=nodes_payload)
+        return httpx.Response(404)
+
+    transport = httpx.MockTransport(handler)
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(httpx, "AsyncClient", lambda **kw: real_client(transport=transport, **kw))
+
+    status = await octoboss.get_status(base_url="http://127.0.0.1:8765")
+    # hardware Fallback: ram_free_gb populiert -> hardware_present=1
+    assert status.metrics.get("nodes_hardware_present") == 1

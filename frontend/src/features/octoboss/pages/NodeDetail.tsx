@@ -94,15 +94,54 @@ function SegBar({ value }: { value: number | null | undefined }) {
   );
 }
 
-function LoadRow({ label, value }: { label: string; value: number | null | undefined }) {
+// ─── Quell-Label für Hardware-Telemetrie-Tooltip ─────────────────────────────
+
+function hwSourceLabel(
+  source: "direct" | "heartbeat" | null | undefined,
+  at: string | null | undefined,
+): string {
+  if (source === "direct") {
+    if (at) {
+      try {
+        const s = Math.floor((Date.now() - new Date(at).getTime()) / 1000);
+        const age = s < 60 ? `${s}s` : `${Math.floor(s / 60)}min`;
+        return `Direkt-Pull (vor ${age})`;
+      } catch {
+        return "Direkt-Pull";
+      }
+    }
+    return "Direkt-Pull";
+  }
+  if (source === "heartbeat") return "Heartbeat (Lasten ggf. null)";
+  return "Quelle unbekannt";
+}
+
+function LoadRow({
+  label,
+  value,
+  hwSource,
+  hwAt,
+}: {
+  label: string;
+  value: number | null | undefined;
+  hwSource?: "direct" | "heartbeat" | null;
+  hwAt?: string | null;
+}) {
   const txt =
     value == null ? "text-fg-subtle" : value > 90 ? "text-status-error" : value > 70 ? "text-status-warn" : "text-status-ok";
+  const srcLabel = hwSourceLabel(hwSource, hwAt);
   return (
-    <div className="flex items-center gap-2 py-1 text-sm">
-      <span className="w-12 shrink-0 text-xs text-fg-muted">{label}</span>
-      <SegBar value={value} />
-      <span className={`ml-auto tabular-nums ${txt}`}>{value == null ? "n/a" : `${value.toFixed(0)}%`}</span>
-    </div>
+    <Tooltip
+      title={`${label}-Auslastung: ${value == null ? "keine Telemetrie" : value.toFixed(1) + " %"} · ${srcLabel}`}
+      source="/api/v1/octoboss/nodes/{id}"
+      thresholds="<70% ok · 70-90% warn · >90% krit"
+    >
+      <div className="flex items-center gap-2 py-1 text-sm">
+        <span className="w-12 shrink-0 text-xs text-fg-muted">{label}</span>
+        <SegBar value={value} />
+        <span className={`ml-auto tabular-nums ${txt}`}>{value == null ? "n/a" : `${value.toFixed(0)}%`}</span>
+      </div>
+    </Tooltip>
   );
 }
 
@@ -205,8 +244,10 @@ export function NodeDetailPage() {
             {/* Hardware */}
             <Panel title="Hardware & Auslastung">
               <KV label="GPU" value={hw?.gpu_name ?? "—"} />
-              <LoadRow label="GPU" value={hw?.gpu_load_percent} />
-              <LoadRow label="CPU" value={hw?.cpu_load_percent} />
+              <LoadRow label="GPU" value={hw?.gpu_load_percent}
+                hwSource={hw?.hardware_source} hwAt={hw?.hardware_at} />
+              <LoadRow label="CPU" value={hw?.cpu_load_percent}
+                hwSource={hw?.hardware_source} hwAt={hw?.hardware_at} />
               <KV label="RAM frei" value={hw?.ram_free_gb != null ? `${hw.ram_free_gb.toFixed(1)} GB` : "—"} />
               <KV label="VRAM frei" value={hw?.vram_free_gb != null ? `${hw.vram_free_gb.toFixed(1)} GB` : "—"} />
               <KV label="GPU-Temp" value={hw?.gpu_temp_c != null ? `${hw.gpu_temp_c.toFixed(0)} °C` : "—"} />
