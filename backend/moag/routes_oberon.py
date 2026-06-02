@@ -21,7 +21,7 @@ Stub-Fallback wenn kein oberon_token konfiguriert.
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
@@ -184,6 +184,13 @@ def get_cost(
         raise _cockpit_error(exc)
 
 
+# Oberon deckelt den Audit-Lookback auf 30 Tage und liefert OHNE expliziten
+# since-Cursor nur die letzten 24h — fuer ein Audit-Log unbrauchbar (leere
+# Anzeige, sobald 24h kein DSGVO-Proxy-Traffic lief). Default daher auf das
+# Oberon-Maximum, damit die UI ohne Zeitfilter den vollen Verlauf sieht.
+_AUDIT_DEFAULT_LOOKBACK_DAYS = 30
+
+
 @router.get("/audit")
 def get_audit(
     since: Optional[str] = Query(default=None, description="ISO-8601-Cursor fuer Pagination"),
@@ -194,6 +201,9 @@ def get_audit(
     """GET /api/v2/admin/cockpit/audit — DSGVO-Audit-Event-Stream.
 
     Datenquelle: Oberon /api/v2/admin/cockpit/audit
+
+    Ohne `since` setzt MOAG den Cursor auf 30 Tage zurueck (Oberon-Maximum),
+    sonst greift Oberons 24h-Default und die Anzeige bleibt meist leer.
     """
     client = _build_cockpit_client()
     if client is None:
@@ -204,6 +214,9 @@ def get_audit(
             since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
         except ValueError:
             raise HTTPException(status_code=400, detail=f"Ungueltige since-Zeit: {since!r}")
+    else:
+        # Kein Cursor von der UI → Oberons 24h-Default umgehen, vollen Lookback nutzen.
+        since_dt = datetime.now(timezone.utc) - timedelta(days=_AUDIT_DEFAULT_LOOKBACK_DAYS)
     try:
         with client:
             result = client.get_audit(limit=limit, since=since_dt, pii_type=pii_type, client_id=client_id)

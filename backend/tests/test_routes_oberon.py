@@ -228,6 +228,63 @@ def test_calls_since_invalid(app_with_token):
     assert resp.status_code == 400
 
 
+def _audit_response_mock():
+    """Erstellt ein leeres AuditResponse-Mock fuer get_audit."""
+    from moag.clients.oberon_cockpit_schemas import AuditFilters, AuditResponse
+    return AuditResponse(
+        events=[],
+        next_since=None,
+        limit=100,
+        returned=0,
+        filters=AuditFilters(pii_type=None, client_id=None),
+    )
+
+
+def test_audit_default_since_30d(app_with_token):
+    """Ohne since-Parameter setzt MOAG einen Default-Cursor ~30 Tage zurueck
+    (umgeht Oberons 24h-Default, sonst bleibt die Anzeige meist leer)."""
+    from datetime import datetime, timedelta, timezone
+
+    import moag.routes_oberon as _ro
+
+    mock_client = MagicMock()
+    mock_client.__enter__ = MagicMock(return_value=mock_client)
+    mock_client.__exit__ = MagicMock(return_value=False)
+    mock_client.get_audit = MagicMock(return_value=_audit_response_mock())
+
+    with patch.object(_ro, "_build_cockpit_client", return_value=mock_client):
+        with TestClient(app_with_token) as client:
+            resp = client.get("/api/v1/oberon/audit")
+
+    assert resp.status_code == 200
+    mock_client.get_audit.assert_called_once()
+    since_arg = mock_client.get_audit.call_args.kwargs.get("since")
+    assert since_arg is not None, "Default-since muss gesetzt sein"
+    delta = datetime.now(timezone.utc) - since_arg
+    # ~30 Tage, mit Toleranz fuer Test-Laufzeit
+    assert timedelta(days=29, hours=23) <= delta <= timedelta(days=30, minutes=5)
+
+
+def test_audit_explicit_since_passthrough(app_with_token):
+    """Expliziter since-Parameter wird unveraendert durchgereicht (kein Default-Override)."""
+    from datetime import datetime, timezone
+
+    import moag.routes_oberon as _ro
+
+    mock_client = MagicMock()
+    mock_client.__enter__ = MagicMock(return_value=mock_client)
+    mock_client.__exit__ = MagicMock(return_value=False)
+    mock_client.get_audit = MagicMock(return_value=_audit_response_mock())
+
+    with patch.object(_ro, "_build_cockpit_client", return_value=mock_client):
+        with TestClient(app_with_token) as client:
+            resp = client.get("/api/v1/oberon/audit?since=2026-05-01T00:00:00Z")
+
+    assert resp.status_code == 200
+    since_arg = mock_client.get_audit.call_args.kwargs.get("since")
+    assert since_arg == datetime(2026, 5, 1, 0, 0, 0, tzinfo=timezone.utc)
+
+
 def test_platform_instances_with_token(app_with_token):
     """Mit Token: /instances ruft OberonPlatformClient auf."""
     mock_instances = [{"id": "inst-1", "mode": "devloop", "context_size": 4096}]
