@@ -144,6 +144,31 @@ async def _proxy_post(
         )
 
 
+def _enrich_node_hardware(node: dict) -> dict:
+    """Reichert den hardware-Block einer Node mit hardware_direct an.
+
+    OctoBoss liefert zwei Quellen: `hardware` (Heartbeat — gpu_load/cpu_load oft
+    null, bekannter Bug) und `hardware_direct` (HwDirectPullPoller, echte Lasten).
+    Wir mergen die effektiven Werte (hardware_direct bevorzugt) in `hardware` und
+    setzen `hardware_source`/`hardware_at`, damit das Frontend (Nodes.tsx liest
+    hw.gpu_load_percent + hw.hardware_source) die echten Werte zeigt.
+    gpu_name/cpu_model bleiben aus `hardware` erhalten (hardware_direct hat sie nicht).
+    Fallback: kein hardware_direct → hardware mit Quelle "heartbeat".
+    """
+    if not isinstance(node, dict):
+        return node
+    hw = dict(node.get("hardware") or {})
+    hw_direct = node.get("hardware_direct") or {}
+    if hw_direct:
+        hw.update(hw_direct)  # echte Lasten gewinnen; gpu_name/cpu_model bleiben aus hw
+        hw["hardware_source"] = "direct"
+        hw["hardware_at"] = node.get("hardware_direct_at")
+    elif hw:
+        hw["hardware_source"] = "heartbeat"
+    node["hardware"] = hw
+    return node
+
+
 def build_octoboss_router(settings_store: SettingsStore) -> APIRouter:
     """Erstellt den FastAPI-Router fuer alle OctoBoss-Proxy-Routen."""
     router = APIRouter(prefix="/api/v1/octoboss", tags=["octoboss"])
@@ -155,13 +180,19 @@ def build_octoboss_router(settings_store: SettingsStore) -> APIRouter:
         Liefert Hardware-Telemetrie, Ollama-Status, Mode und Modules pro Node.
         """
         hub_url, token = _resolve_hub(settings_store)
-        return await _proxy_get(hub_url, "/seti/nodes", token)
+        data = await _proxy_get(hub_url, "/seti/nodes", token)
+        if isinstance(data, dict) and isinstance(data.get("nodes"), list):
+            data["nodes"] = [_enrich_node_hardware(n) for n in data["nodes"]]
+        elif isinstance(data, list):
+            data = [_enrich_node_hardware(n) for n in data]
+        return data
 
     @router.get("/nodes/{node_id}")
     async def get_node(node_id: str) -> Any:
         """Node-Detail: GET /seti/nodes/{node_id} am OctoBoss-Hub."""
         hub_url, token = _resolve_hub(settings_store)
-        return await _proxy_get(hub_url, f"/seti/nodes/{node_id}", token)
+        node = await _proxy_get(hub_url, f"/seti/nodes/{node_id}", token)
+        return _enrich_node_hardware(node)
 
     @router.get("/overview")
     async def get_overview() -> Any:
