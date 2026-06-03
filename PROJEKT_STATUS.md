@@ -11,10 +11,10 @@
 
 **Tests:** 488 Backend + 482 Frontend grün, tsc 0, Build grün. **Deploy des aktuellen Stands (qnapbackup + Übersicht + Oberon) an Roman übergeben — Live-Bestätigung ausstehend.** Letzter bestätigter Live-Stand: Amber-Theme + Node-Karten (Screenshots).
 
-**Letzte Änderung:** 2026-06-02 — qnapbackup-Drilldown live (v0.2.9 deployed), dann Hotfix `share`-Schema (v0.2.10): echte API liefert `share` Singular, nicht `shares` Array — Backup-Historie crashte; per Live-Smoke gefunden + gefixt.
+**Letzte Änderung:** 2026-06-03 — Benchmark-Seite neu (v0.2.11): Heatmap-Performance-Vergleich mit Hostnames statt UUIDs, schnellster Rechner je Modell hervorgehoben; tote Test-Nodes (6 Karteileichen vom 20.05.) in ausklappbare Sektion ausgelagert; History eingeklappt. Datenquelle-Diagnose: nur 3 von 9 Matrix-Nodes sind echte Rechner.
 
 ## Version
-v0.2.10 (lokal; v0.2.9 live auf VDR — wird durch v0.2.10 ersetzt). Seit v0.2.3: hardware_direct-Sichtbarkeit, qnapbackup-Card + Drilldown, Tooltip-block-Layout, DSGVO-Audit-Fix, GPU/CPU-Last-Historie.
+v0.2.11 (lokal; v0.2.10 live auf VDR). Seit v0.2.3: hardware_direct-Sichtbarkeit, qnapbackup-Card + Drilldown, Tooltip-block-Layout, DSGVO-Audit-Fix, GPU/CPU-Last-Historie, Benchmark-Heatmap-Redesign.
 
 ## Nächste geplante Stufe
 Follow-Ups aus Release-Report v0.2.3 (siehe `MASSNAHMEN.md` 2026-05-24):

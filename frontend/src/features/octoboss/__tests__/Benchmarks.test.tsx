@@ -104,6 +104,15 @@ const MOCK_RUN_STARTED = {
   message: "Benchmark-Run gestartet",
 };
 
+// Node-Liste fuers Hostname-Mapping: node_id == Hostname (Test vereinfacht),
+// beide verbunden → liveNodes = beide, keine veralteten.
+const MOCK_NODES = {
+  nodes: [
+    { node_id: "Ryzenstrike", hostname: "Ryzenstrike", connected: true, hardware: { gpu_name: "RTX 2060S" } },
+    { node_id: "WhiteStar", hostname: "WhiteStar", connected: true, hardware: { gpu_name: "RX 7900XTX" } },
+  ],
+};
+
 // ── API-Spies als Helper ───────────────────────────────────────────────────────
 
 function mockAllApis(overrides: Partial<{
@@ -121,6 +130,7 @@ function mockAllApis(overrides: Partial<{
   vi.spyOn(apiModule.api.octoboss, "getBenchmarkHistory").mockResolvedValue(
     overrides.history ?? MOCK_HISTORY,
   );
+  vi.spyOn(apiModule.api.octoboss, "getNodes").mockResolvedValue(MOCK_NODES);
   if (overrides.runBenchmark !== undefined) {
     vi.spyOn(apiModule.api.octoboss, "runBenchmark").mockResolvedValue(
       overrides.runBenchmark,
@@ -177,6 +187,7 @@ describe("BenchmarksPage", () => {
     );
     vi.spyOn(apiModule.api.octoboss, "getBenchmarkRuns").mockResolvedValue(MOCK_RUNS);
     vi.spyOn(apiModule.api.octoboss, "getBenchmarkHistory").mockResolvedValue(MOCK_HISTORY);
+    vi.spyOn(apiModule.api.octoboss, "getNodes").mockResolvedValue(MOCK_NODES);
 
     render(wrap(<BenchmarksPage />));
     await waitFor(() => {
@@ -191,6 +202,7 @@ describe("BenchmarksPage", () => {
       new Error("503 Benchmark-DB nicht verfuegbar"),
     );
     vi.spyOn(apiModule.api.octoboss, "getBenchmarkHistory").mockResolvedValue(MOCK_HISTORY);
+    vi.spyOn(apiModule.api.octoboss, "getNodes").mockResolvedValue(MOCK_NODES);
 
     render(wrap(<BenchmarksPage />));
     await waitFor(() => {
