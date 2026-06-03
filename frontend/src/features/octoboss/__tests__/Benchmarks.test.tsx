@@ -274,6 +274,25 @@ describe("BenchmarksPage", () => {
     });
   });
 
+  it("schickt Scope-Filter (domains) wenn eine Domaene abgewaehlt wird", async () => {
+    mockAllApis({ runBenchmark: MOCK_RUN_STARTED });
+    const spy = vi.spyOn(apiModule.api.octoboss, "runBenchmark").mockResolvedValue(MOCK_RUN_STARTED);
+
+    render(wrap(<BenchmarksPage />));
+    // OCR-Chip abwaehlen (alle Domaenen sind per Default an)
+    const ocrChip = await screen.findByRole("button", { name: /OCR/i });
+    fireEvent.click(ocrChip);
+
+    fireEvent.click(screen.getByRole("button", { name: /Benchmark-Run starten/i }));
+    await waitFor(() => expect(screen.getByRole("alertdialog")).toBeTruthy());
+    fireEvent.click(screen.getByTestId("confirm-dialog-confirm"));
+
+    await waitFor(() => {
+      // ocr fehlt; node_ids bleibt leer (alle Nodes aktiv)
+      expect(spy).toHaveBeenCalledWith({ domains: ["llm_text", "llm_vision", "ner_pii"] });
+    });
+  });
+
   it("zeigt PageBadge", async () => {
     mockAllApis();
     render(wrap(<BenchmarksPage />));

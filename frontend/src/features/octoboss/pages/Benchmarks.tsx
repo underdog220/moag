@@ -91,6 +91,20 @@ interface NodeInfo {
 // (Vision-)Modelle hat — gehören nicht in den Performance-Vergleich.
 const PSEUDO_SUBJECTS = new Set(["(no_models)", "(no_vision_models)"]);
 
+// Benchmark-Domänen (OctoBoss RunRequest.domains). Auswahl im Run-Panel.
+const BENCH_DOMAINS: { key: string; label: string }[] = [
+  { key: "llm_text", label: "LLM-Text" },
+  { key: "llm_vision", label: "LLM-Vision" },
+  { key: "ocr", label: "OCR" },
+  { key: "ner_pii", label: "NER / PII" },
+];
+
+/** Scope-Filter für POST /benchmarks/run (leere Felder = „alles"). */
+interface RunScope {
+  domains?: string[];
+  node_ids?: string[];
+}
+
 // ── Hilfsfunktionen ───────────────────────────────────────────────────────────
 
 /** Primaer-Metrik pro Domain (was in der Zelle angezeigt wird). */
@@ -151,13 +165,62 @@ function fmtAge(hours: number | null): string {
 
 interface RunPanelProps {
   activeRunId: string | null;
-  onTrigger: () => void;
+  onTrigger: (scope: RunScope) => void;
   isMutating: boolean;
   lastRunId: string | null;
+  liveNodes: string[];
+  nodeInfo: Record<string, NodeInfo>;
 }
 
-function RunPanel({ activeRunId, onTrigger, isMutating, lastRunId }: RunPanelProps) {
+/** Toggle-Chip für die Scope-Auswahl. */
+function ScopeChip({ on, label, onClick }: { on: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+        on
+          ? "border-brand/50 bg-brand/15 text-brand"
+          : "border-white/10 bg-bg-subtle text-fg-subtle hover:text-fg"
+      }`}
+    >
+      {on ? "✓ " : ""}
+      {label}
+    </button>
+  );
+}
+
+function RunPanel({ activeRunId, onTrigger, isMutating, lastRunId, liveNodes, nodeInfo }: RunPanelProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // „Ausgeschlossen"-Sets statt „ausgewählt": neue Nodes/Domänen sind so
+  // automatisch an (robust gegen asynchrones Nachladen der Node-Liste).
+  const [exclDomains, setExclDomains] = useState<Set<string>>(new Set());
+  const [exclNodes, setExclNodes] = useState<Set<string>>(new Set());
+
+  function toggle(set: Set<string>, key: string, setter: (s: Set<string>) => void) {
+    const next = new Set(set);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    setter(next);
+  }
+
+  const selectedDomains = BENCH_DOMAINS.filter((d) => !exclDomains.has(d.key)).map((d) => d.key);
+  const selectedNodes = liveNodes.filter((n) => !exclNodes.has(n));
+  const nothingSelected = selectedDomains.length === 0 || (liveNodes.length > 0 && selectedNodes.length === 0);
+
+  // Scope bauen: nur einschränken wenn nicht „alles" gewählt ist.
+  function buildScope(): RunScope {
+    const scope: RunScope = {};
+    if (selectedDomains.length < BENCH_DOMAINS.length) scope.domains = selectedDomains;
+    if (liveNodes.length > 0 && selectedNodes.length < liveNodes.length) scope.node_ids = selectedNodes;
+    return scope;
+  }
+
+  const scopeSummary =
+    selectedDomains.length === BENCH_DOMAINS.length && selectedNodes.length === liveNodes.length
+      ? "alle Tests auf allen Rechnern"
+      : `${selectedDomains.length}/${BENCH_DOMAINS.length} Tests · ${selectedNodes.length}/${liveNodes.length || "?"} Rechner`;
 
   return (
     <div className="rounded border border-white/10 bg-bg-panel px-5 py-4">
@@ -165,42 +228,32 @@ function RunPanel({ activeRunId, onTrigger, isMutating, lastRunId }: RunPanelPro
         <div>
           <h3 className="text-sm font-semibold text-fg">Benchmark-Run starten</h3>
           <p className="mt-0.5 text-xs text-fg-muted">
-            Startet einen vollstaendigen Bench-Durchlauf auf allen verfuegbaren Nodes.
+            Wähle was gebencht werden soll — leere Auswahl = alles.
           </p>
         </div>
 
         <div className="ml-auto flex items-center gap-3">
           {activeRunId && (
-            <Tooltip
-              title={`Laufender Run: ${activeRunId}`}
-              source="/api/v1/octoboss/benchmarks/runs"
-            >
+            <Tooltip title={`Laufender Run: ${activeRunId}`} source="/api/v1/octoboss/benchmarks/runs">
               <span className="flex items-center gap-1.5 rounded border border-status-warn/30 bg-status-warn/10 px-2.5 py-1.5 text-xs text-status-warn">
                 <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-status-warn" />
                 Run laeuft
               </span>
             </Tooltip>
           )}
-
           {!activeRunId && lastRunId && (
-            <Tooltip
-              title={`Zuletzt gestarteter Run: ${lastRunId}`}
-              source="/api/v1/octoboss/benchmarks/run"
-            >
-              <span className="text-xs text-fg-subtle font-mono">
-                Gestartet: {lastRunId.slice(0, 8)}…
-              </span>
+            <Tooltip title={`Zuletzt gestarteter Run: ${lastRunId}`} source="/api/v1/octoboss/benchmarks/run">
+              <span className="text-xs text-fg-subtle font-mono">Gestartet: {lastRunId.slice(0, 8)}…</span>
             </Tooltip>
           )}
-
           <Tooltip
-            title="Startet einen vollstaendigen Benchmark-Durchlauf (alle Subjects x alle Nodes). Bestaetigung erforderlich."
+            title={`Startet einen Benchmark-Durchlauf für: ${scopeSummary}. Bestätigung erforderlich.`}
             source="/api/v1/octoboss/benchmarks/run"
-            thresholds="Dauer: typisch 2–10 Minuten je nach Cluster-Groesse"
+            thresholds="Dauer: typisch 2–10 Minuten je nach Auswahl"
           >
             <button
               onClick={() => setConfirmOpen(true)}
-              disabled={isMutating || !!activeRunId}
+              disabled={isMutating || !!activeRunId || nothingSelected}
               className="min-h-[44px] rounded border border-brand/50 bg-brand/10 px-4 py-2
                          text-sm font-medium text-brand transition-colors
                          hover:bg-brand/20 hover:border-brand
@@ -213,12 +266,45 @@ function RunPanel({ activeRunId, onTrigger, isMutating, lastRunId }: RunPanelPro
         </div>
       </div>
 
+      {/* Scope-Auswahl */}
+      <div className="mt-3 flex flex-col gap-2 border-t border-white/10 pt-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="w-16 shrink-0 text-xs text-fg-subtle">Tests:</span>
+          {BENCH_DOMAINS.map((d) => (
+            <ScopeChip
+              key={d.key}
+              on={!exclDomains.has(d.key)}
+              label={d.label}
+              onClick={() => toggle(exclDomains, d.key, setExclDomains)}
+            />
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="w-16 shrink-0 text-xs text-fg-subtle">Rechner:</span>
+          {liveNodes.length === 0 ? (
+            <span className="text-xs text-fg-subtle">— lädt …</span>
+          ) : (
+            liveNodes.map((n) => (
+              <ScopeChip
+                key={n}
+                on={!exclNodes.has(n)}
+                label={nodeLabel(n, nodeInfo[n])}
+                onClick={() => toggle(exclNodes, n, setExclNodes)}
+              />
+            ))
+          )}
+        </div>
+        {nothingSelected && (
+          <p className="text-xxs text-status-warn">Mindestens einen Test und einen Rechner wählen.</p>
+        )}
+      </div>
+
       <ConfirmDialog
         open={confirmOpen}
         title="Benchmark-Run starten?"
         message={
           <span>
-            Es wird ein vollstaendiger Bench-Durchlauf auf allen verfuegbaren Nodes gestartet.
+            Es wird ein Bench-Durchlauf gestartet: <strong>{scopeSummary}</strong>.
             Laufzeit: typisch 2–10 Minuten. Ein gleichzeitig laufender Run wird als
             <em> uebersprungen</em> markiert.
           </span>
@@ -226,7 +312,7 @@ function RunPanel({ activeRunId, onTrigger, isMutating, lastRunId }: RunPanelPro
         confirmLabel="Run starten"
         onConfirm={() => {
           setConfirmOpen(false);
-          onTrigger();
+          onTrigger(buildScope());
         }}
         onCancel={() => setConfirmOpen(false)}
       />
@@ -620,7 +706,7 @@ export function BenchmarksPage() {
   });
 
   const runMutation = useMutation({
-    mutationFn: () => api.octoboss.runBenchmark() as Promise<RunStartResponse>,
+    mutationFn: (scope: RunScope) => api.octoboss.runBenchmark(scope) as Promise<RunStartResponse>,
     onSuccess: (data) => {
       setLastRunId(data.run_id ?? null);
       void queryClient.invalidateQueries({ queryKey: ["octoboss", "benchmarks", "runs"] });
@@ -671,9 +757,11 @@ export function BenchmarksPage() {
       <section aria-label="Run-Panel">
         <RunPanel
           activeRunId={activeRunId}
-          onTrigger={() => runMutation.mutate()}
+          onTrigger={(scope) => runMutation.mutate(scope)}
           isMutating={runMutation.isPending}
           lastRunId={lastRunId}
+          liveNodes={liveNodes}
+          nodeInfo={nodeInfo}
         />
         {runMutation.isSuccess && (runMutation.data as RunStartResponse | undefined)?.summary?.skipped && (
           <div className="mt-2 rounded border border-status-warn/30 bg-status-warn/10 px-4 py-2 text-xs text-status-warn">
