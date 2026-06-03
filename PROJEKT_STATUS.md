@@ -11,7 +11,7 @@
 
 **Tests:** 488 Backend + 482 Frontend grün, tsc 0, Build grün. **Deploy des aktuellen Stands (qnapbackup + Übersicht + Oberon) an Roman übergeben — Live-Bestätigung ausstehend.** Letzter bestätigter Live-Stand: Amber-Theme + Node-Karten (Screenshots).
 
-**Letzte Änderung:** 2026-06-03 — Benchmark-Scope-Auswahl (v0.2.12): Toggle-Chips beim Run-Start für Tests (Domänen) + Rechner (Nodes), schickt `domains`/`node_ids` an die Run-API. Davor v0.2.11: Heatmap-Performance-Vergleich mit Hostnames, tote Test-Nodes ausgelagert, History eingeklappt. Parallel: OctoBoss-CR „Hub-Tesseract mitbenchmarken" (OCR-History war leer — kein OCR-fähiger Compute-Node).
+**Letzte Änderung:** 2026-06-03 — qnapbackup-Score-Drilldown (v0.2.13): „Warum dieser Score?"-Panel zeigt, dass die 65 % allein vom Postgres-Replica-Lag (~4,8 d) kommen, Rest grün. Robuste Zeitanzeige fängt qnapbackup-Zukunfts-Timestamps ab (per SSH verifiziert: VDR-System-Uhr + qnapbackup-`fetched_at` korrekt, nur Backup-Timestamps ~25 min voraus = qnapbackup-Datenbug). Offen: Replica-Lag (Infra) + qnapbackup-Timestamp-Bug. Davor Benchmark-Scope-Auswahl (v0.2.12): Toggle-Chips beim Run-Start für Tests (Domänen) + Rechner (Nodes), schickt `domains`/`node_ids` an die Run-API. Davor v0.2.11: Heatmap-Performance-Vergleich mit Hostnames, tote Test-Nodes ausgelagert, History eingeklappt. Parallel: OctoBoss-CR „Hub-Tesseract mitbenchmarken" (OCR-History war leer — kein OCR-fähiger Compute-Node).
 
 ## Version
 v0.2.12 (lokal; v0.2.10 live auf VDR — v0.2.11+12 noch nicht deployed). Seit v0.2.3: hardware_direct-Sichtbarkeit, qnapbackup-Card + Drilldown, Tooltip-block-Layout, DSGVO-Audit-Fix, GPU/CPU-Last-Historie, Benchmark-Heatmap-Redesign + Scope-Auswahl.

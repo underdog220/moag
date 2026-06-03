@@ -13,6 +13,7 @@ import {
   formatBytes,
   formatRelative,
   formatPercent,
+  formatDateTime,
 } from "../../lib/format";
 import type { QnapBackupStatus, QnapBackupRecentItem } from "../../lib/types";
 
@@ -25,6 +26,94 @@ function fmtDuration(sec: number | null | undefined): string {
   if (sec < 3600) return `${Math.round(sec / 60)}min`;
   if (sec < 86_400) return `${(sec / 3600).toFixed(1)}h`;
   return `${(sec / 86_400).toFixed(1)}d`;
+}
+
+/** Relative Backup-Zeit, robust gegen Zukunfts-Timestamps. qnapbackup liefert
+ * für `last_backup_at`/`finished_at` teils Zeiten ~25 min in der Zukunft
+ * (Datenbug in qnapbackups Backup-Timestamp-Logik — die VDR-System-Uhr UND
+ * qnapbackups `fetched_at` sind nachweislich korrekt). Statt irreführendem
+ * "in 41 Minuten" zeigen wir dann das absolute Datum + neutralen Hinweis. */
+function backupTimeLabel(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const t = Date.parse(iso);
+  if (Number.isNaN(t)) return iso;
+  if (t > Date.now() + 60_000) return `${formatDateTime(iso)} (Zeitstempel voraus)`;
+  return formatRelative(iso);
+}
+
+// ─── Score-Faktoren (Drilldown "Warum dieser Score?") ────────────────────────
+// Spiegelt die qnapbackup-Heuristik compute_status_score (CR 2026-05-16):
+// Backup-Aktualität, Shares, freier Speicher, Replica(+Lag), Fehler.
+// Maßgeblich bleibt der von qnapbackup gelieferte Score — hier nur Diagnose.
+
+type FactorState = "ok" | "warn" | "crit";
+interface ScoreFactor {
+  label: string;
+  state: FactorState;
+  detail: string;
+}
+
+function evalScoreFactors(m: QnapBackupStatus["metrics"]): ScoreFactor[] {
+  const f: ScoreFactor[] = [];
+
+  // Backup-Aktualität (Zukunfts-Timestamp = Uhr-Versatz → als frisch werten)
+  if (m.last_backup_at) {
+    const t = Date.parse(m.last_backup_at);
+    if (!Number.isNaN(t)) {
+      const ageH = Math.max(0, (Date.now() - t) / 3_600_000);
+      f.push({
+        label: "Backup-Aktualität",
+        state: ageH < 25 ? "ok" : ageH < 48 ? "warn" : "crit",
+        detail: ageH < 25 ? "letztes Backup < 25 h" : `letztes Backup ${ageH < 48 ? ageH.toFixed(0) + " h" : (ageH / 24).toFixed(1) + " d"} alt`,
+      });
+    }
+  }
+  // Freigaben
+  if (m.shares_total != null) {
+    const allOk = (m.shares_failed ?? 0) === 0 && m.shares_ok === m.shares_total;
+    f.push({
+      label: "Freigaben",
+      state: allOk ? "ok" : "crit",
+      detail: `${m.shares_ok ?? "?"}/${m.shares_total} gesichert`,
+    });
+  }
+  // Freier Speicher
+  if (m.free_space_percent != null) {
+    const p = m.free_space_percent;
+    f.push({
+      label: "Freier Speicher",
+      state: p >= 20 ? "ok" : p >= 10 ? "warn" : "crit",
+      detail: `${p} % frei`,
+    });
+  }
+  // Postgres-Replica (+ Lag)
+  if (m.replica_oberon_postgres_ok != null) {
+    const ok = m.replica_oberon_postgres_ok;
+    const lag = m.replica_oberon_postgres_lag_seconds ?? 0;
+    f.push({
+      label: "Postgres-Replica",
+      state: !ok ? "crit" : lag >= 300 ? "warn" : "ok",
+      detail: !ok ? "Replica nicht erreichbar" : `Lag ${fmtDuration(lag)}${lag >= 300 ? " (> 300 s)" : " (ok)"}`,
+    });
+  }
+  // Fehler 24h
+  if (m.errors_24h != null) {
+    f.push({
+      label: "Fehler (24 h)",
+      state: m.errors_24h > 0 ? "crit" : "ok",
+      detail: `${m.errors_24h} Fehler`,
+    });
+  }
+  return f;
+}
+
+function FactorDot({ state }: { state: FactorState }) {
+  const c = state === "crit" ? "bg-status-error" : state === "warn" ? "bg-status-warn" : "bg-status-ok";
+  return <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${c}`} aria-hidden="true" />;
+}
+
+function rankState(s: FactorState): number {
+  return s === "crit" ? 2 : s === "warn" ? 1 : 0;
 }
 
 /** Statusfarbe fuer einen Backup-Eintrag. */
@@ -136,7 +225,7 @@ function StatusPanel({ status, updatedAt }: { status: QnapBackupStatus; updatedA
       <div className="flex flex-col gap-0">
         <KV
           label="Letztes Backup"
-          value={formatRelative(m.last_backup_at)}
+          value={backupTimeLabel(m.last_backup_at)}
           tip={`Zeitpunkt des letzten Backups: ${m.last_backup_at ?? "unbekannt"}`}
           source="/api/v1/qnapbackup/status"
           updatedAt={updatedAt}
@@ -242,7 +331,7 @@ function BackupRow({ item, updatedAt }: { item: QnapBackupRecentItem; updatedAt:
           source="/api/v1/qnapbackup/backups/recent"
           updatedAt={updatedAt}
         >
-          <span>{formatRelative(item.started_at)}</span>
+          <span>{backupTimeLabel(item.started_at)}</span>
         </Tooltip>
       </td>
       <td className="py-2 px-3 text-xs text-fg">
@@ -330,6 +419,55 @@ function BackupsPanel({ items, updatedAt }: { items: QnapBackupRecentItem[]; upd
   );
 }
 
+// ─── Score-Drilldown "Warum dieser Score?" ──────────────────────────────────
+
+function ScoreBreakdownPanel({ status }: { status: QnapBackupStatus }) {
+  const factors = evalScoreFactors(status.metrics);
+  const issues = factors.filter((f) => f.state !== "ok");
+  const sorted = [...factors].sort((a, b) => rankState(b.state) - rankState(a.state));
+
+  return (
+    <Panel title="Warum dieser Score?">
+      <p className="mb-2 text-xs text-fg-muted">
+        Score <strong className="text-fg">{status.score}/100</strong> —{" "}
+        {issues.length === 0
+          ? "alle Faktoren grün."
+          : `gedrückt durch: ${issues.map((i) => i.label).join(", ")}.`}
+      </p>
+      <div className="flex flex-col gap-1.5">
+        {sorted.map((f) => (
+          <Tooltip
+            key={f.label}
+            title={`${f.label}: ${f.detail}`}
+            source="/api/v1/qnapbackup/status"
+            block
+          >
+            <div className="flex items-center gap-2 text-xs">
+              <FactorDot state={f.state} />
+              <span className="w-36 shrink-0 text-fg">{f.label}</span>
+              <span
+                className={
+                  f.state === "ok"
+                    ? "text-fg-muted"
+                    : f.state === "warn"
+                      ? "text-status-warn"
+                      : "text-status-error"
+                }
+              >
+                {f.detail}
+              </span>
+            </div>
+          </Tooltip>
+        ))}
+      </div>
+      <p className="mt-2 text-xxs text-fg-subtle">
+        Faktoren spiegeln qnapbackups Bewertungs-Heuristik (compute_status_score). Maßgeblich
+        ist der von qnapbackup gelieferte Score.
+      </p>
+    </Panel>
+  );
+}
+
 // ─── Haupt-Komponente ─────────────────────────────────────────────────────────
 
 export function QnapBackupFeature() {
@@ -399,6 +537,9 @@ export function QnapBackupFeature() {
         {statusQuery.data && (
           <StatusPanel status={statusQuery.data} updatedAt={updatedAt} />
         )}
+
+        {/* Score-Drilldown: warum nicht 100? */}
+        {statusQuery.data && <ScoreBreakdownPanel status={statusQuery.data} />}
 
         {/* Backup-Historie */}
         {recentQuery.data && (

@@ -122,3 +122,38 @@ test("Leerer-Zustand-Text wenn keine Backups vorhanden", async () => {
     expect(screen.getByText(/noch keine backups gelistet/i)).toBeDefined();
   });
 });
+
+test("Score-Drilldown rendert und meldet bei Default alle Faktoren grün", async () => {
+  render(<QnapBackupFeature />, { wrapper });
+  await waitFor(() => {
+    expect(screen.getByText("Warum dieser Score?")).toBeDefined();
+    // Default-Mock: Lag 12s, alles ok
+    expect(screen.getByText(/alle Faktoren grün/i)).toBeDefined();
+    expect(screen.getByText("Postgres-Replica")).toBeDefined();
+  });
+});
+
+test("Score-Drilldown markiert Replica-Lag als Score-Treiber", async () => {
+  const { api } = await import("../../lib/api");
+  (api.qnapbackup.getStatus as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    ok: true,
+    score: 65,
+    summary: "Warnung: Replica-Lag",
+    metrics: {
+      last_backup_at: new Date(Date.now() - 4 * 3600 * 1000).toISOString(),
+      shares_total: 5,
+      shares_ok: 5,
+      shares_failed: 0,
+      replica_oberon_postgres_ok: true,
+      replica_oberon_postgres_lag_seconds: 412410, // ~4.8 d > 300 s
+      free_space_percent: 67,
+      errors_24h: 0,
+    },
+    fetched_at: new Date().toISOString(),
+    error: null,
+  });
+  render(<QnapBackupFeature />, { wrapper });
+  await waitFor(() => {
+    expect(screen.getByText(/gedrückt durch: Postgres-Replica/i)).toBeDefined();
+  });
+});
