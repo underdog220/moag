@@ -14,7 +14,7 @@
 **Letzte Änderung:** 2026-06-03 — qnapbackup-Score-Drilldown (v0.2.13): „Warum dieser Score?"-Panel zeigt, dass die 65 % allein vom Postgres-Replica-Lag (~4,8 d) kommen, Rest grün. Robuste Zeitanzeige fängt qnapbackup-Zukunfts-Timestamps ab (per SSH verifiziert: VDR-System-Uhr + qnapbackup-`fetched_at` korrekt, nur Backup-Timestamps ~25 min voraus = qnapbackup-Datenbug). Offen: Replica-Lag (Infra) + qnapbackup-Timestamp-Bug. Davor Benchmark-Scope-Auswahl (v0.2.12): Toggle-Chips beim Run-Start für Tests (Domänen) + Rechner (Nodes), schickt `domains`/`node_ids` an die Run-API. Davor v0.2.11: Heatmap-Performance-Vergleich mit Hostnames, tote Test-Nodes ausgelagert, History eingeklappt. Parallel: OctoBoss-CR „Hub-Tesseract mitbenchmarken" (OCR-History war leer — kein OCR-fähiger Compute-Node).
 
 ## Version
-v0.2.12 (lokal; v0.2.10 live auf VDR — v0.2.11+12 noch nicht deployed). Seit v0.2.3: hardware_direct-Sichtbarkeit, qnapbackup-Card + Drilldown, Tooltip-block-Layout, DSGVO-Audit-Fix, GPU/CPU-Last-Historie, Benchmark-Heatmap-Redesign + Scope-Auswahl.
+v0.2.14 (lokal; v0.2.10 live auf VDR — v0.2.11–0.2.14 noch nicht deployed). Baustein C (RAM/VRAM-Sichtbarkeit) + D-3 Auto-Rollback deploy-ready; Tag-Trennung 0.2.13/0.2.14 sichert wirksames Rollback-Ziel. Seit v0.2.3: hardware_direct-Sichtbarkeit, qnapbackup-Card + Drilldown, Tooltip-block-Layout, DSGVO-Audit-Fix, GPU/CPU-Last-Historie, Benchmark-Heatmap-Redesign + Scope-Auswahl.
 
 ## Nächste geplante Stufe
 Follow-Ups aus Release-Report v0.2.3 (siehe `MASSNAHMEN.md` 2026-05-24):

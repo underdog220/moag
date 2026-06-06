@@ -4,6 +4,8 @@ Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
 
 ## 2026-06-06
 
+- [2026-06-06] [v0.2.14] **Version-Bump 0.2.13 → 0.2.14 (Baustein C + D-3 deploy-ready, Tag-Trennung für Rollback).** `backend/pyproject.toml` version auf 0.2.14 gesetzt (einzige laufzeit-definierende Stelle; `__init__.py` liest via `importlib.metadata`). `PROJEKT_STATUS.md` Version-Zeile aktualisiert. Zweck: Production-Deploy erhält Image-Tag `moag:0.2.14`; `moag:0.2.13` bleibt als intaktes D-3-Auto-Rollback-Ziel erhalten (sonst wäre Rollback bei gleichem Tag wirkungslos).
+
 - [2026-06-06] [v0.2.14] **AP K-2 (Baustein C): RAM gesamt + VRAM gesamt in NodeDetail.** Konzept `cluster-gpu-infrastruktur-2026-06-06.md`: SonOfSETI meldet `ram_total_gb`/`gpu_vram_total_mb` im Heartbeat, MOAG zeigte bislang nur „frei". Drei Dateien geändert: (1) `backend/moag/models.py NodeHardware` — `ram_total_gb: Optional[float] = None` + `vram_total_gb: Optional[float] = None` ergänzt. (2) `frontend/src/lib/types.ts NodeHardware` — `ram_total_gb?: number | null` + `vram_total_gb?: number | null` ergänzt. (3) `frontend/src/features/octoboss/pages/NodeDetail.tsx` — KV-Zeilen „RAM frei" / „VRAM frei" zu „RAM" / „VRAM" mit Format `frei / total GB` umgebaut (graceful: wenn total null → nur frei; wenn frei null → „—"). Kein Backend-Proxy-Change nötig: `_enrich_node_hardware()` operiert auf Dict-Ebene, total-Felder kommen durch sobald sie im Pydantic-Modell stehen. 516 BE + 499 FE-Tests grün, tsc 0, Build grün.
 
 ## 2026-06-03
