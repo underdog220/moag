@@ -1,32 +1,32 @@
-#requires -version 5.1
+﻿#requires -version 5.1
 # MOAG-Deploy auf VDR (192.168.200.71) mit Build + Transfer + Deploy.
 #
 # Standard-Flow (baut Image, uebertraegt auf VDR, deployt):
 #   pwsh -File scripts/deploy-vdr.ps1
 #
 # Version wird automatisch aus backend/pyproject.toml gelesen.
-# ImageTag-Default: moag:<version> — ueberschreibbar via -ImageTag.
+# ImageTag-Default: moag:<version> -- ueberschreibbar via -ImageTag.
 #
 # Aufruf-Varianten:
 #
-#   Variante A — Standard-Deploy (Build + Transfer + Deploy):
+#   Variante A -- Standard-Deploy (Build + Transfer + Deploy):
 #     pwsh -File scripts/deploy-vdr.ps1
 #
-#   Variante B — Werte als Parameter:
+#   Variante B -- Werte als Parameter:
 #     pwsh -File scripts/deploy-vdr.ps1 `
 #       -OberonToken "mein-token" `
 #       -NasDomPassword "mein-pw"
 #
-#   Variante C — Nur Smoke (kein Re-Deploy, nur Pruefen ob Container laeuft):
+#   Variante C -- Nur Smoke (kein Re-Deploy, nur Pruefen ob Container laeuft):
 #     pwsh -File scripts/deploy-vdr.ps1 -SmokeOnly
 #
-#   Variante D — Build ueberspringen (Image ist bereits lokal vorhanden):
+#   Variante D -- Build ueberspringen (Image ist bereits lokal vorhanden):
 #     pwsh -File scripts/deploy-vdr.ps1 -SkipBuild
 #
-#   Variante E — Transfer ueberspringen (Image schon auf VDR, nur neu starten):
+#   Variante E -- Transfer ueberspringen (Image schon auf VDR, nur neu starten):
 #     pwsh -File scripts/deploy-vdr.ps1 -SkipBuild -SkipTransfer
 #
-#   Variante F — Nur bauen, kein Transfer, kein Deploy (CI-Check):
+#   Variante F -- Nur bauen, kein Transfer, kein Deploy (CI-Check):
 #     pwsh -File scripts/deploy-vdr.ps1 -BuildOnly
 #
 # Voraussetzungen:
@@ -74,7 +74,7 @@ param(
     # Volume-Konfiguration (Upload-Hub Persistenz)
     [string]$VolumeHostPath   = "/home/underdog/moag-data",
     [string]$VolumeMountPath  = "/data/moag",
-    # Container-User-ID — muss zum Owner des Volume-Verzeichnisses passen
+    # Container-User-ID -- muss zum Owner des Volume-Verzeichnisses passen
     # (sonst Permission-Denied beim SQLite-Init). Default: vdr-User 'underdog' = 1002
     [int]$ContainerUid        = 1002,
     [int]$ContainerGid        = 1002,
@@ -150,9 +150,9 @@ function Get-RemoteImageSha {
 # ---- Hilfsfunktion: SHA-Vergleich -> Transfer-Aktion -----------------------
 # Reine Logik-Funktion (Docker-frei, testbar). Vergleicht zwei Image-SHAs
 # und entscheidet was die Transfer-Stufe tun soll:
-#   "missing-local" — lokal nicht vorhanden (Caller sollte werfen)
-#   "transfer"      — remote fehlt ODER beide vorhanden aber unterschiedlich
-#   "skip"          — beide vorhanden und identisch (Transfer ueberspringen)
+#   "missing-local" -- lokal nicht vorhanden (Caller sollte werfen)
+#   "transfer"      -- remote fehlt ODER beide vorhanden aber unterschiedlich
+#   "skip"          -- beide vorhanden und identisch (Transfer ueberspringen)
 function Compare-ImageShas {
     [OutputType([string])]
     param(
@@ -368,7 +368,7 @@ MOAG_UPLOAD_DIR=$VolumeMountPath/uploads
     # chmod 644 (nicht 600): Docker liest --env-file als Container-User (underdog, uid 1002),
     # nicht als root. Mit 600/root:root waere die Datei fuer den Container-User nicht lesbar
     # und der Start schlaegt mit "open /etc/moag.env: permission denied" fehl.
-    # Single-User-LAN — Lesbarkeit durch andere Accounts akzeptabel.
+    # Single-User-LAN -- Lesbarkeit durch andere Accounts akzeptabel.
     ssh $VdrHost "sudo mv /tmp/moag-deploy.env /etc/moag.env && sudo chmod 644 /etc/moag.env && sudo chown root:root /etc/moag.env && echo 'OK: /etc/moag.env installiert'"
 
     # Lokal aufraumen
@@ -383,7 +383,14 @@ MOAG_UPLOAD_DIR=$VolumeMountPath/uploads
     $volumeSetup = "mkdir -p $VolumeHostPath/uploads && chmod -R u+rwX,g+rwX,o+rX $VolumeHostPath && echo 'OK: Volume bereit'"
     ssh $VdrHost $volumeSetup
 
-    # ---- 7. Container stoppen + entfernen + neu starten ---------------------
+    # ---- 7a. CURRENT_IMAGE ermitteln (Rollback-Ziel, Konvention 6) ----------
+    # Muss VOR dem Stop abgefragt werden -- danach ist der Container weg.
+    Write-Host "[DEPLOY] Ermittle laufendes Image (Rollback-Ziel) ..."
+    $CurrentImage = (ssh $VdrHost "docker inspect $ContainerName --format '{{.Config.Image}}' 2>/dev/null || echo none" | Out-String).Trim()
+    if (-not $CurrentImage) { $CurrentImage = "none" }
+    Write-Host "[DEPLOY] Rollback-Ziel: $CurrentImage (wird bei Healthcheck-Fail benoetigt)"
+
+    # ---- 7b. Container stoppen + entfernen + neu starten --------------------
     Write-Host "[DEPLOY] Stoppe und entferne alten Container '$ContainerName' ..."
     ssh $VdrHost "docker stop $ContainerName 2>/dev/null || true; docker rm $ContainerName 2>/dev/null || true; echo 'OK: Container gestoppt/entfernt'"
 
@@ -398,27 +405,34 @@ MOAG_UPLOAD_DIR=$VolumeMountPath/uploads
     Write-Host "[DEPLOY] Container gestartet"
 }
 
-# ---- 8. Smoke-Check ----------------------------------------------------------
+# ---- 8. Smoke-Check: 6x Poll (Konvention 5) ----------------------------------
 $BaseUrl = "http://192.168.200.71:$HostPort"
 Write-Host ""
-Write-Host "[SMOKE] Warte 5s auf Container-Start ..."
-Start-Sleep -Seconds 5
+Write-Host "[SMOKE] Warte 10s auf Container-Start ..."
+Start-Sleep -Seconds 10
 
-Write-Host "[SMOKE] Pruefe $BaseUrl/api/health ..."
-try {
-    $h = Invoke-RestMethod -Uri "$BaseUrl/api/health" -TimeoutSec 15
-    $ok = ($h.status -eq "ok") -and ($null -ne $h.version)
-    if ($ok) {
-        Write-Host "[PASS] api-health — version=$($h.version) build=$($h.build)"
-    } else {
-        Write-Host "[FAIL] api-health — Antwort: $($h | ConvertTo-Json -Compress)"
+$healthOk = $false
+for ($i = 1; $i -le 6; $i++) {
+    Write-Host "[SMOKE] Versuch $i/6: pruefe $BaseUrl/api/health ..."
+    try {
+        $h = Invoke-RestMethod -Uri "$BaseUrl/api/health" -TimeoutSec 10 -ErrorAction Stop
+        if ($h.status -eq "ok") {
+            Write-Host "[SMOKE] [PASS] Versuch $i/6 -- version=$($h.version) build=$($h.build)"
+            $healthOk = $true
+            break
+        } else {
+            Write-Host "[SMOKE] Versuch $i/6 -- status nicht 'ok': $($h | ConvertTo-Json -Compress)"
+        }
+    } catch {
+        Write-Host "[SMOKE] Versuch $i/6 fehlgeschlagen: $($_.Exception.Message)"
     }
-} catch {
-    $ok = $false
-    Write-Host "[FAIL] api-health — Exception: $($_.Exception.Message)"
+    if ($i -lt 6) {
+        Write-Host "[SMOKE] Warte 10s ..."
+        Start-Sleep -Seconds 10
+    }
 }
 
-if ($ok) {
+if ($healthOk) {
     Write-Host ""
     Write-Host "========================================"
     Write-Host "MOAG-Deploy ($BaseUrl): PASS"
@@ -426,11 +440,35 @@ if ($ok) {
     Write-Host "  pwsh -File scripts/smoke-vdr.ps1 -BaseUrl $BaseUrl"
     Write-Host "========================================"
     exit 0
-} else {
+}
+
+# ---- 9. Auto-Rollback (Konvention 6) -----------------------------------------
+Write-Warning "[ROLLBACK] Healthcheck rot nach 6 Versuchen."
+
+if ($CurrentImage -eq "none") {
+    Write-Host "[ROLLBACK] Kein Vorgaenger-Image bekannt -- Rollback nicht moeglich."
+    Write-Host "[ROLLBACK] Container-Logs pruefen: ssh $VdrHost docker logs $ContainerName"
     Write-Host ""
     Write-Host "========================================"
-    Write-Host "MOAG-Deploy ($BaseUrl): FAIL — Smoke-Check nicht bestanden"
-    Write-Host "Logs pruefen: ssh vdr docker logs $ContainerName"
+    Write-Host "MOAG-Deploy ($BaseUrl): FAIL -- kein Rollback (kein Vorgaenger)"
     Write-Host "========================================"
     exit 1
 }
+
+Write-Host "[ROLLBACK] Starte Rollback auf $CurrentImage ..."
+$rollbackRun = "docker run -d --name $ContainerName --restart unless-stopped " +
+               "-p ${HostPort}:17900 " +
+               "--user ${ContainerUid}:${ContainerGid} " +
+               "-v ${VolumeHostPath}:${VolumeMountPath} " +
+               "--env-file /etc/moag.env " +
+               "$CurrentImage"
+$rollbackCmd = "docker stop $ContainerName 2>/dev/null; docker rm $ContainerName 2>/dev/null; $rollbackRun; echo ROLLBACK_OK"
+ssh $VdrHost $rollbackCmd
+Write-Host "[ROLLBACK] Rollback auf $CurrentImage durchgefuehrt."
+
+Write-Host ""
+Write-Host "========================================"
+Write-Host "MOAG-Deploy ($BaseUrl): FAIL -- Rollback auf $CurrentImage ausgefuehrt"
+Write-Host "Logs pruefen: ssh $VdrHost docker logs $ContainerName"
+Write-Host "========================================"
+exit 1
