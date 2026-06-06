@@ -260,8 +260,26 @@ export function NodeDetailPage() {
                 hwSource={hw?.hardware_source} hwAt={hw?.hardware_at} />
               <LoadRow label="CPU" value={hw?.cpu_load_percent}
                 hwSource={hw?.hardware_source} hwAt={hw?.hardware_at} />
-              <KV label="RAM frei" value={hw?.ram_free_gb != null ? `${hw.ram_free_gb.toFixed(1)} GB` : "—"} />
-              <KV label="VRAM frei" value={hw?.vram_free_gb != null ? `${hw.vram_free_gb.toFixed(1)} GB` : "—"} />
+              <KV
+                label="RAM"
+                value={
+                  hw?.ram_free_gb != null
+                    ? hw?.ram_total_gb != null
+                      ? `${hw.ram_free_gb.toFixed(1)} / ${hw.ram_total_gb.toFixed(1)} GB`
+                      : `${hw.ram_free_gb.toFixed(1)} GB`
+                    : "—"
+                }
+              />
+              <KV
+                label="VRAM"
+                value={
+                  hw?.vram_free_gb != null
+                    ? hw?.vram_total_gb != null
+                      ? `${hw.vram_free_gb.toFixed(1)} / ${hw.vram_total_gb.toFixed(1)} GB`
+                      : `${hw.vram_free_gb.toFixed(1)} GB`
+                    : "—"
+                }
+              />
               <KV label="GPU-Temp" value={hw?.gpu_temp_c != null ? `${hw.gpu_temp_c.toFixed(0)} °C` : "—"} />
               <KV label="CPU-Temp" value={hw?.cpu_temp_c != null ? `${hw.cpu_temp_c.toFixed(0)} °C` : "—"} />
               <KV label="CPU-Modell" value={hw?.cpu_model ?? "—"} mono />

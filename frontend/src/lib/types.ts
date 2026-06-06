@@ -75,7 +75,9 @@ export interface NodeHardware {
   gpu_load_percent: number | null;
   cpu_load_percent: number | null;
   ram_free_gb: number | null;
+  ram_total_gb?: number | null;
   vram_free_gb: number | null;
+  vram_total_gb?: number | null;
   cpu_model: string | null;
   // Temperaturen (optional) + GPU-Health (hw-monitor >= 1.2)
   gpu_temp_c?: number | null;

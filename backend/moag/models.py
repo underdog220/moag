@@ -34,7 +34,9 @@ class NodeHardware(BaseModel):
     cpu_load_percent: Optional[float] = None
     cpu_model: Optional[str] = None
     ram_free_gb: Optional[float] = None
+    ram_total_gb: Optional[float] = None
     vram_free_gb: Optional[float] = None
+    vram_total_gb: Optional[float] = None
     # Temperaturen (optional je Plattform) + GPU-Health (hw-monitor >= 1.2)
     gpu_temp_c: Optional[float] = None
     cpu_temp_c: Optional[float] = None
