@@ -40,6 +40,7 @@ import type {
   HwHistoryResponse,
   QnapBackupStatus,
   QnapBackupRecentResponse,
+  PanopticorStatus,
 } from "./types";
 
 const API_BASE = "/api";
@@ -774,6 +775,14 @@ export const api = {
      *  limit: 1..100, Default 20. */
     getBackupsRecent: (limit = 20): Promise<QnapBackupRecentResponse> =>
       request<QnapBackupRecentResponse>(`/v1/qnapbackup/backups/recent?limit=${limit}`),
+  },
+
+  // ─── Panopticor-Drilldown-API (/api/v1/panopticor/*) ────────────────────────
+
+  panopticor: {
+    /** GET /api/v1/panopticor/status — Panopticor-Bridge-Status (Score, Summary, Metriken). */
+    getStatus: (): Promise<PanopticorStatus> =>
+      request<PanopticorStatus>("/v1/panopticor/status"),
   },
 
   // ─── OCRexpert-Drilldown-API (/api/v1/ocrexpert/*) ───────────────────────────

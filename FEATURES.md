@@ -165,8 +165,16 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 - **Tests:** `test_routes_qnapbackup.py` (10 BE-Tests) + `qnapbackup.test.tsx` (7 FE-Tests).
 - **Code:** `backend/moag/routes_qnapbackup.py`, `frontend/src/features/qnapbackup/index.tsx`.
 
-#### Stubs (`/panopticor/*`)
-- panopticor: Stub-Card, wartet auf CR #4 (`requests/open/2026-05-16-moag-status-api.md`)
+#### Panopticor-Adapter + Drilldown-Seite (`/panopticor/`, aktiv seit 2026-06-09)
+- **Was:** Echter Adapter ruft `GET /status` der Panopticor-Bridge (Port 8787) ab → Card + Drilldown-Seite zeigen Bridge-Status, aktive Runs, KI-Eval-Status, Integritaetsbefunde, letzter-Run-Felder.
+- **Score-Mapping:** Bridge liefert score 0..1 (float), Adapter skaliert auf 0..100 (int).
+- **lastRun-Anreicherung:** Felder (runId, taskId, verdict, releaseReadiness, score, updatedAt) werden flach in metrics eingebettet → UI-Sektion "Letzter Run".
+- **Hologramm-Link:** Drilldown-Seite verlinkt `http://localhost:8787/live` fuer Live-Beobachtung.
+- **Fehlerfall:** Bridge down / Timeout → ok=False, score=0, summary "Panopticor-Bridge nicht erreichbar", kein Crash.
+- **CR #4:** Panopticor-seitig erfuellt (`GET /status` Aggregat-Endpoint seit Bridge v0.10.0 verfuegbar).
+- **Code:** `backend/moag/adapters/panopticor.py`, `backend/moag/routes_panopticor.py`, `frontend/src/features/panopticor/index.tsx`
+- **Datenquelle:** `GET /api/v1/panopticor/status` (Proxy auf Bridge `GET /status`, Polling 15s)
+- **Tests:** `backend/tests/test_adapter_panopticor.py` (7 BE-Tests), `frontend/src/features/panopticor/panopticor.test.tsx` (8 FE-Tests)
 
 ### Backend-Architektur
 

@@ -2,6 +2,10 @@
 
 Chronologische Liste aller Maßnahmen. Format: `[Datum] [Version] Beschreibung`.
 
+## 2026-06-09
+
+- [2026-06-09] [v0.2.14] **Panopticor-Adapter implementiert (CR #4 Panopticor-seitig erfuellt).** Stub `adapters/panopticor.py` durch echten httpx-Adapter ersetzt: `GET {base_url}/status` → `SystemStatus`. score-Skalierung 0..1 → 0..100, lastRun-Felder flach in metrics angereichert, Fehlerfall Bridge-down kein Crash. Neue Route `routes_panopticor.py` (`GET /api/v1/panopticor/status`) registriert in `api.py`. Frontend `features/panopticor/index.tsx` Stub durch vollstaendige Drilldown-Seite ersetzt (StatusPanel mit Score/LED/Summary/Bridge-Metriken/lastRun-Sektion, Hologramm-Link, Polling 15s). TS-Typen `PanopticorStatus/PanopticorMetrics` in `types.ts`, API-Namespace `api.panopticor.getStatus` in `api.ts`. Tests: 7 neue BE-Tests + 8 neue FE-Tests. 518 BE + 507 FE gruen, tsc 0, Build gruen. Live-Probe Bridge bestätigt: score 1.0 → 100, verdict good, releaseReadiness ready.
+
 ## 2026-06-06
 
 - [2026-06-06] [v0.2.14] **Version-Bump 0.2.13 → 0.2.14 (Baustein C + D-3 deploy-ready, Tag-Trennung für Rollback).** `backend/pyproject.toml` version auf 0.2.14 gesetzt (einzige laufzeit-definierende Stelle; `__init__.py` liest via `importlib.metadata`). `PROJEKT_STATUS.md` Version-Zeile aktualisiert. Zweck: Production-Deploy erhält Image-Tag `moag:0.2.14`; `moag:0.2.13` bleibt als intaktes D-3-Auto-Rollback-Ziel erhalten (sonst wäre Rollback bei gleichem Tag wirkungslos).

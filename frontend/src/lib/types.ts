@@ -1036,3 +1036,37 @@ export interface QnapBackupRecentItem {
 export interface QnapBackupRecentResponse {
   items: QnapBackupRecentItem[];
 }
+
+// ─── Panopticor-API-Typen (Endpoint GET /api/v1/panopticor/status) ────────────
+// Quelle: backend/moag/adapters/panopticor.py (Proxy auf Bridge :8787/status)
+
+/** Metriken aus GET /api/v1/panopticor/status (flach: Bridge-metrics + lastRun-Felder) */
+export interface PanopticorMetrics {
+  projectVersion?: string | null;
+  activeRuns?: number | null;
+  maxConcurrent?: number | null;
+  capacity?: number | null;
+  aiEvaluation?: string | null;
+  canRun?: boolean | null;
+  integrityFindings?: number | null;
+  latency_ms?: number | null;
+  // lastRun-Felder (flach angereichert durch Adapter)
+  lastRun_runId?: string | null;
+  lastRun_taskId?: string | null;
+  lastRun_status?: string | null;
+  lastRun_verdict?: string | null;
+  lastRun_releaseReadiness?: string | null;
+  lastRun_score?: number | null;
+  lastRun_updatedAt?: string | null;
+  [key: string]: unknown;
+}
+
+/** Antwort von GET /api/v1/panopticor/status */
+export interface PanopticorStatus {
+  ok: boolean;
+  score: number;         // 0..100
+  summary: string;
+  metrics: PanopticorMetrics;
+  fetched_at: string;    // ISO-8601
+  error?: string | null;
+}
