@@ -53,10 +53,13 @@ Write-Host ""
 Write-Host "=== Get-PyprojectVersion Tests ==="
 Write-Host ""
 
-# Test 1: echte pyproject.toml (0.2.3 nach Cluster-Intent-Erweiterung)
+# Test 1: echte pyproject.toml — Version unabhaengig (Select-String) gegenpruefen,
+# damit der Test bei jedem Versions-Bump gueltig bleibt (kein hartes Literal).
 $realPath = Join-Path $PSScriptRoot "..\backend\pyproject.toml"
+$expectedReal = (Select-String -Path $realPath -Pattern '^\s*version\s*=\s*"([^"]+)"' |
+                 Select-Object -First 1).Matches.Groups[1].Value
 $v = Get-PyprojectVersion -PyprojectPath $realPath
-Assert-Equal -Actual $v -Expected "0.2.3" -TestName "echte pyproject.toml liest 0.2.3"
+Assert-Equal -Actual $v -Expected $expectedReal -TestName "echte pyproject.toml liest aktuelle Version ($expectedReal)"
 
 # Test 2: Mock-Datei mit klarer Version
 $mockFile = Join-Path $env:TEMP "moag-test-pyproject.toml"
@@ -99,12 +102,12 @@ Assert-Throws -Code { Get-PyprojectVersion -PyprojectPath $mockFile3 } `
               -TestName "fehlende version-Zeile wirft Fehler"
 Remove-Item $mockFile3 -Force
 
-# Test 6: ImageTag-Konstruktion pruefen (moag:<version>)
-$expectedTag = "moag:0.2.3"
+# Test 6: ImageTag-Konstruktion pruefen (moag:<version>) — Version unabhaengig abgeleitet.
 $realPath2 = Join-Path $PSScriptRoot "..\backend\pyproject.toml"
+$expectedTag = "moag:$expectedReal"
 $parsedV = Get-PyprojectVersion -PyprojectPath $realPath2
 $constructedTag = "moag:$parsedV"
-Assert-Equal -Actual $constructedTag -Expected $expectedTag -TestName "ImageTag-Konstruktion moag:0.2.3"
+Assert-Equal -Actual $constructedTag -Expected $expectedTag -TestName "ImageTag-Konstruktion ($expectedTag)"
 
 Write-Host ""
 Write-Host "=== Ergebnis: $passed/$($passed + $failed) Tests bestanden ==="
