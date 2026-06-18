@@ -96,9 +96,22 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 ### Per-System-Drilldowns
 
 #### Oberon (`/oberon/*`)
-- **Sub-Routen:** `providers` · `cost` · `audit` · `smoke` · `instances` · `pii-tuning` · `db-broker` · `contract`
-- **Backend:** `routes_oberon.py` (10 Proxy-Routes) + `clients/oberon_cockpit_client.py` + `clients/oberon_platform_client.py`
+- **Sub-Routen:** `providers` · `cost` · `audit` · `revision` · `smoke` · `instances` · `pii-tuning` · `db-broker` · `contract`
+- **Backend:** `routes_oberon.py` (12 Proxy-Routes) + `clients/oberon_cockpit_client.py` + `clients/oberon_platform_client.py`
 - **Aktionen integriert:** ActionCards für `oberon.smoke`, `oberon.llm.test`, `oberon.dsgvo.check`
+
+#### Oberon DSGVO-Revision (`/oberon/revision`, aktiv seit 2026-06-18, Kern A + B + C)
+- **Was:** Revisions-Workbench für den Oberon-**Document-Store** — getrennt vom Metadaten-`audit`-Stream. Links gefilterte Liste der aufbewahrten Dokument-Sessions (Client, Doctype, Zeit, PII-Typen, **Verdikt-Chip**), Klick → **Side-by-Side: Original ↔ Oberon-anonymisierte Fassung** + PII-Befund- und **Verdikt-Panel**. Ermöglicht Gegenprüfen + Markieren (Datenschutz-Nachvollziehbarkeit).
+- **Datenquellen:** `GET /api/v1/oberon/revision/documents` (Liste, Polling 30s) · `.../{sessionId}/{datei}` (Text) · `.../{sessionId}/{datei}/raw` (PDF-Binär) · `GET .../revision/verdicts` + `POST .../revision/verdict` (MOAG-lokale Verdikte). Proxy auf Oberon `GET /api/v2/dsgvo/documents` (Bearer-Token); Verdikte in MOAG-SQLite.
+- **Datei-Whitelist:** Text — `original.txt`, `anonymisiert.txt`, `oberon_anonymisiert.txt`, `oberon_pii.json`, `meta.json`; PDF — `original.pdf`, `redacted.pdf` (Path-Traversal-Schutz, 400 bei Fremddatei).
+- **C — Verdikt (MOAG-lokal):** `geprueft`/`beanstandet` pro Session, Buttons im Panel, persistiert in SQLite (`MOAG_REVIEW_DB`, Default `~/.moag/review.db`). `offen` löscht. Migration nach Oberon via CR `2026-06-18-moag-dsgvo-revision-verdikt-retention` (offen).
+- **B1 — Filter/Suche:** Freitext + Verdikt-Filter + PII-Filter; Render-Cap 200 mit Hinweis (Perf bei ~1117 Docs).
+- **B3 — Diff-Highlight (Toggle):** zeilenbasiertes LCS (`_diff.ts`, MAX 4000 Zeilen) markiert geänderte Zeilen Original↔Oberon-anonymisiert. **Hinweis:** `oberon_pii.json` liefert nur PII-Typen/Längen, KEINE Offsets — echtes Offset-Highlighting ist daher nicht möglich, der Diff ist die buildbare Alternative.
+- **B4 — 3. Spalte (Toggle):** zeigt zusätzlich `anonymisiert.txt` (Client) neben Oberons Fassung.
+- **B2 — PDF-Ansicht (Toggle):** Original ↔ geschwärzt als native `<object>`-PDF-Embeds + „neuer Tab"-Link, über die Binär-Route.
+- **Code:** Backend `clients/oberon_platform_client.py` (`get_dsgvo_documents`/`get_dsgvo_document_file`/`get_dsgvo_document_bytes`/`_get_text`), `routes_oberon.py` (`_REVISION_ALLOWED_FILES`/`_REVISION_ALLOWED_PDF` + Routes inkl. Verdikt), `dsgvo_review_store.py`; Frontend `features/oberon/pages/Revision.tsx`, `_diff.ts`, Typen + `api.oberon.getRevisionDocuments/getRevisionFile/revisionRawUrl/getRevisionVerdicts/setRevisionVerdict`.
+- **Tests:** `test_routes_oberon.py` (Liste/Datei/PDF-Raw/Whitelist/Verdikt) · `test_dsgvo_review_store.py` (5) · `__tests__/Revision.test.tsx` (7) · `__tests__/diff.test.ts` (3).
+- **Offen (Oberon-CR):** Verdikt-Migration nach Oberon + KI-Qualitätsurteil pro Dokument + **Retention/Lösch-nach-Prüfung** (Document-Store wächst aktuell unbegrenzt mit Klartext-PII — DSGVO-Speicherbegrenzung).
 
 #### OctoBoss (`/octoboss/*`)
 - **Sub-Routen:** `nodes` (Liste) · `nodes/:id` (Detail) · `jobs` · `assets` · `cluster` (Sync/Peers) · `ocr` · `llm-models` · `manifest-health` · `benchmarks`

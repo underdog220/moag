@@ -44,6 +44,7 @@ from .events import EventBus
 from .hub_client import HubClient
 from .job_store import JobStore, default_db_path
 from .alert_ack_store import AlertAckStore, default_ack_db_path
+from .dsgvo_review_store import DsgvoReviewStore, default_review_db_path
 from .models import (
     EdgeLogEntry,
     EdgeLogResponse,
@@ -133,6 +134,7 @@ def create_app(
     settings_store: SettingsStore | None = None,
     job_store: JobStore | None = None,
     alert_ack_store: AlertAckStore | None = None,
+    review_store: DsgvoReviewStore | None = None,
     event_bus: EventBus | None = None,
     hub_client: HubClient | None = None,
     *,
@@ -147,6 +149,7 @@ def create_app(
     settings_store = settings_store or SettingsStore(default_settings_path())
     job_store = job_store or JobStore(default_db_path())
     alert_ack_store = alert_ack_store or AlertAckStore(default_ack_db_path())
+    review_store = review_store or DsgvoReviewStore(default_review_db_path())
     event_bus = event_bus or EventBus()
     hub_client = hub_client or HubClient(event_bus=event_bus)
 
@@ -246,6 +249,10 @@ def create_app(
                 pass
             try:
                 alert_ack_store.close()
+            except Exception:  # pragma: no cover
+                pass
+            try:
+                review_store.close()
             except Exception:  # pragma: no cover
                 pass
 
@@ -621,7 +628,7 @@ def create_app(
     app.include_router(build_ocrexpert_router(settings_store))
 
     from moag.routes_oberon import build_oberon_router
-    app.include_router(build_oberon_router(settings_store))
+    app.include_router(build_oberon_router(settings_store, review_store))
 
     from moag.routes_octoboss import build_octoboss_router
     app.include_router(build_octoboss_router(settings_store))

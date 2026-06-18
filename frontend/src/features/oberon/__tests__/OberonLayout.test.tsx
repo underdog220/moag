@@ -40,11 +40,12 @@ function wrap(node: ReactNode, initialPath = "/oberon/providers") {
 // ── OberonLayout ─────────────────────────────────────────────────────────────
 
 describe("OberonLayout", () => {
-  it("rendert alle 8 Sub-Tab-Labels", () => {
+  it("rendert alle 9 Sub-Tab-Labels", () => {
     render(wrap(<OberonLayout />, "/oberon/providers"));
     expect(screen.getByText("Provider")).toBeInTheDocument();
     expect(screen.getByText("Kosten")).toBeInTheDocument();
     expect(screen.getByText("Audit")).toBeInTheDocument();
+    expect(screen.getByText("Revision")).toBeInTheDocument();
     expect(screen.getByText("Smoke")).toBeInTheDocument();
     expect(screen.getByText("Instanzen")).toBeInTheDocument();
     expect(screen.getByText("PII-Tuning")).toBeInTheDocument();

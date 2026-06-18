@@ -11,6 +11,7 @@ import { Tooltip } from "../../components/Tooltip";
 import { ProvidersPage } from "./pages/Providers";
 import { CostPage } from "./pages/Cost";
 import { AuditPage } from "./pages/Audit";
+import { RevisionPage } from "./pages/Revision";
 import { SmokePage } from "./pages/Smoke";
 import { InstancesPage } from "./pages/Instances";
 import { PiiTuningPage } from "./pages/PiiTuning";
@@ -27,6 +28,7 @@ const SUB_TABS: SubTab[] = [
   { to: "providers",  label: "Provider",   tooltip: "LLM-Provider mit Health, Latenz und Modell-Profilen — GET /api/v1/oberon/providers" },
   { to: "cost",       label: "Kosten",     tooltip: "Aggregierte Kostenauswertung nach Client, Modell oder Tag — GET /api/v1/oberon/cost" },
   { to: "audit",      label: "Audit",      tooltip: "DSGVO-Audit-Event-Stream mit PII-Filter — GET /api/v1/oberon/audit" },
+  { to: "revision",   label: "Revision",   tooltip: "DSGVO-Revision: Original vs. anonymisierte Fassung pro Dokument gegenpruefen — GET /api/v1/oberon/revision/documents" },
   { to: "smoke",      label: "Smoke",      tooltip: "Live-Health-Snapshot aller 6 Sub-Checks — GET /api/v1/oberon/smoke" },
   { to: "instances",  label: "Instanzen",  tooltip: "Aktive DevLoop/Chat-Sessions auf Oberon — GET /api/v1/oberon/instances" },
   { to: "pii-tuning", label: "PII-Tuning", tooltip: "PII-Erkennungs-Konfiguration der DSGVO-Engine — GET /api/v1/oberon/pii-tuning" },
@@ -75,6 +77,7 @@ export function OberonLayout() {
           <Route path="providers"  element={<ProvidersPage />} />
           <Route path="cost"       element={<CostPage />} />
           <Route path="audit"      element={<AuditPage />} />
+          <Route path="revision"   element={<RevisionPage />} />
           <Route path="smoke"      element={<SmokePage />} />
           <Route path="instances"  element={<InstancesPage />} />
           <Route path="pii-tuning" element={<PiiTuningPage />} />

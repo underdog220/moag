@@ -198,6 +198,69 @@ class OberonPlatformClient:
         )
         return body
 
+    def _get_text(self, path: str) -> tuple[str, str]:
+        """GET-Request der den Body als TEXT zurueckgibt (kein JSON-Parse).
+
+        Fuer Endpoints die rohen Text liefern (DSGVO-Document-Store-Dateien
+        original.txt / oberon_anonymisiert.txt). Gibt (content, content_type).
+
+        Wirft:
+          PlatformUnavailable bei 5xx, Timeout, ConnectError
+          PlatformError       bei 4xx
+        """
+        url = self.base_url + path
+        headers = self._auth_headers()
+        t0 = time.monotonic()
+        try:
+            resp = self._client.get(url, headers=headers)
+        except httpx.TimeoutException as exc:
+            dauer_ms = int((time.monotonic() - t0) * 1000)
+            plog.step(
+                "platform.client", "get_text",
+                input={"path": path}, output={"error": "timeout"},
+                dauer_ms=dauer_ms, ok=False,
+            )
+            raise PlatformUnavailable(f"Platform-Timeout ({self.timeout_s}s): {path}") from exc
+        except (httpx.ConnectError, httpx.HTTPError, OSError) as exc:
+            dauer_ms = int((time.monotonic() - t0) * 1000)
+            plog.step(
+                "platform.client", "get_text",
+                input={"path": path}, output={"error": str(exc)},
+                dauer_ms=dauer_ms, ok=False,
+            )
+            raise PlatformUnavailable(f"Platform-Verbindungsfehler: {exc}") from exc
+
+        dauer_ms = int((time.monotonic() - t0) * 1000)
+        if resp.status_code >= 500:
+            plog.step(
+                "platform.client", "get_text",
+                input={"path": path}, output={"status": resp.status_code},
+                dauer_ms=dauer_ms, ok=False,
+            )
+            raise PlatformUnavailable(
+                f"Platform HTTP {resp.status_code}: {path} — {resp.text[:200]}"
+            )
+        if resp.status_code >= 400:
+            plog.step(
+                "platform.client", "get_text",
+                input={"path": path}, output={"status": resp.status_code},
+                dauer_ms=dauer_ms, ok=False,
+            )
+            raise PlatformError(
+                f"Platform HTTP {resp.status_code}: {path}",
+                status_code=resp.status_code,
+                body=resp.text,
+            )
+
+        content_type = resp.headers.get("content-type") or resp.headers.get("Content-Type") or ""
+        plog.step(
+            "platform.client", "get_text",
+            input={"path": path},
+            output={"status": resp.status_code, "bytes": len(resp.content)},
+            dauer_ms=dauer_ms, ok=True,
+        )
+        return resp.text, content_type
+
     # ── Plattform-Endpoints ──────────────────────────────────────────────────
 
     def get_instances(self) -> Any:
@@ -231,6 +294,63 @@ class OberonPlatformClient:
     def get_dsgvo_status(self) -> Any:
         """GET /api/v2/dsgvo/status — DSGVO-Engine-Status."""
         return self._get("/api/v2/dsgvo/status")
+
+    def get_dsgvo_documents(self) -> Any:
+        """GET /api/v2/dsgvo/documents — DSGVO-Document-Store (Revisions-Liste).
+
+        Liste aller aufbewahrten Dokument-Sessions (Original + anonymisierte
+        Fassung), die ein Revisor auf korrekte Anonymisierung gegenpruefen kann.
+        """
+        return self._get("/api/v2/dsgvo/documents")
+
+    def get_dsgvo_document_file(self, session_id: str, datei: str) -> tuple[str, str]:
+        """GET /api/v2/dsgvo/documents/{sessionId}/{datei} — Einzeldatei einer Session.
+
+        Liefert den Text-Inhalt einer Datei (original.txt, oberon_anonymisiert.txt,
+        ...) als (content, content_type). Aufrufer muss `datei` gegen eine
+        Whitelist pruefen (Path-Traversal-Schutz) — der Client kodiert nur.
+        """
+        from urllib.parse import quote
+
+        path = (
+            f"/api/v2/dsgvo/documents/{quote(session_id, safe='')}/{quote(datei, safe='')}"
+        )
+        return self._get_text(path)
+
+    def get_dsgvo_document_bytes(self, session_id: str, datei: str) -> tuple[bytes, str]:
+        """GET /api/v2/dsgvo/documents/{sessionId}/{datei} — Datei als BYTES (PDF).
+
+        Wie get_dsgvo_document_file, aber roher Binaer-Inhalt (resp.content),
+        damit PDFs nicht ueber Text-Dekodierung korrumpiert werden.
+        """
+        from urllib.parse import quote
+
+        path = f"/api/v2/dsgvo/documents/{quote(session_id, safe='')}/{quote(datei, safe='')}"
+        url = self.base_url + path
+        headers = self._auth_headers()
+        t0 = time.monotonic()
+        try:
+            resp = self._client.get(url, headers=headers)
+        except httpx.TimeoutException as exc:
+            raise PlatformUnavailable(f"Platform-Timeout ({self.timeout_s}s): {path}") from exc
+        except (httpx.ConnectError, httpx.HTTPError, OSError) as exc:
+            raise PlatformUnavailable(f"Platform-Verbindungsfehler: {exc}") from exc
+
+        dauer_ms = int((time.monotonic() - t0) * 1000)
+        if resp.status_code >= 500:
+            raise PlatformUnavailable(f"Platform HTTP {resp.status_code}: {path}")
+        if resp.status_code >= 400:
+            raise PlatformError(
+                f"Platform HTTP {resp.status_code}: {path}",
+                status_code=resp.status_code, body=resp.text,
+            )
+        content_type = resp.headers.get("content-type") or resp.headers.get("Content-Type") or "application/pdf"
+        plog.step(
+            "platform.client", "get_bytes",
+            input={"path": path}, output={"status": resp.status_code, "bytes": len(resp.content)},
+            dauer_ms=dauer_ms, ok=True,
+        )
+        return resp.content, content_type
 
     def provision_database(self, app_name: str = "moag") -> Any:
         """POST /api/v2/database/provision — DB-Provisioning fuer eine App.

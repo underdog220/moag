@@ -568,6 +568,62 @@ export interface AuditResponse {
   [key: string]: unknown;
 }
 
+// ── DSGVO-Revision (Document-Store: Original + Anonymisiert pro Session) ──────
+// GET /api/v1/oberon/revision/documents
+// Oberon liefert camelCase-Keys (sessionId, clientId, ...).
+
+export interface RevisionDocument {
+  sessionId: string;
+  clientId?: string | null;
+  documentType?: string | null;
+  filename?: string | null;
+  timestamp?: string | null; // ISO-8601
+  hatOriginalText?: boolean;
+  hatAnonymizedText?: boolean;
+  hatOberonAnonymisiert?: boolean;
+  hatOriginalPdf?: boolean;
+  hatRedactedPdf?: boolean;
+  oberonPiiFound?: boolean;
+  oberonPiiTypes?: string[];
+  piiKategorien?: string[];
+  piiRegionen?: number;
+  seitenMitPii?: number;
+  seitenGesamt?: number;
+  rescanStatus?: string | null; // "ok" | "leak" (optional, falls Oberon es liefert)
+  [key: string]: unknown;
+}
+
+export interface RevisionDocumentsResponse {
+  documents: RevisionDocument[];
+  count: number;
+  [key: string]: unknown;
+}
+
+// GET /api/v1/oberon/revision/documents/{sessionId}/{datei}
+export interface RevisionFileResponse {
+  session_id: string;
+  datei: string;
+  content: string;
+  content_type: string;
+  [key: string]: unknown;
+}
+
+// MOAG-lokales Revisions-Verdikt (bis Oberon-CR umgesetzt).
+export type RevisionVerdict = "geprueft" | "beanstandet";
+
+export interface RevisionVerdictRecord {
+  verdict: RevisionVerdict;
+  reviewer?: string | null;
+  note?: string | null;
+  reviewed_at?: string | null;
+}
+
+// GET /api/v1/oberon/revision/verdicts
+export interface RevisionVerdictsResponse {
+  verdicts: Record<string, RevisionVerdictRecord>;
+  [key: string]: unknown;
+}
+
 // GET /api/cockpit/smoke
 export interface CockpitSmokeCheck {
   name: string;

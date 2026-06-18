@@ -430,3 +430,222 @@ def test_classification_guide_503_dsgvo_disabled(app_with_token):
     assert resp.status_code == 503
     data = resp.json()
     assert data["detail"]["status"] == "dsgvo_disabled"
+
+
+# ── DSGVO-Revision (Document-Store) ───────────────────────────────────────────
+
+
+def test_revision_documents_stub(app_no_token):
+    """Ohne Token: /revision/documents liefert Stub-Antwort."""
+    with TestClient(app_no_token) as client:
+        resp = client.get("/api/v1/oberon/revision/documents")
+    assert resp.status_code == 200
+    assert resp.json().get("stub") is True
+
+
+def test_revision_documents_with_token(app_with_token):
+    """Mit Token: /revision/documents reicht die Oberon-Dokumentliste durch."""
+    mock_list = {
+        "documents": [
+            {
+                "sessionId": "doc.pdf_123",
+                "clientId": "valiador",
+                "documentType": "Grundbuchauszug",
+                "filename": "doc.pdf",
+                "hatOriginalText": True,
+                "hatOberonAnonymisiert": True,
+                "oberonPiiFound": True,
+                "oberonPiiTypes": ["PERSON", "ADRESSE"],
+                "timestamp": "2026-06-18T08:00:00Z",
+            }
+        ],
+        "count": 1,
+    }
+
+    import moag.routes_oberon as _ro
+
+    mock_client = MagicMock()
+    mock_client.__enter__ = MagicMock(return_value=mock_client)
+    mock_client.__exit__ = MagicMock(return_value=False)
+    mock_client.get_dsgvo_documents = MagicMock(return_value=mock_list)
+
+    with patch.object(_ro, "_build_platform_client", return_value=mock_client):
+        with TestClient(app_with_token) as client:
+            resp = client.get("/api/v1/oberon/revision/documents")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["count"] == 1
+    assert data["documents"][0]["sessionId"] == "doc.pdf_123"
+    assert data["documents"][0]["oberonPiiTypes"] == ["PERSON", "ADRESSE"]
+
+
+def test_revision_file_with_token(app_with_token):
+    """Mit Token: /revision/documents/{id}/{datei} liefert Text-Inhalt als JSON."""
+    import moag.routes_oberon as _ro
+
+    mock_client = MagicMock()
+    mock_client.__enter__ = MagicMock(return_value=mock_client)
+    mock_client.__exit__ = MagicMock(return_value=False)
+    mock_client.get_dsgvo_document_file = MagicMock(
+        return_value=("Max Mustermann, Hauptstr. 1", "text/plain; charset=utf-8")
+    )
+
+    with patch.object(_ro, "_build_platform_client", return_value=mock_client):
+        with TestClient(app_with_token) as client:
+            resp = client.get("/api/v1/oberon/revision/documents/doc.pdf_123/original.txt")
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["session_id"] == "doc.pdf_123"
+    assert data["datei"] == "original.txt"
+    assert data["content"] == "Max Mustermann, Hauptstr. 1"
+    assert "text/plain" in data["content_type"]
+    mock_client.get_dsgvo_document_file.assert_called_once_with("doc.pdf_123", "original.txt")
+
+
+def test_revision_file_whitelist_rejects_unknown(app_with_token):
+    """Nicht-Whitelist-Dateiname -> HTTP 400 (Path-Traversal-Schutz), kein Oberon-Call."""
+    import moag.routes_oberon as _ro
+
+    mock_client = MagicMock()
+    mock_client.__enter__ = MagicMock(return_value=mock_client)
+    mock_client.__exit__ = MagicMock(return_value=False)
+    mock_client.get_dsgvo_document_file = MagicMock()
+
+    with patch.object(_ro, "_build_platform_client", return_value=mock_client):
+        with TestClient(app_with_token) as client:
+            resp = client.get("/api/v1/oberon/revision/documents/doc.pdf_123/secrets.env")
+
+    assert resp.status_code == 400
+    assert resp.json()["detail"]["status"] == "datei_nicht_erlaubt"
+    mock_client.get_dsgvo_document_file.assert_not_called()
+
+
+def test_revision_file_stub(app_no_token):
+    """Ohne Token: /revision/documents/{id}/{datei} liefert Stub (Whitelist-Datei)."""
+    with TestClient(app_no_token) as client:
+        resp = client.get("/api/v1/oberon/revision/documents/doc.pdf_123/original.txt")
+    assert resp.status_code == 200
+    assert resp.json().get("stub") is True
+
+
+def test_revision_documents_unavailable_502(app_with_token):
+    """Oberon nicht erreichbar -> HTTP 502."""
+    from moag.clients.oberon_platform_client import PlatformUnavailable
+
+    import moag.routes_oberon as _ro
+
+    mock_client = MagicMock()
+    mock_client.__enter__ = MagicMock(return_value=mock_client)
+    mock_client.__exit__ = MagicMock(return_value=False)
+    mock_client.get_dsgvo_documents = MagicMock(side_effect=PlatformUnavailable("Timeout"))
+
+    with patch.object(_ro, "_build_platform_client", return_value=mock_client):
+        with TestClient(app_with_token) as client:
+            resp = client.get("/api/v1/oberon/revision/documents")
+
+    assert resp.status_code == 502
+
+
+def test_revision_pdf_raw_with_token(app_with_token):
+    """Mit Token: /revision/.../{pdf}/raw liefert Binaer-Bytes mit Content-Type."""
+    import moag.routes_oberon as _ro
+
+    mock_client = MagicMock()
+    mock_client.__enter__ = MagicMock(return_value=mock_client)
+    mock_client.__exit__ = MagicMock(return_value=False)
+    mock_client.get_dsgvo_document_bytes = MagicMock(
+        return_value=(b"%PDF-1.4 fake bytes", "application/pdf")
+    )
+
+    with patch.object(_ro, "_build_platform_client", return_value=mock_client):
+        with TestClient(app_with_token) as client:
+            resp = client.get("/api/v1/oberon/revision/documents/doc_1/original.pdf/raw")
+
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("application/pdf")
+    assert resp.content.startswith(b"%PDF")
+    mock_client.get_dsgvo_document_bytes.assert_called_once_with("doc_1", "original.pdf")
+
+
+def test_revision_pdf_raw_whitelist(app_with_token):
+    """Nicht-PDF-Whitelist-Name -> 400, kein Oberon-Call."""
+    import moag.routes_oberon as _ro
+
+    mock_client = MagicMock()
+    mock_client.__enter__ = MagicMock(return_value=mock_client)
+    mock_client.__exit__ = MagicMock(return_value=False)
+    mock_client.get_dsgvo_document_bytes = MagicMock()
+
+    with patch.object(_ro, "_build_platform_client", return_value=mock_client):
+        with TestClient(app_with_token) as client:
+            resp = client.get("/api/v1/oberon/revision/documents/doc_1/original.txt/raw")
+
+    assert resp.status_code == 400
+    mock_client.get_dsgvo_document_bytes.assert_not_called()
+
+
+def test_revision_pdf_raw_no_token(app_no_token):
+    """Ohne Token: PDF-Raw -> 503 (kein Stub-Body fuer Binaer)."""
+    with TestClient(app_no_token) as client:
+        resp = client.get("/api/v1/oberon/revision/documents/doc_1/original.pdf/raw")
+    assert resp.status_code == 503
+
+
+# ── Revisions-Verdikt (MOAG-lokal) ────────────────────────────────────────────
+
+
+@pytest.fixture
+def app_with_review(tmp_path):
+    """App mit isoliertem Verdikt-Store (tmp) — kein Oberon-Token noetig."""
+    from moag.dsgvo_review_store import DsgvoReviewStore
+
+    store = SettingsStore(tmp_path / "settings.json")
+    review = DsgvoReviewStore(tmp_path / "review.db")
+    return create_app(settings_store=store, review_store=review, enable_pipeline=False)
+
+
+def test_verdict_set_and_list(app_with_review):
+    """POST setzt ein Verdikt, GET liefert es zurueck."""
+    with TestClient(app_with_review) as client:
+        # Anfangs leer
+        r0 = client.get("/api/v1/oberon/revision/verdicts")
+        assert r0.status_code == 200
+        assert r0.json()["verdicts"] == {}
+
+        # Setzen
+        r1 = client.post(
+            "/api/v1/oberon/revision/verdict",
+            json={"session_id": "doc_1", "verdict": "geprueft", "reviewer": "roman", "note": "ok"},
+        )
+        assert r1.status_code == 200
+        assert r1.json()["verdict"] == "geprueft"
+        assert r1.json()["reviewer"] == "roman"
+
+        # In der Liste
+        r2 = client.get("/api/v1/oberon/revision/verdicts")
+        v = r2.json()["verdicts"]
+        assert v["doc_1"]["verdict"] == "geprueft"
+        assert v["doc_1"]["note"] == "ok"
+
+
+def test_verdict_beanstandet_and_reset(app_with_review):
+    """'beanstandet' wird gespeichert, 'offen' loescht wieder."""
+    with TestClient(app_with_review) as client:
+        client.post("/api/v1/oberon/revision/verdict", json={"session_id": "doc_2", "verdict": "beanstandet"})
+        assert client.get("/api/v1/oberon/revision/verdicts").json()["verdicts"]["doc_2"]["verdict"] == "beanstandet"
+
+        # Zuruecksetzen
+        r = client.post("/api/v1/oberon/revision/verdict", json={"session_id": "doc_2", "verdict": "offen"})
+        assert r.status_code == 200
+        assert r.json()["verdict"] == "offen"
+        assert client.get("/api/v1/oberon/revision/verdicts").json()["verdicts"] == {}
+
+
+def test_verdict_invalid_rejected(app_with_review):
+    """Unbekanntes Verdikt -> HTTP 400."""
+    with TestClient(app_with_review) as client:
+        r = client.post("/api/v1/oberon/revision/verdict", json={"session_id": "doc_3", "verdict": "vielleicht"})
+        assert r.status_code == 400
+        assert r.json()["detail"]["status"] == "ungueltiges_verdikt"

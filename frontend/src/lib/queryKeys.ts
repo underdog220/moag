@@ -71,6 +71,10 @@ export const qk = {
     dbBroker: ["oberon", "db-broker"] as const,
     contract: ["oberon", "contract"] as const,
     platformStatus: ["oberon", "platform-status"] as const,
+    revisionList: ["oberon", "revision", "list"] as const,
+    revisionFile: (sessionId: string, datei: string) =>
+      ["oberon", "revision", "file", sessionId, datei] as const,
+    revisionVerdicts: ["oberon", "revision", "verdicts"] as const,
   },
 
   // Custos-Drilldown-API (/api/v1/custos/*)

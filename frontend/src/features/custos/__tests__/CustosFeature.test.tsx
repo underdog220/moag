@@ -217,7 +217,9 @@ describe("AuditPage", () => {
 
     render(wrap(<AuditPage />));
     await waitFor(() => {
-      expect(screen.getByText(/3/)).toBeInTheDocument();
+      // Gezielt auf den Aktiv-Zaehler (<strong>) statt /3/ — sonst kollidiert die
+      // Regex mit dem PageBadge (Commit-Hash/Uhrzeit enthalten ggf. eine "3").
+      expect(screen.getByText("3", { selector: "strong" })).toBeInTheDocument();
     });
   });
 });

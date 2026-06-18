@@ -413,6 +413,36 @@ export const api = {
     getSmoke: (): Promise<SmokeResponse> =>
       request<SmokeResponse>("/v1/oberon/smoke"),
 
+    /** GET /api/v1/oberon/revision/documents — DSGVO-Revisions-Liste (Document-Store). */
+    getRevisionDocuments: (): Promise<import("./types").RevisionDocumentsResponse> =>
+      request<import("./types").RevisionDocumentsResponse>("/v1/oberon/revision/documents"),
+
+    /** GET /api/v1/oberon/revision/documents/{sessionId}/{datei} — Einzeldatei (Text). */
+    getRevisionFile: (
+      sessionId: string,
+      datei: string,
+    ): Promise<import("./types").RevisionFileResponse> =>
+      request<import("./types").RevisionFileResponse>(
+        `/v1/oberon/revision/documents/${encodeURIComponent(sessionId)}/${encodeURIComponent(datei)}`,
+      ),
+
+    /** URL der PDF-Raw-Route (fuer <object>/<embed> in der PDF-Ansicht). */
+    revisionRawUrl: (sessionId: string, datei: string): string =>
+      `${API_BASE}/v1/oberon/revision/documents/${encodeURIComponent(sessionId)}/${encodeURIComponent(datei)}/raw`,
+
+    /** GET /api/v1/oberon/revision/verdicts — MOAG-lokale Revisions-Verdikte. */
+    getRevisionVerdicts: (): Promise<import("./types").RevisionVerdictsResponse> =>
+      request<import("./types").RevisionVerdictsResponse>("/v1/oberon/revision/verdicts"),
+
+    /** POST /api/v1/oberon/revision/verdict — Verdikt setzen ('offen' loescht). */
+    setRevisionVerdict: (body: {
+      session_id: string;
+      verdict: "geprueft" | "beanstandet" | "offen";
+      reviewer?: string;
+      note?: string;
+    }): Promise<unknown> =>
+      request<unknown>("/v1/oberon/revision/verdict", { method: "POST", body }),
+
     /** GET /api/v1/oberon/instances — Aktive Oberon-Instanzen. */
     getInstances: (): Promise<unknown> =>
       request<unknown>("/v1/oberon/instances"),

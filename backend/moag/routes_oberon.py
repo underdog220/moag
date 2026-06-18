@@ -24,7 +24,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, Response
+from pydantic import BaseModel, Field
 
 from moag.clients.oberon_cockpit_client import (
     CockpitClient,
@@ -37,6 +38,7 @@ from moag.clients.oberon_platform_client import (
     PlatformError,
     PlatformUnavailable,
 )
+from moag.dsgvo_review_store import VALID_VERDICTS, DsgvoReviewStore
 from moag.settings_store import SettingsStore
 
 logger = logging.getLogger("moag.routes_oberon")
@@ -47,12 +49,20 @@ router = APIRouter(prefix="/api/v1/oberon", tags=["oberon"])
 
 # SettingsStore-Referenz wird beim App-Start injiziert (siehe build_oberon_router)
 _settings_store: Optional[SettingsStore] = None
+# MOAG-lokaler Verdikt-Store fuer DSGVO-Revision (ebenfalls injiziert)
+_review_store: Optional[DsgvoReviewStore] = None
 
 
 def _get_settings_store() -> SettingsStore:
     if _settings_store is None:
         raise RuntimeError("OberonRouter: SettingsStore nicht injiziert — build_oberon_router() nicht aufgerufen?")
     return _settings_store
+
+
+def _get_review_store() -> DsgvoReviewStore:
+    if _review_store is None:
+        raise RuntimeError("OberonRouter: DsgvoReviewStore nicht injiziert — build_oberon_router() nicht aufgerufen?")
+    return _review_store
 
 
 def _build_cockpit_client() -> Optional[CockpitClient]:
@@ -361,6 +371,158 @@ def get_contract_classification_guide(request: Request) -> Any:
         raise _platform_error(exc)
 
 
+# ── DSGVO-Revision (Document-Store: Original + Anonymisiert pro Session) ───────
+
+# Whitelist der abrufbaren Dateien im DSGVO-Document-Store. Schuetzt vor
+# Path-Traversal (kein "../") und beschraenkt auf die bekannten Session-Dateien.
+_REVISION_ALLOWED_FILES = {
+    "original.txt",
+    "anonymisiert.txt",
+    "oberon_anonymisiert.txt",
+    "oberon_pii.json",
+    "meta.json",
+}
+
+# Whitelist der als Binaer (PDF) abrufbaren Dateien.
+_REVISION_ALLOWED_PDF = {
+    "original.pdf",
+    "redacted.pdf",
+}
+
+
+@router.get("/revision/documents")
+def get_revision_documents() -> Any:
+    """GET /api/v2/dsgvo/documents — DSGVO-Revisions-Liste.
+
+    Liste der aufbewahrten Dokument-Sessions (Original + anonymisierte Fassung),
+    die ein Revisor auf korrekte Anonymisierung gegenpruefen kann.
+    Datenquelle: Oberon /api/v2/dsgvo/documents
+    """
+    client = _build_platform_client()
+    if client is None:
+        return _no_token_response("revision/documents")
+    try:
+        with client:
+            return client.get_dsgvo_documents()
+    except PlatformUnavailable as exc:
+        raise _platform_unavailable(exc)
+    except PlatformError as exc:
+        raise _platform_error(exc)
+
+
+@router.get("/revision/documents/{session_id}/{datei}")
+def get_revision_document_file(session_id: str, datei: str) -> Any:
+    """GET /api/v2/dsgvo/documents/{sessionId}/{datei} — Einzeldatei einer Session.
+
+    Liefert den Text-Inhalt (original.txt, oberon_anonymisiert.txt, ...) als
+    JSON {session_id, datei, content, content_type}. Nur Whitelist-Dateinamen
+    erlaubt (Path-Traversal-Schutz).
+    Datenquelle: Oberon /api/v2/dsgvo/documents/{sessionId}/{datei}
+    """
+    if datei not in _REVISION_ALLOWED_FILES:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "status": "datei_nicht_erlaubt",
+                "detail": f"Datei {datei!r} nicht in Whitelist",
+                "allowed": sorted(_REVISION_ALLOWED_FILES),
+            },
+        )
+    client = _build_platform_client()
+    if client is None:
+        return _no_token_response("revision/documents/file")
+    try:
+        with client:
+            content, content_type = client.get_dsgvo_document_file(session_id, datei)
+            return {
+                "session_id": session_id,
+                "datei": datei,
+                "content": content,
+                "content_type": content_type,
+            }
+    except PlatformUnavailable as exc:
+        raise _platform_unavailable(exc)
+    except PlatformError as exc:
+        raise _platform_error(exc)
+
+
+@router.get("/revision/documents/{session_id}/{datei}/raw")
+def get_revision_document_pdf(session_id: str, datei: str) -> Response:
+    """GET /api/v2/dsgvo/documents/{sessionId}/{datei} — PDF als Binaer-Stream.
+
+    Fuer die PDF-Ansicht (original.pdf / redacted.pdf). Liefert die rohen Bytes
+    mit korrektem Content-Type, damit der Browser sie nativ rendern kann.
+    Nur PDF-Whitelist erlaubt (Path-Traversal-Schutz).
+    Datenquelle: Oberon /api/v2/dsgvo/documents/{sessionId}/{datei}
+    """
+    if datei not in _REVISION_ALLOWED_PDF:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "status": "datei_nicht_erlaubt",
+                "detail": f"Datei {datei!r} nicht in PDF-Whitelist",
+                "allowed": sorted(_REVISION_ALLOWED_PDF),
+            },
+        )
+    client = _build_platform_client()
+    if client is None:
+        raise HTTPException(status_code=503, detail={"status": "no_token", "detail": "Kein Oberon-Token konfiguriert"})
+    try:
+        with client:
+            content, content_type = client.get_dsgvo_document_bytes(session_id, datei)
+            return Response(content=content, media_type=content_type or "application/pdf")
+    except PlatformUnavailable as exc:
+        raise _platform_unavailable(exc)
+    except PlatformError as exc:
+        raise _platform_error(exc)
+
+
+# ── Revisions-Verdikt (MOAG-lokal, bis Oberon-CR umgesetzt ist) ───────────────
+
+
+class RevisionVerdictBody(BaseModel):
+    """Body fuer POST /revision/verdict."""
+
+    session_id: str = Field(min_length=1, description="Document-Store-Session-ID")
+    verdict: str = Field(description="'geprueft', 'beanstandet' oder 'offen' (loescht)")
+    reviewer: Optional[str] = Field(default=None, description="Name des Pruefers")
+    note: Optional[str] = Field(default=None, description="Optionale Notiz")
+
+
+@router.get("/revision/verdicts")
+def get_revision_verdicts() -> Any:
+    """Liefert alle MOAG-lokal gespeicherten Revisions-Verdikte.
+
+    Format: {"verdicts": {sessionId: {verdict, reviewer, note, reviewed_at}}}.
+    Der Store ist klein (nur bereits revidierte Sessions) — das Frontend merged
+    per sessionId in die Dokument-Liste.
+    """
+    store = _get_review_store()
+    return {"verdicts": store.all_verdicts()}
+
+
+@router.post("/revision/verdict")
+def set_revision_verdict(body: RevisionVerdictBody) -> Any:
+    """Setzt das Revisions-Verdikt einer Session (MOAG-lokal persistiert).
+
+    verdict='offen' loescht den Eintrag (zuruecksetzen). Sonst 'geprueft'/'beanstandet'.
+    """
+    store = _get_review_store()
+    if body.verdict == "offen":
+        cleared = store.clear(body.session_id)
+        return {"session_id": body.session_id, "verdict": "offen", "cleared": cleared}
+    if body.verdict not in VALID_VERDICTS:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "status": "ungueltiges_verdikt",
+                "detail": f"Verdikt {body.verdict!r} unbekannt",
+                "allowed": sorted(VALID_VERDICTS) + ["offen"],
+            },
+        )
+    return store.set_verdict(body.session_id, body.verdict, body.reviewer, body.note)
+
+
 @router.get("/platform/status")
 def get_platform_status() -> Any:
     """GET /api/v2/platform/status — Plattform-Gesundheitsstatus.
@@ -383,11 +545,17 @@ def get_platform_status() -> Any:
 # ── Router-Factory (fuer create_app) ─────────────────────────────────────────
 
 
-def build_oberon_router(settings_store: SettingsStore) -> APIRouter:
-    """Injiziert den SettingsStore und gibt den konfigurierten Router zurueck.
+def build_oberon_router(
+    settings_store: SettingsStore,
+    review_store: Optional[DsgvoReviewStore] = None,
+) -> APIRouter:
+    """Injiziert SettingsStore (+ optional Verdikt-Store) und gibt den Router zurueck.
 
     Muss von create_app() aufgerufen werden, bevor include_router() greift.
+    review_store ist optional, damit aeltere Aufrufer (Tests) ohne ihn auskommen;
+    fehlt er, baut der Router einen Default-Store mit dem Standard-Pfad.
     """
-    global _settings_store
+    global _settings_store, _review_store
     _settings_store = settings_store
+    _review_store = review_store or DsgvoReviewStore()
     return router

@@ -352,6 +352,7 @@ MOAG_CUSTOS_BASE_URL=$CustosBaseUrl
 MOAG_DB_CACHE_PATH=$VolumeMountPath/db.json
 MOAG_JOBS_DB=$VolumeMountPath/jobs.db
 MOAG_ALERTS_DB=$VolumeMountPath/alerts.db
+MOAG_REVIEW_DB=$VolumeMountPath/review.db
 MOAG_UPLOAD_DIR=$VolumeMountPath/uploads
 "@
 
