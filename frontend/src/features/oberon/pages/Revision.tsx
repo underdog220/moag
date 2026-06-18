@@ -9,7 +9,7 @@
 //   GET  /api/v1/oberon/revision/verdicts                        → MOAG-lokale Verdikte
 //   POST /api/v1/oberon/revision/verdict                         → Verdikt setzen
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../lib/api";
 import { qk } from "../../../lib/queryKeys";
@@ -24,6 +24,40 @@ import { diffLines, type DiffLine } from "../_diff";
 const LIST_SOURCE = "GET /api/v1/oberon/revision/documents";
 // Obergrenze gerenderter Listeneintraege (Performance bei vielen Dokumenten).
 const MAX_RENDER = 200;
+
+// Synchronisiertes Scrollen mehrerer Panels: scrollt man eins, ziehen die
+// anderen proportional mit (fuer den direkten Vergleich Original<->anonymisiert).
+function useSyncScroll() {
+  const panes = useRef<Map<string, HTMLElement>>(new Map());
+  const lock = useRef<string | null>(null);
+
+  const register = (key: string) => (el: HTMLElement | null) => {
+    if (el) panes.current.set(key, el);
+    else panes.current.delete(key);
+  };
+
+  const onScroll = (key: string) => (e: { currentTarget: HTMLElement }) => {
+    // Nur die Quelle des aktuellen Scroll-Vorgangs darf die anderen treiben
+    // (verhindert die Rueckkopplungs-Schleife beim programmatischen Setzen).
+    if (lock.current && lock.current !== key) return;
+    lock.current = key;
+    const src = e.currentTarget;
+    const denom = src.scrollHeight - src.clientHeight;
+    const ratio = denom > 0 ? src.scrollTop / denom : 0;
+    panes.current.forEach((el, k) => {
+      if (k === key) return;
+      const d = el.scrollHeight - el.clientHeight;
+      el.scrollTop = ratio * d;
+    });
+    if (typeof window !== "undefined" && window.requestAnimationFrame) {
+      window.requestAnimationFrame(() => { lock.current = null; });
+    } else {
+      lock.current = null;
+    }
+  };
+
+  return { register, onScroll };
+}
 
 function rescanTone(status: string | null | undefined): "ok" | "error" | "neutral" {
   if (!status) return "neutral";
@@ -84,8 +118,9 @@ export function RevisionPage() {
   const [verdictFilter, setVerdictFilter] = useState<string>("alle");
   const [piiFilter, setPiiFilter] = useState<string>("alle");
   const [showClient, setShowClient] = useState(false);
-  const [showDiff, setShowDiff] = useState(false);
+  const [showDiff, setShowDiff] = useState(true);
   const [viewMode, setViewMode] = useState<"text" | "pdf">("text");
+  const sync = useSyncScroll();
 
   const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: qk.oberon.revisionList,
@@ -409,6 +444,20 @@ export function RevisionPage() {
                   )
                 ) : (
                   <>
+                    {/* Legende fuer die Diff-Farben + Hinweis Sync-Scroll */}
+                    {showDiff && (
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xxs text-fg-muted">
+                        <span className="inline-flex items-center gap-1">
+                          <span className="inline-block h-3 w-3 rounded-sm bg-status-error/30 border border-status-error/40" />
+                          im Original (enthielt PII)
+                        </span>
+                        <span className="inline-flex items-center gap-1">
+                          <span className="inline-block h-3 w-3 rounded-sm bg-status-ok/30 border border-status-ok/40" />
+                          anonymisierte Ersetzung
+                        </span>
+                        <span className="text-fg-subtle">· Spalten scrollen synchron</span>
+                      </div>
+                    )}
                     {/* Side-by-Side Text */}
                     <div className={`grid grid-cols-1 gap-4 ${showClient && clientDatei ? "2xl:grid-cols-3" : "xl:grid-cols-2"}`}>
                       <TextPanel
@@ -420,6 +469,8 @@ export function RevisionPage() {
                         error={orig.error as Error | null}
                         sessionId={effectiveSelected}
                         tone="original"
+                        registerScroll={sync.register("orig")}
+                        onScroll={sync.onScroll("orig")}
                       />
                       {showClient && clientDatei && (
                         <TextPanel
@@ -430,6 +481,8 @@ export function RevisionPage() {
                           error={client.error as Error | null}
                           sessionId={effectiveSelected}
                           tone="anon"
+                          registerScroll={sync.register("client")}
+                          onScroll={sync.onScroll("client")}
                         />
                       )}
                       <TextPanel
@@ -441,6 +494,8 @@ export function RevisionPage() {
                         error={anon.error as Error | null}
                         sessionId={effectiveSelected}
                         tone="anon"
+                        registerScroll={sync.register("anon")}
+                        onScroll={sync.onScroll("anon")}
                       />
                     </div>
                     {diff?.skipped && (
@@ -470,6 +525,8 @@ function TextPanel({
   error,
   sessionId,
   tone,
+  registerScroll,
+  onScroll,
 }: {
   title: string;
   datei: string | null;
@@ -479,11 +536,16 @@ function TextPanel({
   error: Error | null;
   sessionId: string | null;
   tone: "original" | "anon";
+  registerScroll?: (el: HTMLElement | null) => void;
+  onScroll?: (e: { currentTarget: HTMLElement }) => void;
 }) {
   const source = datei && sessionId
     ? `GET /api/v1/oberon/revision/documents/${sessionId}/${datei}`
     : "GET /api/v1/oberon/revision/documents/{id}/{datei}";
   const borderTone = tone === "anon" ? "border-status-ok/20" : "border-white/10";
+  // Geaenderte Zeilen: im Original rot (enthielt PII), in der anonymisierten
+  // Fassung gruen (die Ersetzung) — zwei klar unterscheidbare Farben.
+  const changedBg = tone === "anon" ? "bg-status-ok/20" : "bg-status-error/20";
   return (
     <section className={`flex flex-col rounded-lg border ${borderTone} bg-bg-panel p-3`}>
       <div className="mb-2 flex items-center gap-2 border-b border-white/10 pb-1.5">
@@ -501,12 +563,16 @@ function TextPanel({
       ) : text == null ? (
         <p className="py-6 text-center text-xs text-fg-muted">Kein Inhalt (Oberon-Token fehlt oder Datei leer).</p>
       ) : lines ? (
-        <div className="max-h-[28rem] overflow-auto font-mono text-xs leading-relaxed">
+        <div
+          ref={registerScroll}
+          onScroll={onScroll}
+          className="max-h-[28rem] overflow-auto font-mono text-xs leading-relaxed"
+        >
           {lines.map((ln, i) => (
             <div
               key={i}
               className={`whitespace-pre-wrap break-words px-1 ${
-                ln.changed ? "bg-status-warn/15 text-fg" : "text-fg"
+                ln.changed ? `${changedBg} text-fg` : "text-fg"
               }`}
             >
               {ln.text || " "}
@@ -514,7 +580,11 @@ function TextPanel({
           ))}
         </div>
       ) : (
-        <pre className="max-h-[28rem] overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-fg">
+        <pre
+          ref={registerScroll as ((el: HTMLPreElement | null) => void) | undefined}
+          onScroll={onScroll}
+          className="max-h-[28rem] overflow-auto whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-fg"
+        >
           {text || "(leer)"}
         </pre>
       )}

@@ -112,7 +112,7 @@ describe("RevisionPage", () => {
     });
   });
 
-  it("Diff-Toggle hebt geaenderte Zeilen hervor (kein Crash)", async () => {
+  it("Diff-Highlight ist standardmaessig an und rendert Zeilen je Spalte", async () => {
     vi.spyOn(apiModule.api.oberon, "getRevisionDocuments").mockResolvedValue({ documents: [DOC], count: 1 } as any);
     mockVerdicts();
     vi.spyOn(apiModule.api.oberon, "getRevisionFile").mockImplementation(async (_sid: string, datei: string) => {
@@ -122,11 +122,13 @@ describe("RevisionPage", () => {
 
     render(wrap(<RevisionPage />));
     await waitFor(() => expect(screen.getByTestId("revision-befund")).toBeInTheDocument());
-    fireEvent.click(screen.getByTestId("revision-diff-toggle"));
+    // Diff ist per Default an -> unveraenderte Zeile erscheint als Element in beiden Spalten
     await waitFor(() => {
-      // unveraenderte Zeile erscheint in beiden Spalten
       expect(screen.getAllByText("Zeile A").length).toBeGreaterThanOrEqual(2);
     });
+    // Toggle aus -> Plain-Text-Ansicht, kein Crash
+    fireEvent.click(screen.getByTestId("revision-diff-toggle"));
+    await waitFor(() => expect(screen.getByTestId("revision-befund")).toBeInTheDocument());
   });
 
   it("PDF-Ansicht: Umschalten zeigt PDF-Panels", async () => {
