@@ -29,7 +29,7 @@ Follow-Ups aus Release-Report v0.2.3 (siehe `MASSNAHMEN.md` 2026-05-24):
 ### TODO — neu aus Rollout-Deploy-Session (2026-06-21)
 - [x] **Rollout-View Phantom-Nodes** — ✅ erledigt 0.2.19 (`b74aa6e`): Manifest-only-Nodes (kein Heartbeat) werden gezählt (`manifest_only_count`) + als Fußnote „+N ausgeblendet" gezeigt, nicht mehr gelistet. Live: 4 echte statt 18 Nodes.
 - [x] **Pretest-Hygiene (False-Positive)** — ✅ erledigt 0.2.19: `chunkSizeWarningLimit` 500 → 1600, Build warnungsfrei, Pretest-Verdikt jetzt `good/ready` statt `unstable`.
-- [ ] **Lessons-Learned-Eintrag:** Bridge `local-process`-RunRequest — Pfade als **Forward-Slashes** (`C:/...`), nicht Backslashes. Doppel-Escaping (JSON-Tool-Param + Python-String-Literal) halbiert `\\` → `\`, und `\f`/`\t`/`\b` werden zu Steuerzeichen → kaputtes `Set-Location`. Kandidat für `C:\code\docs\lessons-learned.md` (+ ergänzt `memory/reference_panopticor_signal_mechanik.md`).
+- [x] **Lessons-Learned-Eintrag** — ✅ erledigt: `L-051` (Bridge `local-process` Forward-Slashes statt Backslashes, Doppel-Escaping-Falle) + `L-052` (Multi-Repo-Push ohne eigenes `cd` trifft falsches Repo) in `C:\code\docs\lessons\`, Index gerendert, Drift-Check clean.
 - [ ] **FEATURES.md-Housekeeping:** Test-Zähler (Abschnitt „Tests + Smoke") + Container-Zeile (`moag:0.1.0`) sind global veraltet (real ~535 BE / ~520 FE, live `moag:0.2.18`) — beim nächsten FEATURES-Touch nachziehen.
 
 ### Bestehend
