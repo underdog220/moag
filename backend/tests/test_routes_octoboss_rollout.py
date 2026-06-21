@@ -38,7 +38,10 @@ def _make_store() -> SettingsStore:
     return store
 
 
-def _client_with_handler(monkeypatch, handler) -> TestClient:
+_INVENTORY_DEFAULT = object()
+
+
+def _client_with_handler(monkeypatch, handler, inventory=_INVENTORY_DEFAULT) -> TestClient:
     real_async_client = httpx.AsyncClient
     monkeypatch.setattr(
         httpx,
@@ -48,6 +51,19 @@ def _client_with_handler(monkeypatch, handler) -> TestClient:
             **{k: v for k, v in kw.items() if k != "transport"},
         ),
     )
+
+    # Inventory kommt NICHT mehr ueber den Hub-Proxy (Hub hat keinen
+    # /api/v1/manifest/inventory-Endpoint → 404), sondern in-process via
+    # gather_all_inventories. Hier direkt patchen statt die vielen Sub-Hub-Endpoints
+    # zu mocken — dieser Test prueft die Aggregator-Komposition, nicht den
+    # Inventory-Builder (der hat eigene Tests). inventory=None simuliert Ausfall.
+    async def _fake_inventory(hubs_arg, **kw):
+        inv = _INVENTORY if inventory is _INVENTORY_DEFAULT else inventory
+        if inv is None:
+            raise RuntimeError("inventory source down")
+        return inv
+
+    monkeypatch.setattr("moag.routes_octoboss.gather_all_inventories", _fake_inventory)
     app = create_app(settings_store=_make_store(), enable_pipeline=False)
     return TestClient(app, raise_server_exceptions=True)
 
@@ -278,3 +294,26 @@ def test_rollout_status_degrades_on_partial_failure(monkeypatch):
     assert data["last_test"]["error"] is not None
     assert data["improvement"] == []
     assert data["improvement_error"] is not None
+
+
+def test_rollout_status_degrades_on_inventory_failure(monkeypatch):
+    """Faellt die Inventory-Quelle aus (gather_all_inventories wirft), bleibt der
+    Endpoint 200: ROLLOUT degradiert (error gesetzt, core_default None), aber
+    Nodes (aus /seti/nodes), Benchmarks und Verbesserung funktionieren weiter.
+
+    Regressions-Schutz fuer den 0.2.18-Fix: vorher proxyte der Aggregator den
+    nicht existierenden Hub-Pfad /api/v1/manifest/inventory → permanent 404.
+    """
+    client = _client_with_handler(monkeypatch, _full_handler, inventory=None)
+    resp = client.get("/api/v1/octoboss/rollout/status")
+    assert resp.status_code == 200
+    data = resp.json()
+    # ROLLOUT degradiert, Nodes kommen weiter aus /seti/nodes
+    assert data["rollout"]["error"] is not None
+    assert data["rollout"]["core_default"] is None
+    nodes = {n["node_id"]: n for n in data["rollout"]["nodes"]}
+    assert len(nodes) == 2
+    assert nodes["n1"]["soll"] is None  # kein core_default/override mehr
+    # LETZTER TEST + VERBESSERUNG laufen weiter
+    assert data["last_test"]["benchmark_run"] is not None
+    assert data["improvement"]

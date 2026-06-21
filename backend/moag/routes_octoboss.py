@@ -33,6 +33,7 @@ import httpx
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from .settings_store import SettingsStore
+from .manifest_inventory import gather_all_inventories
 
 logger = logging.getLogger("moag.routes_octoboss")
 
@@ -399,8 +400,32 @@ def build_octoboss_router(settings_store: SettingsStore) -> APIRouter:
             except Exception as exc:  # noqa: BLE001 — Degradation statt Total-Fail
                 return (None, str(exc))
 
-        # ── 1) ROLLOUT: Manifest-Inventory (Core-default/versions/overrides + Module-by-Node)
-        inv, inv_err = await _safe_get("/api/v1/manifest/inventory")
+        async def _safe_inventory() -> tuple[Any, str | None]:
+            """Inventory in-process via gather_all_inventories — NICHT als Hub-Proxy.
+
+            Der OctoBoss-Hub hat KEINEN /api/v1/manifest/inventory-Endpoint (404).
+            Das Inventory ist eine MOAG-eigene Aggregation aus
+            /api/v1/seti/bootstrapper/versions (+ Fallback /seti/distribute/info) —
+            dieselbe Quelle + dasselbe Schema wie die /api/v1/manifest/inventory-Route.
+            Vorher proxyte der Aggregator faelschlich den Hub-Pfad → garantiert 404.
+            """
+            try:
+                s = settings_store.get()
+                active_id = s.default_hub_id
+                hubs_arg: list[tuple[str, str, bool]] = []
+                for h in s.hubs:
+                    url_clean = (h.url or "").rstrip("/")
+                    if not url_clean:
+                        continue
+                    hubs_arg.append((h.id, url_clean, h.id == active_id))
+                if not hubs_arg:
+                    hubs_arg = [("fallback", hub_url, True)]
+                return (await gather_all_inventories(hubs_arg), None)
+            except Exception as exc:  # noqa: BLE001 — Degradation statt Total-Fail
+                return (None, str(exc))
+
+        # ── 1) ROLLOUT: Manifest-Inventory — MOAG-eigene Aggregation (kein Hub-Proxy)
+        inv, inv_err = await _safe_inventory()
         seti, seti_err = await _safe_get("/seti/nodes")
 
         core_default: str | None = None
