@@ -25,6 +25,14 @@ Follow-Ups aus Release-Report v0.2.3 (siehe `MASSNAHMEN.md` 2026-05-24):
 5. ~~Backlog-Memory-Themen (Alert-Center, Adapter-Status-Inspector, OpenAPI-Browser, File-Upload-UI)~~ — **alle erledigt 2026-06-01.** `/alerts` (Severity+Ack), `/inspector` (Adapter-Roh-Status), `/openapi` (API-Browser MOAG+Sub-Systeme), `/ocr-upload` (multipart an OCRexpert). Backlog #5 abgeschlossen.
 
 ## Offene Punkte
+
+### TODO — neu aus Rollout-Deploy-Session (2026-06-21)
+- [ ] **Rollout-View Phantom-Nodes:** Das Manifest-Inventory bringt ~14 heartbeat-lose „PANOPTICOR-NODE"-Einträge mit (Panopticor-Sandbox-Nodes im Hub-Manifest) → Node-Liste verrauscht. Optionen: heartbeat-lose Nodes ausblenden ODER als „nur Manifest / kein Heartbeat" gruppieren. Frontend `RolloutStatus.tsx` / Backend-Filter in `get_rollout_status`. Produkt-Entscheidung Roman.
+- [ ] **Pretest-Hygiene (False-Positive):** Jeder Bridge-Pretest endet auf Verdikt „unstable/manual_review", weil Vite die „chunks > 500 kB"-Warnung auf **stderr** schreibt und Panopticors `local-process`-Adapter jede stderr-Zeile als error-Event wertet (5 Events). Optionen: (a) MOAG-seitig Vite beruhigen (`build.chunkSizeWarningLimit` hoch ODER `manualChunks` für `pdf.worker`/`recharts`) → Pretest wird „good"; (b) Panopticor-CR: Build-stderr-Warnungen nicht als error-Events klassifizieren. (a) ist der schnelle Weg.
+- [ ] **Lessons-Learned-Eintrag:** Bridge `local-process`-RunRequest — Pfade als **Forward-Slashes** (`C:/...`), nicht Backslashes. Doppel-Escaping (JSON-Tool-Param + Python-String-Literal) halbiert `\\` → `\`, und `\f`/`\t`/`\b` werden zu Steuerzeichen → kaputtes `Set-Location`. Kandidat für `C:\code\docs\lessons-learned.md` (+ ergänzt `memory/reference_panopticor_signal_mechanik.md`).
+- [ ] **FEATURES.md-Housekeeping:** Test-Zähler (Abschnitt „Tests + Smoke") + Container-Zeile (`moag:0.1.0`) sind global veraltet (real ~535 BE / ~520 FE, live `moag:0.2.18`) — beim nächsten FEATURES-Touch nachziehen.
+
+### Bestehend
 - ~~Upload-Hub Listing-Endpoint crash~~ — behoben (2026-05-17, psycopg dict_row + COUNT AS n, Commit `27d0774`)
 - ~~Operation-Handler Detail-Drift~~ — behoben (2026-05-17, alle 4 LLM/PII gegen Live-Oberon verifiziert, Commit `88de394`): pii.scan benötigt `clientId`; llm.vision braucht `projectId` + `imageUrl` Data-URL + DevLoop-Marker-Strip; llm.plan-Response-Schema (`planType`/`erkannteRaeume`) statt erfundener Felder.
 - ~~Volume-Permissions provisorisch chmod 0777~~ — behoben (2026-05-17, `scripts/deploy-vdr.ps1` macht jetzt `mkdir` + `chmod` + `--user 1002:1002` + `-v` automatisch)

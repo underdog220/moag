@@ -131,11 +131,12 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
   - Letzter **Pretest**-Verdikt read-only nicht abrufbar (keine List-API; Pretests laufen als Panopticor-Spec-Files + spec_id-Polling). Als Folge-TODO gekennzeichnet.
   - Katalog-Lifecycle (proposed→benchmarking→active) noch nicht angebunden — keine read-only Quelle. Folge-TODO.
 - **Phase 1 = read-only:** Buttons "Test starten" / "Default wechseln (Pretest-Gate)" sind disabled-Platzhalter (`· Phase 2`), loesen NICHTS aus. ADR-004-Tooltips auf jeder Zahl/jedem Symbol/Button.
-- **Backend:** `GET /api/v1/octoboss/rollout/status` (Aggregat, fan-out zu `manifest/inventory` + `seti/nodes` + `benchmarks/runs?limit=1`+`/runs/{id}` + `benchmarks/matrix`; degradiert bei Teilausfall mit `error`-Markierung). Schema `octoboss-rollout-status-v1`.
-- **Code:** `frontend/src/features/octoboss/pages/RolloutStatus.tsx`, `frontend/src/features/octoboss/index.tsx` (Tab + Route), `frontend/src/lib/api.ts` (`octoboss.getRolloutStatus`), `frontend/src/lib/types.ts` (`RolloutStatus` et al.), `backend/moag/routes_octoboss.py` (`/rollout/status`)
-- **Tests:** `backend/tests/test_routes_octoboss_rollout.py` (3 Tests: happy-path / RED-Verdikt / Degradation)
+- **Backend:** `GET /api/v1/octoboss/rollout/status` (Aggregat, EIN Call statt sechs; degradiert bei Teilausfall mit `error`-Markierung). Schema `octoboss-rollout-status-v1`. **Inventory in-process** via `gather_all_inventories()` (`manifest_inventory.py`) — **NICHT** als Hub-Proxy, der OctoBoss-Hub hat keinen `/api/v1/manifest/inventory`-Endpoint (404-Fix `dcdd96a`, 0.2.18). Weitere Quellen: `seti/nodes` + `benchmarks/runs?limit=1`+`/runs/{id}` + `benchmarks/matrix`.
+- **Code:** `frontend/src/features/octoboss/pages/RolloutStatus.tsx`, `frontend/src/features/octoboss/index.tsx` (Tab + Route), `frontend/src/lib/api.ts` (`octoboss.getRolloutStatus`), `frontend/src/lib/types.ts` (`RolloutStatus` et al.), `backend/moag/routes_octoboss.py` (`/rollout/status` + `_safe_inventory`)
+- **Tests:** `backend/tests/test_routes_octoboss_rollout.py` (4 Tests: happy-path / RED-Verdikt / Benchmark-Degradation / **Inventory-Ausfall-Degradation**)
 - **Konzept:** `C:\code\docs\concepts\2026-06-21-moag-octoboss-rollout-view.md`
-- **Stand:** Phase 1 implementiert 2026-06-21 (Branch `feat/moag-octoboss-rollout-view`). Phase 2 (Aktionen) offen.
+- **Stand:** **Live auf VDR seit 2026-06-21** (Deploy 0.2.17, Inventory-404-Fix 0.2.18). `rollout.error: None`, Soll-Spalte befüllt verifiziert. Phase 2 (Aktionen) offen.
+- **Offene Folge-Punkte:** (1) ~14 phantom „PANOPTICOR-NODE"-Einträge ohne Heartbeat aus dem Hub-Manifest verrauschen die Node-Liste — heartbeat-lose Nodes ausblenden/gruppieren (Produkt-Entscheidung). (2) Per-Node Ist-Core + Pretest-Verdikt + Katalog-Lifecycle weiterhin als ehrliche Lücken markiert (Folge-CRs).
 
 #### OctoBoss Bench-Dashboard (`/octoboss/benchmarks`)
 - **Was:** Vollstaendiges Benchmark-Dashboard fuer die OctoBoss-Bench-Suite
