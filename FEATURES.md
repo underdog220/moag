@@ -133,10 +133,11 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 - **Phase 1 = read-only:** Buttons "Test starten" / "Default wechseln (Pretest-Gate)" sind disabled-Platzhalter (`· Phase 2`), loesen NICHTS aus. ADR-004-Tooltips auf jeder Zahl/jedem Symbol/Button.
 - **Backend:** `GET /api/v1/octoboss/rollout/status` (Aggregat, EIN Call statt sechs; degradiert bei Teilausfall mit `error`-Markierung). Schema `octoboss-rollout-status-v1`. **Inventory in-process** via `gather_all_inventories()` (`manifest_inventory.py`) — **NICHT** als Hub-Proxy, der OctoBoss-Hub hat keinen `/api/v1/manifest/inventory`-Endpoint (404-Fix `dcdd96a`, 0.2.18). Weitere Quellen: `seti/nodes` + `benchmarks/runs?limit=1`+`/runs/{id}` + `benchmarks/matrix`.
 - **Code:** `frontend/src/features/octoboss/pages/RolloutStatus.tsx`, `frontend/src/features/octoboss/index.tsx` (Tab + Route), `frontend/src/lib/api.ts` (`octoboss.getRolloutStatus`), `frontend/src/lib/types.ts` (`RolloutStatus` et al.), `backend/moag/routes_octoboss.py` (`/rollout/status` + `_safe_inventory`)
-- **Tests:** `backend/tests/test_routes_octoboss_rollout.py` (4 Tests: happy-path / RED-Verdikt / Benchmark-Degradation / **Inventory-Ausfall-Degradation**)
+- **Phantom-Node-Filter (seit 0.2.19):** Nodes, die NUR im Manifest stehen (kein Heartbeat, nie verbunden — ephemere „PANOPTICOR-NODE"-Sandbox-Nodes), werden nicht gelistet, sondern in `rollout.manifest_only_count` gezählt + als Fußnote „+N nur im Manifest ausgeblendet" gezeigt (kein stilles Verstecken). Echte Offline-Nodes bleiben (aus `/seti/nodes`).
+- **Tests:** `backend/tests/test_routes_octoboss_rollout.py` (5 Tests: happy-path / RED-Verdikt / Benchmark-Degradation / Inventory-Ausfall-Degradation / **Manifest-only-Ausblendung**)
 - **Konzept:** `C:\code\docs\concepts\2026-06-21-moag-octoboss-rollout-view.md`
-- **Stand:** **Live auf VDR seit 2026-06-21** (Deploy 0.2.17, Inventory-404-Fix 0.2.18). `rollout.error: None`, Soll-Spalte befüllt verifiziert. Phase 2 (Aktionen) offen.
-- **Offene Folge-Punkte:** (1) ~14 phantom „PANOPTICOR-NODE"-Einträge ohne Heartbeat aus dem Hub-Manifest verrauschen die Node-Liste — heartbeat-lose Nodes ausblenden/gruppieren (Produkt-Entscheidung). (2) Per-Node Ist-Core + Pretest-Verdikt + Katalog-Lifecycle weiterhin als ehrliche Lücken markiert (Folge-CRs).
+- **Stand:** **Live auf VDR seit 2026-06-21** (Deploy 0.2.17 → Inventory-404-Fix 0.2.18 → Phantom-Filter + Pretest-Hygiene 0.2.19). `rollout.error: None`, Soll-Spalte befüllt, 4 echte Nodes (14 ausgeblendet) verifiziert. Phase 2 (Aktionen) offen.
+- **Offene Folge-Punkte:** Per-Node Ist-Core + Pretest-Verdikt + Katalog-Lifecycle weiterhin als ehrliche Lücken markiert (Folge-CRs).
 
 #### OctoBoss Bench-Dashboard (`/octoboss/benchmarks`)
 - **Was:** Vollstaendiges Benchmark-Dashboard fuer die OctoBoss-Bench-Suite
