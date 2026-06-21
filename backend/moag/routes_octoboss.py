@@ -367,6 +367,244 @@ def build_octoboss_router(settings_store: SettingsStore) -> APIRouter:
         hub_url, token = _resolve_hub(settings_store)
         return await _proxy_get(hub_url, f"/api/v1/benchmarks/runs/{run_id}", token)
 
+    # ── Rollout & Test — Aggregations-Endpoint (Phase 1, read-only) ───────────────
+
+    @router.get("/rollout/status")
+    async def get_rollout_status() -> dict:
+        """Komprimierte Rollout-/Test-/Verbesserungs-Sicht (EIN Call statt sechs).
+
+        Aggregiert (read-only) die bereits durchgereichten OctoBoss-Routen:
+          - /manifest/inventory  → Core-default + Versions + Per-Node Overrides + Module-by-Node
+          - /seti/nodes          → agent_version + connected + last_heartbeat je Node
+          - /api/v1/benchmarks/runs?limit=1 + /runs/{id} → letzter Benchmark-Lauf
+          - /api/v1/benchmarks/matrix → Trend (▲/=/▼) je subject/domain für VERBESSERUNG
+
+        Robust gegen Teilausfälle: Schlägt eine Quelle fehl, wird der jeweilige
+        Block mit `error` markiert statt den ganzen Endpoint scheitern zu lassen.
+
+        EHRLICHE LÜCKE (siehe Konzept 2026-06-21): Per-Node *Ist*-Core-Version ist
+        NICHT getrackt. `agent_version` ist der Agent-/Bootstrapper-Build, NICHT die
+        deployte Core-Version. Wir liefern Soll (Manifest-default/override) +
+        `agent_version` + Heartbeat und kennzeichnen das im Feld
+        `core_ist_tracked: false` + `core_ist_note`. Kein stilles "alle grün".
+        """
+        hub_url, token = _resolve_hub(settings_store)
+
+        async def _safe_get(path: str, params: dict[str, str] | None = None) -> tuple[Any, str | None]:
+            """GET mit Fehler-Kapselung: (data|None, error_str|None)."""
+            try:
+                return (await _proxy_get(hub_url, path, token, params=params), None)
+            except HTTPException as exc:
+                return (None, f"HTTP {exc.status_code}: {exc.detail}")
+            except Exception as exc:  # noqa: BLE001 — Degradation statt Total-Fail
+                return (None, str(exc))
+
+        # ── 1) ROLLOUT: Manifest-Inventory (Core-default/versions/overrides + Module-by-Node)
+        inv, inv_err = await _safe_get("/api/v1/manifest/inventory")
+        seti, seti_err = await _safe_get("/seti/nodes")
+
+        core_default: str | None = None
+        hub_version: str | None = None
+        overrides_by_node: dict[str, str] = {}
+        node_meta: dict[str, dict] = {}  # node_id → {hostname, connected, node_pool}
+
+        if isinstance(inv, dict):
+            hub_version = inv.get("active_hub_id") if isinstance(inv.get("active_hub_id"), str) else hub_version
+            hubs = inv.get("hubs")
+            active_id = inv.get("active_hub_id")
+            chosen = None
+            if isinstance(hubs, list) and hubs:
+                # aktiven Hub bevorzugen, sonst ersten mit Inventory
+                for h in hubs:
+                    if isinstance(h, dict) and h.get("is_active"):
+                        chosen = h
+                        break
+                if chosen is None:
+                    chosen = next((h for h in hubs if isinstance(h, dict) and h.get("inventory")), None)
+            if isinstance(chosen, dict):
+                hub_version = chosen.get("id") or hub_version
+                inventory = chosen.get("inventory") or {}
+                core = inventory.get("core") or {}
+                core_default = core.get("default")
+                for ov in core.get("overrides") or []:
+                    if isinstance(ov, dict) and ov.get("node_id"):
+                        overrides_by_node[str(ov["node_id"])] = str(ov.get("version") or "")
+                for n in (inventory.get("modules") or {}).get("by_node") or []:
+                    if isinstance(n, dict) and n.get("node_id"):
+                        node_meta[str(n["node_id"])] = {
+                            "hostname": n.get("hostname"),
+                            "connected": n.get("connected"),
+                            "node_pool": n.get("node_pool"),
+                        }
+            _ = active_id  # nur zur Klarheit referenziert
+
+        # Hub-Software-Version (octoboss x.y.z) — aus /seti/overview wäre genauer,
+        # aber wir bleiben bei den hier schon gezogenen Quellen. active_hub_id ist
+        # die Hub-Identität; die Hub-Software-Version lassen wir bewusst optional.
+
+        # ── Nodes aus /seti/nodes mergen (agent_version + Heartbeat)
+        import datetime as _dt
+
+        def _heartbeat_age_s(iso: Any) -> int | None:
+            if not iso or not isinstance(iso, str):
+                return None
+            try:
+                ts = _dt.datetime.fromisoformat(iso.replace("Z", "+00:00"))
+                now = _dt.datetime.now(_dt.timezone.utc)
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=_dt.timezone.utc)
+                return max(0, int((now - ts).total_seconds()))
+            except Exception:
+                return None
+
+        seti_nodes_raw: list = []
+        if isinstance(seti, dict) and isinstance(seti.get("nodes"), list):
+            seti_nodes_raw = seti["nodes"]
+        elif isinstance(seti, list):
+            seti_nodes_raw = seti
+
+        rollout_nodes: list[dict] = []
+        seen_ids: set[str] = set()
+        for raw in seti_nodes_raw:
+            if not isinstance(raw, dict):
+                continue
+            nid = str(raw.get("node_id") or raw.get("id") or "")
+            if not nid:
+                continue
+            seen_ids.add(nid)
+            soll = overrides_by_node.get(nid) or core_default
+            meta = node_meta.get(nid, {})
+            rollout_nodes.append({
+                "node_id": nid,
+                "hostname": raw.get("hostname") or meta.get("hostname"),
+                "soll": soll,
+                "soll_source": "override" if nid in overrides_by_node else "default",
+                "agent_version": raw.get("agent_version"),
+                "connected": bool(raw.get("connected")),
+                "heartbeat_age_s": _heartbeat_age_s(raw.get("last_heartbeat")),
+                "last_heartbeat": raw.get("last_heartbeat"),
+            })
+        # Nodes, die nur im Manifest-Inventory stehen (kein Heartbeat) ergänzen
+        for nid, meta in node_meta.items():
+            if nid in seen_ids:
+                continue
+            rollout_nodes.append({
+                "node_id": nid,
+                "hostname": meta.get("hostname"),
+                "soll": overrides_by_node.get(nid) or core_default,
+                "soll_source": "override" if nid in overrides_by_node else "default",
+                "agent_version": None,
+                "connected": bool(meta.get("connected")),
+                "heartbeat_age_s": None,
+                "last_heartbeat": None,
+            })
+        rollout_nodes.sort(key=lambda n: (n.get("hostname") or n.get("node_id") or ""))
+
+        rollout = {
+            "core_default": core_default,
+            "hub_version": hub_version,
+            "core_ist_tracked": False,
+            "core_ist_note": (
+                "Per-Node Ist-Core-Version ist NICHT getrackt: agent_version ist der "
+                "Agent-/Bootstrapper-Build, nicht die deployte Core-Version. Angezeigt "
+                "werden Soll (Manifest) + agent_version + Heartbeat (≈*)."
+            ),
+            "nodes": rollout_nodes,
+            "error": inv_err or seti_err,
+        }
+
+        # ── 2) LETZTER TEST: letzter Benchmark-Lauf (+ Pretest-Lücke ehrlich)
+        runs_data, runs_err = await _safe_get("/api/v1/benchmarks/runs", params={"limit": "1"})
+        benchmark_run: dict | None = None
+        if isinstance(runs_data, dict):
+            runs = runs_data.get("runs") or []
+            if runs and isinstance(runs[0], dict):
+                r0 = runs[0]
+                run_id = r0.get("run_id")
+                summary = r0.get("summary") or {}
+                # Verdict aus summary ableiten (kein eigenes Feld am Run)
+                failed = summary.get("failed")
+                verdict = None
+                if isinstance(failed, int):
+                    verdict = "GREEN" if failed == 0 else "RED"
+                subjects: list[dict] = []
+                # Run-Detail für Einzel-Ergebnisse (subjects) ziehen
+                if run_id:
+                    detail, _derr = await _safe_get(f"/api/v1/benchmarks/runs/{run_id}")
+                    results = (detail or {}).get("results") if isinstance(detail, dict) else None
+                    for res in results or []:
+                        if not isinstance(res, dict):
+                            continue
+                        subjects.append({
+                            "subject": res.get("subject"),
+                            "domain": res.get("domain"),
+                            "metric": res.get("metric_string")
+                            or (str(res.get("metric_value")) if res.get("metric_value") is not None else None),
+                            "passed": bool(res.get("passed")),
+                            "node_id": res.get("node_id"),
+                        })
+                benchmark_run = {
+                    "run_id": run_id,
+                    "started_at": r0.get("started_at"),
+                    "finished_at": r0.get("finished_at"),  # ggf. None (Hub liefert nicht immer)
+                    "status": r0.get("status"),
+                    "verdict": verdict,
+                    "summary": summary,
+                    "subjects": subjects,
+                }
+        last_test = {
+            "benchmark_run": benchmark_run,
+            # Pretest read-only nicht abrufbar: Pretests werden als Panopticor-
+            # Spec-Files angelegt + per spec_id gepollt; es gibt keine "letzter
+            # Verdikt"-List-API. → Folge-TODO (Phase 2 / kleiner Backend-CR).
+            "pretest": None,
+            "pretest_note": (
+                "Letzter Pretest-Verdikt ist read-only nicht abrufbar (keine List-API; "
+                "Pretests laufen als Panopticor-Spec-Files + spec_id-Polling). Folge-TODO."
+            ),
+            "error": runs_err,
+        }
+
+        # ── 3) VERBESSERUNG: Trend je subject/domain aus der Matrix
+        matrix_data, matrix_err = await _safe_get("/api/v1/benchmarks/matrix")
+        improvement: list[dict] = []
+        if isinstance(matrix_data, dict):
+            subjects_list = matrix_data.get("subjects") or []
+            mat = matrix_data.get("matrix") or {}
+            for subj in subjects_list:
+                cells = (mat.get(subj) or {}) if isinstance(mat, dict) else {}
+                # repräsentative Zelle je subject: bevorzugt eine mit metric_value
+                chosen_cell = None
+                for cell in cells.values():
+                    if isinstance(cell, dict):
+                        if cell.get("metric_value") is not None:
+                            chosen_cell = cell
+                            break
+                        chosen_cell = chosen_cell or cell
+                if not isinstance(chosen_cell, dict):
+                    continue
+                trend = chosen_cell.get("trend")  # "up" | "down" | "stable"
+                symbol = {"up": "▲", "down": "▼", "stable": "="}.get(trend or "", "=")
+                improvement.append({
+                    "subject": subj,
+                    "domain": chosen_cell.get("domain"),
+                    "trend": trend,
+                    "symbol": symbol,
+                    "metric": chosen_cell.get("metric_string")
+                    or (str(chosen_cell.get("metric_value")) if chosen_cell.get("metric_value") is not None else None),
+                    "passed": bool(chosen_cell.get("passed")),
+                    "stale": bool(chosen_cell.get("stale")),
+                })
+
+        return {
+            "schema": "octoboss-rollout-status-v1",
+            "fetched_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+            "rollout": rollout,
+            "last_test": last_test,
+            "improvement": improvement,
+            "improvement_error": matrix_err,
+        }
+
     @router.post("/benchmarks/run")
     async def post_benchmarks_run(request: Request) -> Any:
         """Benchmark-Run starten: POST /api/v1/benchmarks/run.

@@ -559,6 +559,12 @@ export const api = {
   // ─── OctoBoss Drilldown-API (neue /api/v1/octoboss/* Routen) ─────────────────
 
   octoboss: {
+    /** GET /api/v1/octoboss/rollout/status — komprimierte Rollout/Test/Verbesserungs-Sicht.
+     *  Aggregiert manifest/inventory + seti/nodes + benchmarks(runs/matrix) zu EINEM Call.
+     *  Schema: octoboss-rollout-status-v1. */
+    getRolloutStatus: (): Promise<import("./types").RolloutStatus> =>
+      request<import("./types").RolloutStatus>("/v1/octoboss/rollout/status"),
+
     /** GET /api/v1/octoboss/nodes — Node-Liste mit Hardware/Ollama/Mode/Modules. */
     getNodes: (): Promise<unknown> =>
       request<unknown>("/v1/octoboss/nodes"),

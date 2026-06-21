@@ -810,6 +810,83 @@ export interface OctoBossLlmModel {
   [key: string]: unknown;
 }
 
+// ─── Rollout & Test (Aggregat: GET /api/v1/octoboss/rollout/status) ───────────
+// Schema octoboss-rollout-status-v1 — komprimierte Rollout/Test/Verbesserungs-Sicht.
+
+/** Eine Node-Zeile in der ROLLOUT-Sektion. */
+export interface RolloutNode {
+  node_id: string;
+  hostname: string | null;
+  /** Soll-Version (Manifest: Override pinnt, sonst core_default). */
+  soll: string | null;
+  soll_source: "override" | "default";
+  /** Agent-/Bootstrapper-Build — NICHT die deployte Core-Version (siehe core_ist_note). */
+  agent_version: string | null;
+  connected: boolean;
+  heartbeat_age_s: number | null;
+  last_heartbeat: string | null;
+}
+
+export interface RolloutSection {
+  core_default: string | null;
+  hub_version: string | null;
+  /** false in Phase 1: Per-Node Ist-Core-Version nicht getrackt. */
+  core_ist_tracked: boolean;
+  core_ist_note: string;
+  nodes: RolloutNode[];
+  error: string | null;
+}
+
+/** Ein Einzel-Ergebnis (subject) des letzten Benchmark-Laufs. */
+export interface RolloutTestSubject {
+  subject: string | null;
+  domain: string | null;
+  metric: string | null;
+  passed: boolean;
+  node_id: string | null;
+}
+
+export interface RolloutBenchmarkRun {
+  run_id: string | null;
+  started_at: string | null;
+  finished_at: string | null;
+  status: string | null;
+  /** Aus summary.failed abgeleitet (0 → GREEN, >0 → RED, sonst null). */
+  verdict: "GREEN" | "RED" | null;
+  summary: { total?: number; passed?: number; failed?: number; skipped?: number };
+  subjects: RolloutTestSubject[];
+}
+
+export interface RolloutLastTest {
+  benchmark_run: RolloutBenchmarkRun | null;
+  /** Phase 1: immer null — read-only nicht abrufbar (siehe pretest_note). */
+  pretest: unknown | null;
+  pretest_note: string;
+  error: string | null;
+}
+
+/** Eine Verbesserungs-Zeile (Trend je subject/domain aus der Matrix). */
+export interface RolloutImprovement {
+  subject: string;
+  domain: string | null;
+  trend: "up" | "down" | "stable" | null;
+  /** ▲ / ▼ / = */
+  symbol: string;
+  metric: string | null;
+  passed: boolean;
+  stale: boolean;
+}
+
+/** Antwort von GET /api/v1/octoboss/rollout/status. */
+export interface RolloutStatus {
+  schema: "octoboss-rollout-status-v1";
+  fetched_at: string;
+  rollout: RolloutSection;
+  last_test: RolloutLastTest;
+  improvement: RolloutImprovement[];
+  improvement_error: string | null;
+}
+
 // ─── Custos-API-Typen (/api/v1/custos/*) ─────────────────────────────────────
 // Mirror der Custos-Pydantic-Schemas (custos/schemas/finding.py + regel.py).
 

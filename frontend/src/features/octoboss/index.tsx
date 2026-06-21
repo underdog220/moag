@@ -13,9 +13,11 @@ import { OcrPage } from "./pages/Ocr";
 import { LlmModelsPage } from "./pages/LlmModels";
 import { ManifestHealthPage } from "./pages/ManifestHealth";
 import { BenchmarksPage } from "./pages/Benchmarks";
+import { RolloutStatusPage } from "./pages/RolloutStatus";
 
 // Sub-Tab-Definitionen
 const TABS = [
+  { to: "rollout-status",  label: "Rollout & Test" },
   { to: "nodes",           label: "Nodes" },
   { to: "jobs",            label: "Jobs" },
   { to: "assets",          label: "Assets" },
@@ -69,6 +71,7 @@ export function OctoBossFeature() {
     <Routes>
       <Route element={<OctoBossLayout />}>
         <Route index element={<Navigate to="nodes" replace />} />
+        <Route path="rollout-status" element={<RolloutStatusPage />} />
         <Route path="nodes" element={<NodesPage />} />
         <Route path="nodes/:node_id" element={<NodeDetailPage />} />
         <Route path="jobs" element={<JobsPage />} />

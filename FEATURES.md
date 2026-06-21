@@ -120,6 +120,23 @@ Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12
 - **Score-Formel:** ehrlich gewichtet (40% connected · 30% Ollama · 20% Hardware-Telemetrie · 10% Mode IDLE/ACTIVE)
 - **Aktionen integriert:** `octoboss.cluster.status`, `octoboss.bench.start`, `octoboss.ollama.pull`
 
+#### OctoBoss Rollout & Test (`/octoboss/rollout-status`) — Phase 1 (read-only)
+- **Was:** Komprimierte "auf einen Blick"-Sicht des Upgrade-Prozesses unter der OctoBoss-Sektion. Verdichtet die ueber Tabs verstreuten Rollout-/Test-Infos zu EINER Sub-Seite. Erster Tab in der OctoBoss-Navigation.
+- **Drei Sektionen:**
+  - **ROLLOUT:** Core-`default` + Hub-Identitaet; Per-Node Soll (Manifest: Override `⊙` sonst Core-Default) vs. `agent_version` + Heartbeat-Alter/Status-Dot (<30s ok / <120s warn / aelter krit).
+  - **LETZTER TEST:** letzter Benchmark-Lauf — Verdikt (aus `summary.failed`: 0→GRUEN, >0→ROT), Pass/Fail/Skip-Zaehler, bis zu 8 getestete subjects mit Metrik.
+  - **VERBESSERUNG:** Trend ▲/=/▼ je subject/domain aus der Benchmark-Matrix (`cell.trend`).
+- **Ehrliche Luecke (kein "alle gruen"-Vortaeuschen):**
+  - Per-Node **Ist**-Core-Version ist NICHT getrackt — `agent_version` ist der Agent-/Bootstrapper-Build, nicht die deployte Core-Version. Kennzeichnung `≈*` + Fussnote (`core_ist_tracked: false`). Folge-CR: SonOfSETI-Heartbeat-Feld `deployed_core_version`.
+  - Letzter **Pretest**-Verdikt read-only nicht abrufbar (keine List-API; Pretests laufen als Panopticor-Spec-Files + spec_id-Polling). Als Folge-TODO gekennzeichnet.
+  - Katalog-Lifecycle (proposed→benchmarking→active) noch nicht angebunden — keine read-only Quelle. Folge-TODO.
+- **Phase 1 = read-only:** Buttons "Test starten" / "Default wechseln (Pretest-Gate)" sind disabled-Platzhalter (`· Phase 2`), loesen NICHTS aus. ADR-004-Tooltips auf jeder Zahl/jedem Symbol/Button.
+- **Backend:** `GET /api/v1/octoboss/rollout/status` (Aggregat, fan-out zu `manifest/inventory` + `seti/nodes` + `benchmarks/runs?limit=1`+`/runs/{id}` + `benchmarks/matrix`; degradiert bei Teilausfall mit `error`-Markierung). Schema `octoboss-rollout-status-v1`.
+- **Code:** `frontend/src/features/octoboss/pages/RolloutStatus.tsx`, `frontend/src/features/octoboss/index.tsx` (Tab + Route), `frontend/src/lib/api.ts` (`octoboss.getRolloutStatus`), `frontend/src/lib/types.ts` (`RolloutStatus` et al.), `backend/moag/routes_octoboss.py` (`/rollout/status`)
+- **Tests:** `backend/tests/test_routes_octoboss_rollout.py` (3 Tests: happy-path / RED-Verdikt / Degradation)
+- **Konzept:** `C:\code\docs\concepts\2026-06-21-moag-octoboss-rollout-view.md`
+- **Stand:** Phase 1 implementiert 2026-06-21 (Branch `feat/moag-octoboss-rollout-view`). Phase 2 (Aktionen) offen.
+
 #### OctoBoss Bench-Dashboard (`/octoboss/benchmarks`)
 - **Was:** Vollstaendiges Benchmark-Dashboard fuer die OctoBoss-Bench-Suite
 - **Run-Panel:** Button mit ConfirmDialog + aktiver-Run-Indikator (pulsierender Dot). Polling dynamisch: 3s bei laufendem Run, 30s im Idle (via React-Query refetchInterval).
