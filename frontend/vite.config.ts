@@ -61,6 +61,13 @@ export default defineConfig({
     outDir: STATIC_OUT,
     emptyOutDir: true,
     sourcemap: true,
+    // Bewusst > pdf.worker (~1.4 MB, pdfjs — ein einzelnes Worker-File, nicht
+    // splitbar) und Haupt-Bundle (recharts/pdfjs/react). Die Default-500-kB-Warnung
+    // schreibt Vite auf stderr; Panopticors local-process-Pretest wertet jede
+    // stderr-Zeile als error-Event → permanentes "unstable"-False-Positive. Anheben
+    // statt unterdrücken-per-Hack. (Echtes Code-Splitting via manualChunks wäre eine
+    // separate Optimierung — pdf.worker bliebe trotzdem > 500 kB.)
+    chunkSizeWarningLimit: 1600,
   },
   test: {
     environment: "jsdom",

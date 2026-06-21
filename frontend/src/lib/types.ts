@@ -834,6 +834,8 @@ export interface RolloutSection {
   core_ist_tracked: boolean;
   core_ist_note: string;
   nodes: RolloutNode[];
+  /** Anzahl Nodes, die NUR im Manifest stehen (kein Heartbeat) und ausgeblendet sind. */
+  manifest_only_count: number;
   error: string | null;
 }
 

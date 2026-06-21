@@ -317,3 +317,24 @@ def test_rollout_status_degrades_on_inventory_failure(monkeypatch):
     # LETZTER TEST + VERBESSERUNG laufen weiter
     assert data["last_test"]["benchmark_run"] is not None
     assert data["improvement"]
+
+
+def test_rollout_status_hides_manifest_only_nodes(monkeypatch):
+    """Nodes, die NUR im Manifest stehen (kein Heartbeat, nicht in /seti/nodes),
+    werden NICHT gelistet, sondern in rollout.manifest_only_count gezaehlt (z.B.
+    ephemere Panopticor-Sandbox-Nodes 'PANOPTICOR-NODE'). Echte Nodes bleiben."""
+    import copy
+
+    inv = copy.deepcopy(_INVENTORY)
+    # Ghost-Node, der NICHT in _SETI_NODES vorkommt → nur im Manifest
+    inv["hubs"][0]["inventory"]["modules"]["by_node"].append(
+        {"node_id": "ghost-1", "hostname": "PANOPTICOR-NODE", "connected": False}
+    )
+    client = _client_with_handler(monkeypatch, _full_handler, inventory=inv)
+    resp = client.get("/api/v1/octoboss/rollout/status")
+    assert resp.status_code == 200
+    data = resp.json()
+    node_ids = {n["node_id"] for n in data["rollout"]["nodes"]}
+    assert "ghost-1" not in node_ids                 # ausgeblendet
+    assert "n1" in node_ids and "n2" in node_ids     # echte (in seti) bleiben
+    assert data["rollout"]["manifest_only_count"] == 1

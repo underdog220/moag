@@ -284,6 +284,22 @@ export function RolloutStatusPage() {
               <p className="text-sm text-fg-muted">Keine Nodes gemeldet.</p>
             )}
 
+            {/* Ausgeblendete Manifest-only Nodes (kein Heartbeat) ehrlich ausweisen */}
+            {data.rollout.manifest_only_count > 0 && (
+              <Tooltip
+                title={
+                  `${data.rollout.manifest_only_count} Node(s) stehen nur im Hub-Manifest, ` +
+                  "haben aber keinen Heartbeat (nie verbunden) — z.B. ephemere " +
+                  "Panopticor-Sandbox-Nodes. Aus der Liste ausgeblendet, hier nur gezählt."
+                }
+                source={SRC}
+              >
+                <p className="mt-3 border-t border-white/5 pt-2 text-xxs leading-relaxed text-fg-subtle">
+                  +{data.rollout.manifest_only_count} nur im Manifest (kein Heartbeat) ausgeblendet
+                </p>
+              </Tooltip>
+            )}
+
             {/* Ehrliche Lücke — Fußnote */}
             {!data.rollout.core_ist_tracked && (
               <p className="mt-3 border-t border-white/5 pt-2 text-xxs leading-relaxed text-fg-subtle">

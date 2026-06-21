@@ -509,20 +509,13 @@ def build_octoboss_router(settings_store: SettingsStore) -> APIRouter:
                 "heartbeat_age_s": _heartbeat_age_s(raw.get("last_heartbeat")),
                 "last_heartbeat": raw.get("last_heartbeat"),
             })
-        # Nodes, die nur im Manifest-Inventory stehen (kein Heartbeat) ergänzen
-        for nid, meta in node_meta.items():
-            if nid in seen_ids:
-                continue
-            rollout_nodes.append({
-                "node_id": nid,
-                "hostname": meta.get("hostname"),
-                "soll": overrides_by_node.get(nid) or core_default,
-                "soll_source": "override" if nid in overrides_by_node else "default",
-                "agent_version": None,
-                "connected": bool(meta.get("connected")),
-                "heartbeat_age_s": None,
-                "last_heartbeat": None,
-            })
+        # Nodes, die NUR im Manifest-Inventory stehen (kein Heartbeat, nie verbunden)
+        # werden NICHT gelistet — sie verrauschen die Sicht (z.B. ephemere
+        # Panopticor-Sandbox-Nodes "PANOPTICOR-NODE"). Stattdessen nur zählen und als
+        # ehrliche Fußnote ausweisen (kein stilles Verstecken). Echte Offline-Nodes
+        # bleiben sichtbar, weil sie aus /seti/nodes kommen (Heartbeat-Historie,
+        # agent_version gesetzt) und damit oben bereits in rollout_nodes landen.
+        manifest_only_count = sum(1 for nid in node_meta if nid not in seen_ids)
         rollout_nodes.sort(key=lambda n: (n.get("hostname") or n.get("node_id") or ""))
 
         rollout = {
@@ -535,6 +528,7 @@ def build_octoboss_router(settings_store: SettingsStore) -> APIRouter:
                 "werden Soll (Manifest) + agent_version + Heartbeat (≈*)."
             ),
             "nodes": rollout_nodes,
+            "manifest_only_count": manifest_only_count,
             "error": inv_err or seti_err,
         }
 
