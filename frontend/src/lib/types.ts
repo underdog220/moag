@@ -1205,3 +1205,99 @@ export interface PanopticorStatus {
   fetched_at: string;    // ISO-8601
   error?: string | null;
 }
+
+// ─── Datenschutzkonzept-API-Typen (/api/v1/oberon/datenschutz-konzept/*) ─────
+// Vertragsschema: Oberon /api/v2/admin/datenschutzkonzept
+
+/** Ein einzelner Claim im Datenschutzkonzept. */
+export interface DatenschutzClaim {
+  /** Aussage, z.B. "Alle LLM-Calls werden ueber den DSGVO-Proxy geroutet." */
+  statement: string;
+  /** Quellenreferenz, z.B. Oberon-Settings-Key oder Audit-Log. */
+  source_ref: string;
+  /** Verifizierungsstatus. */
+  status: "ok" | "problem";
+  [key: string]: unknown;
+}
+
+/** Eine Quellenreferenz im Datenschutzkonzept. */
+export interface DatenschutzSource {
+  id: string;
+  title: string;
+  url: string;
+  /** Typ der Quelle, z.B. "endpoint" | "config" | "log". */
+  type: string;
+  last_checked: string | null;   // ISO-8601 oder null
+  /** Ob die Quelle beim letzten Check erreichbar war. */
+  available: boolean;
+  check_note: string | null;
+  [key: string]: unknown;
+}
+
+/** Ein Problem-Flag im Datenschutzkonzept. */
+export interface DatenschutzProblem {
+  id: string;
+  severity: "critical" | "warning" | "info" | string;
+  statement: string;
+  /** Version seit der das Problem besteht. */
+  since_version: number | null;
+  [key: string]: unknown;
+}
+
+/** Snapshot der Oberon-Konfigurations-Fakten. */
+export interface DatenschutzFactsSnapshot {
+  dsgvoEnabled: boolean | null;
+  failSafeMode: boolean | null;
+  nerMode: string | null;
+  sessionTtlMinutes: number | null;
+  safeForCloudGate: boolean | null;
+  auditRetentionDays: number | null;
+  provider: {
+    id: string | null;
+    endpoint: string | null;
+    model_standard: string | null;
+    model_heavy: string | null;
+    [key: string]: unknown;
+  } | null;
+  aktiveScanner: string[];
+  [key: string]: unknown;
+}
+
+/** Vollstaendiges Datenschutzkonzept-Objekt (aktuelle oder historische Version). */
+export interface DatenschutzKonzept {
+  version: number;
+  generated_at: string;             // ISO-8601
+  facts_snapshot: DatenschutzFactsSnapshot;
+  claims: DatenschutzClaim[];
+  sources: DatenschutzSource[];
+  problems: DatenschutzProblem[];
+  /** Datenschutzkonzept als Markdown-Text (fuer gerenderte Anzeige). */
+  prose_markdown: string;
+  /** Erklaerung was das Konzept abdeckt und was explizit nicht. */
+  scope_note: string;
+  integrity_guard_status: "ok" | "warning" | string;
+  integrity_guard_unlisted_urls: string[];
+  [key: string]: unknown;
+}
+
+/** Eintrag in der Versionsliste (/datenschutz-konzept/versions). */
+export interface DatenschutzKonzeptVersion {
+  id: string;
+  version: number;
+  generated_at: string;             // ISO-8601
+  is_current: boolean;
+  [key: string]: unknown;
+}
+
+/** Antwort von GET /api/v1/oberon/datenschutz-konzept/versions. */
+export interface DatenschutzVersionsResponse {
+  versions: DatenschutzKonzeptVersion[];
+  [key: string]: unknown;
+}
+
+/** Stub-Antwort wenn kein Token konfiguriert (MOAG-Konvention). */
+export interface DatenschutzStubResponse {
+  stub: true;
+  message: string;
+  fetched_at: string;
+}

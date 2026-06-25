@@ -645,6 +645,9 @@ def create_app(
     from moag.routes_panopticor import build_panopticor_router
     app.include_router(build_panopticor_router(settings_store))
 
+    from moag.routes_datenschutz import build_datenschutz_router
+    app.include_router(build_datenschutz_router(settings_store))
+
     from moag.routes_manifest_health import build_manifest_health_router
     app.include_router(build_manifest_health_router(settings_store))
 

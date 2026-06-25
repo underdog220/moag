@@ -821,6 +821,48 @@ export const api = {
       request<PanopticorStatus>("/v1/panopticor/status"),
   },
 
+  // ─── Datenschutzkonzept-API (/api/v1/oberon/datenschutz-konzept/*) ───────────
+
+  datenschutz: {
+    /**
+     * GET /api/v1/oberon/datenschutz-konzept — aktuelles Datenschutzkonzept.
+     * Liefert Prosa, Claims, Quellen, Problem-Flags, Integritaets-Status.
+     * Bei fehlendem Token: {stub: true, message, fetched_at}.
+     */
+    getKonzept: (): Promise<
+      import("./types").DatenschutzKonzept | import("./types").DatenschutzStubResponse
+    > =>
+      request<import("./types").DatenschutzKonzept | import("./types").DatenschutzStubResponse>(
+        "/v1/oberon/datenschutz-konzept",
+      ),
+
+    /**
+     * GET /api/v1/oberon/datenschutz-konzept/versions — Versionsliste.
+     * Liefert {versions: [{id, version, generated_at, is_current}]}.
+     */
+    getVersions: (): Promise<import("./types").DatenschutzVersionsResponse> =>
+      request<import("./types").DatenschutzVersionsResponse>(
+        "/v1/oberon/datenschutz-konzept/versions",
+      ),
+
+    /**
+     * GET /api/v1/oberon/datenschutz-konzept/versions/{id} — Einzelversion.
+     * Liefert das vollstaendige Konzept-Objekt einer historischen Version.
+     */
+    getVersion: (id: string): Promise<import("./types").DatenschutzKonzept> =>
+      request<import("./types").DatenschutzKonzept>(
+        `/v1/oberon/datenschutz-konzept/versions/${encodeURIComponent(id)}`,
+      ),
+
+    /**
+     * POST /api/v1/oberon/datenschutz-konzept/generate — manueller Trigger.
+     * Loest LLM-basierte Neu-Generierung aus. Nur nach Confirm-Dialog aufrufen.
+     * Kann 30-120 Sekunden dauern.
+     */
+    generate: (): Promise<unknown> =>
+      request<unknown>("/v1/oberon/datenschutz-konzept/generate", { method: "POST" }),
+  },
+
   // ─── OCRexpert-Drilldown-API (/api/v1/ocrexpert/*) ───────────────────────────
 
   ocrexpert: {

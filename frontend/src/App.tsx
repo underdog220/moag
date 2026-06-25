@@ -21,6 +21,7 @@ import NasDominatorFeature from "./features/nasdominator";
 import QnapBackupFeature from "./features/qnapbackup";
 import CustosFeature from "./features/custos";
 import PanopticorFeature from "./features/panopticor";
+import DatenschutzFeature from "./features/datenschutz";
 import SettingsPage from "./features/settings";
 
 function NotFound() {
@@ -79,6 +80,7 @@ export function App() {
         {/* Compliance & Test */}
         <Route path="/custos/*" element={<CustosFeature />} />
         <Route path="/panopticor/*" element={<PanopticorFeature />} />
+        <Route path="/datenschutz/*" element={<DatenschutzFeature />} />
 
         {/* Settings (Top-Level) */}
         <Route path="/settings" element={<SettingsPage />} />
