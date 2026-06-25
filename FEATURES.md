@@ -2,6 +2,8 @@
 
 Inventar aller Features. Stand 2026-05-17. Aktualisiert nach Phase 1–7 + 11/12 echten Aktionen.
 
+> Geplante/„später"-Features (R2A-Kategorie B): siehe [FEATURE_BACKLOG.md](FEATURE_BACKLOG.md).
+
 ## Aktiv
 
 ### Cockpit & Navigation
